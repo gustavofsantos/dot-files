@@ -1,0 +1,177 @@
+// Zed settings
+//
+// For information on how to configure Zed, see the Zed
+// documentation: https://zed.dev/docs/configuring-zed
+//
+// To see all of Zed's default settings without changing your
+// custom settings, run the `open default settings` command
+// from the command palette or from `Zed` application menu.
+{
+  "icon_theme": "Zed (Default)",
+  "edit_predictions": {
+    "disabled_globs": [
+      "**/node_modules/**",
+      "**/.git/**",
+      "**/.vscode/**",
+      "**/.idea/**",
+      "**/.env*",
+      "**/*.pem",
+      "**/*.key",
+      "**/*.cert",
+      "**/*.crt",
+      "**/secrets.yml"
+    ],
+    "mode": "subtle"
+  },
+  "vim_mode": true,
+  "autosave": "on_focus_change",
+  "ui_font_family": "SF Pro Text",
+  "ui_font_size": 14,
+  "buffer_font_family": "BerkeleyMono Nerd Font",
+  "buffer_font_size": 16,
+  "buffer_line_height": { "custom": 1.75 },
+  "wrap_guides": [80, 120],
+  "ui_font_features": {
+    "calt": true
+  },
+  "scrollbar": {
+    "show": "never"
+  },
+  "buffer_font_features": {
+    "calt": false,
+    "liga": true
+  },
+  "soft_wrap": "none",
+  "cursor_blink": false,
+  "current_line_highlight": "none",
+  "show_edit_predictions": true,
+  "show_completions_on_input": true,
+  "inlay_hints": { "enabled": false },
+  "format_on_save": "off",
+  "use_on_type_format": false,
+  "relative_line_numbers": true,
+  "gutter": {
+    "line_numbers": true,
+    "folds": false,
+    "runnables": false,
+    "code_actions": false
+  },
+  "lsp": {
+    "deno": {
+      "settings": {
+        "deno": {
+          "enable": true
+        }
+      }
+    }
+  },
+  "languages": {
+    "TypeScript": {
+      "language_servers": [
+        "deno",
+        "!typescript-language-server",
+        "!vtsls",
+        "!eslint"
+      ],
+      "formatter": "language_server",
+      "code_actions_on_format": {
+        "source.fixAll.eslint": true
+      }
+    },
+    "TSX": {
+      "language_servers": [
+        "deno",
+        "!typescript-language-server",
+        "!vtsls",
+        "!eslint"
+      ],
+      "formatter": "language_server"
+    },
+    "pyright": {
+      "settings": {
+        "python.analysis": {
+          "typeCheckingMode": "basic"
+        },
+        "python": {
+          "pythonPath": "venv/bin/python"
+        }
+      }
+    },
+    "Markdown": {
+      "preferred_line_length": 80
+    },
+    "JSON": {
+      "prettier": {
+        "allowed": true,
+        "parser": "json"
+      }
+    },
+    "Ruby": {
+      "language_servers": ["ruby-lsp", "!solargraph", "!rubocop"]
+    }
+  },
+  "collaboration_panel": {
+    "button": false
+  },
+  "tab_bar": {
+    "show": false
+  },
+  "project_panel": {
+    "show_diagnostics": "all",
+    "scrollbar": {
+      "show": "never"
+    }
+  },
+  "terminal": {
+    "dock": "bottom",
+    "font_size": 14,
+    "font_family": "BerkeleyMono Nerd Font",
+    "env": {
+      "GIT_EDITOR": "zed --wait"
+    }
+  },
+  "theme": {
+    "mode": "system",
+    "light": "Gruvbox Dark",
+    "dark": "Gruvbox Dark"
+  },
+  "indent_guides": {
+    "enabled": false
+  },
+  "preview_tabs": {
+    "enabled": false,
+    "enable_preview_from_code_navigation": true
+  },
+  "git": {
+    "git_gutter": "tracked_files",
+    "inline_blame": {
+      "enabled": false
+    }
+  },
+  "context_servers": {
+    "memory": {
+      "command": {
+        "path": "/home/gustavo-santos/.nix-profile/bin/npx",
+        "args": ["-y", "@modelcontextprotocol/server-memory"],
+        "env": {}
+      },
+      "settings": {}
+    },
+    "postgres-context-server": {
+      "settings": {
+        "database_url": "postgres://teleport@localhost:53189/prod"
+      }
+    }
+  },
+  "features": {
+    "edit_prediction_provider": "zed"
+  },
+  "assistant": {
+    "default_model": {
+      "provider": "zed.dev",
+      "model": "claude-3-7-sonnet-latest"
+    },
+    "version": "2",
+    "enable_experimental_live_diffs": true
+  }
+}

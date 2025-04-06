@@ -1,0 +1,152 @@
+// Zed keymap
+//
+// For information on binding keys, see the Zed
+// documentation: https://zed.dev/docs/key-bindings
+//
+// To see the default key bindings run `zed: open default keymap`
+// from the command palette.
+[
+  {
+    "context": "Workspace",
+    "bindings": {
+      "ctrl-\\": "terminal_panel::ToggleFocus",
+      "ctrl-shift-f": "project_search::ToggleFocus",
+    }
+  },
+  {
+    "context": "Extension || (Workspace &&  vim_mode == normal && !VimWaiting && !VimCount)",
+    "bindings": {
+      "-": "workspace::ToggleLeftDock",
+      "space b": "tab_switcher::Toggle",
+      "space o": "file_finder::Toggle"
+    }
+  },
+  {
+    "context": "ProjectSearchBar || ProjectSearchView",
+    "bindings": {
+      "escape": "project_search::ToggleFocus",
+      "ctrl-c": "project_search::ToggleFocus"
+    }
+  },
+  {
+    "context": "Editor && showing_completions && vim_mode == insert",
+    "bindings": {
+      "ctrl-y": "editor::ComposeCompletion"
+    }
+  },
+  {
+    "context": "Editor && !showing_completions && !edit_prediction && vim_mode == insert",
+    "bindings": {
+      "ctrl-space": "editor::ShowCompletions",
+      "alt-l": "editor::ShowEditPrediction"
+    }
+  },
+  {
+    "context": "Editor && edit_prediction && !showing_completions && vim_mode == insert",
+    "bindings": {
+      "alt-l": "editor::AcceptEditPrediction"
+    }
+  },
+  {
+    "context": "Editor && edit_prediction_conflict && !showing_completions && vim_mode == insert",
+    "bindings": {
+      "alt-l": "editor::AcceptEditPrediction"
+    }
+  },
+  {
+    "context": "Editor && VimControl && !VimWaiting && !menu",
+    "bindings": {
+      "ctrl-w z": "workspace::ToggleZoom",
+      // Navigation
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-l": "workspace::ActivatePaneRight",
+      "ctrl-k": "workspace::ActivatePaneUp",
+      "ctrl-j": "workspace::ActivatePaneDown",
+      "space w s": "pane::SplitLeft",
+      "space w shift-s": "pane::SplitDown",
+      "space q": "pane::CloseAllItems",
+      "ctrl-w s": "pane::SplitLeft",
+      "ctrl-w ctrl-s": "pane::SplitLeft",
+      "ctrl-w shift-s": "pane::SplitDown",
+      "ctrl-\\": "terminal_panel::ToggleFocus",
+      "-": "pane::RevealInProjectPanel",
+
+      "alt-k": "editor::MoveLineUp",
+      "alt-j": "editor::MoveLineDown",
+
+      "g .": "editor::ToggleCodeActions",
+      "g r": "editor::Rename",
+      "g shift-r": "editor::FindAllReferences"
+    }
+  },
+  {
+    "context": "ProjectPanel",
+    "bindings": {
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-l": "workspace::ActivatePaneRight",
+      "ctrl-k": "workspace::ActivatePaneUp",
+      "ctrl-j": "workspace::ActivatePaneDown"
+    }
+  },
+  {
+    "context": "ProjectPanel && not_editing",
+    "bindings": {
+      "-": "workspace::ToggleLeftDock"
+    }
+  },
+  {
+    "context": "Editor && vim_mode == normal && !VimWaiting && !VimCount",
+    "bindings": {
+      "space o": "file_finder::Toggle",
+      "space b": "tab_switcher::Toggle",
+      "space l": "pane::DeploySearch",
+      "space z": "buffer_search::Deploy",
+      "space space": "pane::AlternateFile",
+      "0": ["vim::StartOfLine", { "display_lines": true }],
+      "$": ["vim::EndOfLine", { "display_lines": true }]
+    }
+  },
+  {
+    "context": "Editor && vim_mode == normal",
+    "bindings": {
+      "g c c": "editor::ToggleComments",
+      "space t f": ["task::Spawn", { "task_name": "Test file" }]
+    }
+  },
+  {
+    "context": "Editor && vim_mode == visual",
+    "bindings": {
+      "g c": "editor::ToggleComments"
+    }
+  },
+  {
+    "context": "FileFinder",
+    "bindings": {
+      "ctrl-s": "pane::SplitRight",
+      "ctrl-shift-s": "pane::SplitDown",
+      "ctrl-d": "pane::CloseActiveItem"
+    }
+  },
+  {
+    "context": "TabSwitcher",
+    "bindings": {
+      "ctrl-d": "tab_switcher::CloseSelectedItem"
+    }
+  },
+  {
+    "context": "Terminal",
+    "bindings": {
+      "ctrl-\\": "workspace::ToggleBottomDock",
+      "ctrl-u": "terminal::Clear"
+    }
+  },
+  {
+    "context": "Dock",
+    "bindings": {
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-l": "workspace::ActivatePaneRight",
+      "ctrl-k": "workspace::ActivatePaneUp",
+      "ctrl-j": "workspace::ActivatePaneDown"
+    }
+  }
+]
