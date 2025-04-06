@@ -1,7 +1,7 @@
 # Berkeley Mono
 font-family = BerkeleyMono Nerd Font
 font-feature = -calt, +liga, -dlig.
-font-size = 12
+font-size = 13
 
 # Mono Lisa
 # font-family = MonoLisa Nerd Font
@@ -27,8 +27,8 @@ cursor-invert-fg-bg = true
 theme = jellybeans
 gtk-titlebar = false
 background-opacity = 1
-window-padding-x = 8
-window-padding-y = 8
+# window-padding-x = 8
+# window-padding-y = 8
 custom-shader = false
 # custom-shader = ~/.config/ghostty/shaders/crt-shader-with-chromatic-aberration-glow-scanlines-dot-matrix.glsl
 # custom-shader-animation=true
