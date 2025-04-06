@@ -1,0 +1,151 @@
+[user]
+  name = Gustavo Santos
+
+[alias]
+  aa            = add --all
+  az		    = "!git ls-files -m -o --exclude-standard | fzf --print0 -m | xargs -0 -t -o git add"
+  b             = branch
+  c             = commit
+  co            = checkout
+  cb	       	= "!. ~/.githelpers && checkout_git_branch"
+  st            = status
+  s             = status --short
+  d             = diff
+  ds            = diff --staged
+  dw            = diff --color-words
+  dh1           = diff HEAD~1
+  l             = log --color --abbrev-commit --branches --graph --date=relative --format='%C(auto,yellow)%<(12,trunc)%ar%C(auto,reset) %C(auto,green)%<(10)%h%C(auto,reset) %C(auto,blue)%<(20)%an%C(auto,reset) %s'
+  lg            = log --color --graph --abbrev-commit --branches --date=relative --pretty=format:'%C(red)%h%C(reset) -%C(yellow)%d%C(reset) %s %C(green)(%cr) %C(bold blue)<%an>%C(reset)'
+  ll		    = log --pretty=deploy
+  lz		    = log --graph --oneline
+  rh            = reset --hard
+  dft           = difftool
+  undo          = reset --soft HEAD~1
+  compress	    = gc --aggressive --prune=now
+  tags          = tag -l
+  amend         = commit --amend --reuse-message=HEAD --no-verify
+  contributors  = shortlog --summary --numbered
+  export        = archive --format=zip --output=repo.zip HEAD
+  su            = submodule update --init --recursive
+  conflict	    = !nvim +DiffviewOpen
+  dash		    = !gh dash
+  nuke		    = !git clean -fd && git reset --hard
+  w		        = worktree
+  wa		    = worktree add
+  wl		    = worktree list --porcelain
+
+  h             = !git head
+  hp            = "!. ~/.githelpers && show_git_head"
+  r             = !GIT_NO_PAGER=1 git l -30 -- .
+  ra            = !git r --all
+  l             = "!. ~/.githelpers && pretty_git_log"
+  la            = !git l --all
+  b             = "!. ~/.githelpers && pretty_git_branch"
+  bs            = !git checkout $(git branch | fzf)
+  ski           = !git stash --keep-index
+  lcom		    = !git-diff-list-commits
+  drev		    = !git-diff
+  lazy		    = !lazygit
+
+[gpg]
+  format = ssh
+
+[gpg "ssh"]
+  program = "/opt/1Password/op-ssh-sign"
+
+[commit]
+  gpgsign = false
+  template = ~/.gitmessage
+
+[github]
+  user = gustavofsantos
+
+[core]
+  editor = nvim
+  pager = delta
+
+[merge]
+  conflictstyle = diff3
+
+[interactive]
+    diffFilter = delta --color-only
+
+[pretty]
+  default = format:"%C(yellow)%h %C(blue)%cs %C(reset)%s%C(red)%d %C(green)%an%C(reset), %C(cyan)%ar'"
+  deploy = format:"%h  %cs  %<(24,trunc)%an  %s"
+
+[push]
+  config = default
+  default = current
+
+[pull]
+  rebase = true
+
+[diff]
+  ; tool = difftastic
+  colorMoved = default
+
+[difftool]
+  prompt = false
+
+[difftool "difftastic"]
+  cmd = difft "$LOCAL" "$REMOTE"
+
+[pager]
+  difftool = true
+
+[rerere]
+  enabled = true
+
+[branch]
+  autosetuprebase = always
+
+[color]
+  diff = auto
+  status = auto
+  branch = auto
+  interactive = auto
+  ui = true
+  pager = true
+
+[color "branch"]
+  current = yellow reverse
+  local   = yellow
+  remote  = green
+
+[color "diff"]
+  meta = blue
+  frag = magenta
+  old  = red
+  new  = green
+
+[color "status"]
+  added = yellow
+  changed = green
+  untracked = blue
+
+[init]
+  defaultBranch = main
+
+[delta]
+  features = side-by-side line-numbers
+  syntax-theme = Kanagawa
+  true-color = always
+  navigate = true
+
+[delta "decorations"]
+  commit-decoration-style = bold yellow box ul
+  file-style = bold yellow ul
+  file-decoration-style = none
+  hunk-header-decoration-style = yellow box
+
+[include]
+  path = ~/.gitconfig.local
+  path = ~/.gitthemes
+
+[credential "https://github.com"]
+  helper =
+  helper = !/usr/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+  helper =
+  helper = !/usr/bin/gh auth git-credential
