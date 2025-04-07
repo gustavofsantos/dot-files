@@ -46,8 +46,8 @@ alias nxe="nix-env"
 alias ls="eza --icons -w 80"
 alias lza="eza --icons -1 -a -l --total-size"
 alias zj="zellij"
-alias eee="sesh connect \$(sesh l -c -i | gum filter --limit 1 --placeholder 'Choose a session' --height 10 --prompt='⚡')"
-alias GO="z \$(zoxide query --list | gum filter --limit 1 --placeholder 'Go to')"
+alias eee="tmux-sessionizer"
+alias GO="z \$(zoxide query --list | fzf)"
 
 if [ -e "$HOME/.cargo/env" ]; then . "$HOME/.cargo/env";  fi
 if [ -e "$HOME/.deno/env" ]; then . "$HOME/.deno/env"; fi
