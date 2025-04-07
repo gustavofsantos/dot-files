@@ -1,6 +1,6 @@
-vim.opt.termguicolors = true
-vim.g.colorscheme = "jellybeans"
 vim.opt.background = "dark"
+vim.cmd.colorscheme("jellybeans")
+vim.opt.termguicolors = true
 vim.opt.hidden = true
 vim.opt.encoding = "utf-8"
 vim.opt.number = true
