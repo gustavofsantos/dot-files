@@ -24,6 +24,7 @@ function M.setup()
     use_lowcolor_black = vim.g.jellybeans_use_lowcolor_black or false,
     use_gui_italics = vim.g.jellybeans_use_gui_italics == nil and true or vim.g.jellybeans_use_gui_italics,
     use_term_italics = vim.g.jellybeans_use_term_italics or false,
+    display_cursor_line = vim.g.jellybeans_display_cursor_line ~= nil and vim.g.jellybeans_display_cursor_line or true,
     overrides = vim.g.jellybeans_overrides or {},
   }
 
@@ -108,7 +109,7 @@ function M.setup()
     Normal = { fg = colors.foreground, bg = colors.background },
     NormalFloat = { fg = colors.foreground, bg = colors.background },
     Cursor = { fg = colors.background, bg = "#b0d0f0" },
-    CursorLine = { bg = colors.cursor_line },
+    CursorLine = { bg = config.display_cursor_line and colors.cursor_line or 'NONE' },
     CursorColumn = { bg = colors.cursor_line },
     ColorColumn = { bg = "#000000" },
 
@@ -268,6 +269,7 @@ function M.setup()
     ["@repeat"] = { link = "Repeat" },
     ["@label"] = { link = "Label" },
     ["@operator"] = { link = "Operator" },
+    ["@property"] = { fg = "#e8e8d3" },
     ["@keyword"] = { link = "Keyword" },
     ["@exception"] = { link = "Exception" },
     ["@variable"] = { link = "Identifier" },
