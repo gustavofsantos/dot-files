@@ -33,10 +33,11 @@ return {
   },
   { "echasnovski/mini.move",      version = '*',     event = "BufRead", opts = {} },
   { "echasnovski/mini.bracketed", version = '*',     event = "BufRead", opts = {} },
-  { 'echasnovski/mini.ai',        version = '*',     event = "BufRead", opts = {} },
+  { "echasnovski/mini.ai",        version = '*',     event = "BufRead", opts = {} },
   { "numToStr/Comment.nvim",      event = "BufRead", opts = {} },
   {
     'saghen/blink.cmp',
+    enabled = false,
     dependencies = {
       'rafamadriz/friendly-snippets',
     },

@@ -28,26 +28,24 @@ return {
         }
       }
     },
+    "hrsh7th/nvim-cmp",
     "b0o/schemastore.nvim",
     "nvim-telescope/telescope.nvim",
   },
   config = function()
     local mason = require("mason")
     local mason_lspconfig = require("mason-lspconfig")
+    local capabilities = require("cmp_nvim_lsp").default_capabilities()
 
     mason.setup()
     mason_lspconfig.setup({
       ensure_installed = {
         "lua_ls",
         "vtsls",
-        "denols",
         "pyright",
         "dockerls",
         "sqlls",
         "docker_compose_language_service",
-        -- "eslint",
-        "jsonls",
-        "yamlls",
         "vimls",
         "bashls",
       },
@@ -55,13 +53,14 @@ return {
 
     mason_lspconfig.setup_handlers({
       function(server_name)
-        require("lspconfig")[server_name].setup({})
+        require("lspconfig")[server_name].setup({ capabilities = capabilities })
       end,
       ["lua_ls"] = function()
-        require("lspconfig").lua_ls.setup({})
+        require("lspconfig").lua_ls.setup({ capabilities = capabilities })
       end,
       ["jsonls"] = function()
         require("lspconfig").jsonls.setup({
+          capabilities = capabilities,
           settings = {
             json = {
               schemas = require("schemastore").json.schemas(),
@@ -72,6 +71,7 @@ return {
       end,
       ["yamlls"] = function()
         require("lspconfig").yamlls.setup({
+          capabilities = capabilities,
           settings = {
             yaml = {
               schemaStore = {
@@ -85,11 +85,15 @@ return {
       end,
       ["pyright"] = function()
         local lspconfig = require("lspconfig")
+        local is_loggi_web = vim.fn.getcwd():match("loggi/web")
         lspconfig.pyright.setup({
+          capabilities = capabilities,
           settings = {
             python = {
               analysis = {
                 typeCheckingMode = "basic",
+                extraPaths = is_loggi_web and { "/var/lib/docker/volumes/web_python_site_packages/_data" } or nil,
+                useLibraryCodeForTypes = true,
               },
             },
           },
@@ -98,6 +102,7 @@ return {
       ["vtsls"] = function()
         local lspconfig = require("lspconfig")
         lspconfig.vtsls.setup({
+          capabilities = capabilities,
           root_dir = lspconfig.util.root_pattern("package.json"),
           single_file_support = false
         })
@@ -105,11 +110,11 @@ return {
       ["denols"] = function()
         local lspconfig = require("lspconfig")
         lspconfig.denols.setup({
+          capabilities = capabilities,
           root_dir = lspconfig.util.root_pattern("deno.json", "deno.jsonc"),
         })
       end,
       -- disable the kotlin language server
-      -- lets be wild
       -- ["kotlin_language_server"] = nil
     })
 

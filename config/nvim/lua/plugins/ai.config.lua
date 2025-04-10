@@ -1,13 +1,11 @@
-local is_copilot_enabled = function()
-  return os.getenv("IS_COPILOT_ENABLED") == "1"
-end
+local utils = require("utils")
 
 return {
   {
     "zbirenbaum/copilot.lua",
     cmd = "Copilot",
     event = "InsertEnter",
-    enabled = is_copilot_enabled,
+    enabled = utils.is_copilot_enabled,
     config = function()
       require("copilot").setup({
         filetypes = {
@@ -23,38 +21,24 @@ return {
           typescriptreact = true,
           ["*"] = false,
         },
-        suggestion = {
-          enabled = true,
-          auto_trigger = true,
-          debounce = 200,
-          hide_during_completion = true,
-          keymap = {
-            accept = "<M-l>",
-            accept_word = false,
-            accept_line = false,
-            next = "<M-]>",
-            prev = "<M-[>",
-            dismiss = "<C-]>",
-          },
-        },
-        panel = {
-          enabled = true,
-          auto_refresh = true,
-          keymap = {
-            jump_prev = "[[",
-            jump_next = "]]",
-            accept = "<CR>",
-            refresh = "gr",
-            open = "<C-space>"
-          },
-        },
-        copilot_node_command = is_copilot_enabled() and vim.fn.expand("$HOME") .. "/.nix-profile/bin/node" or nil,
+        suggestion = { enabled = false },
+        panel = { enabled = false },
+        copilot_node_command = utils.is_copilot_enabled() and vim.fn.expand("$HOME") .. "/.nix-profile/bin/node" or nil,
       })
     end,
   },
   {
+    "olimorris/codecompanion.nvim",
+    config = true,
+    enabled = false,
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+      "nvim-treesitter/nvim-treesitter",
+    },
+  },
+  {
     "yetone/avante.nvim",
-    enabled = is_copilot_enabled,
+    enabled = false,
     event = "BufRead",
     version = "*",
     build = "make",

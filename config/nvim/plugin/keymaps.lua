@@ -39,4 +39,4 @@ set(n, "<leader>;g", "<cmd>GlobalBookmarks<CR>", { desc = "All bookmarks" })
 
 set(n, "-", "<cmd>Oil<CR>", { noremap = true, silent = true, desc = "File explorer" })
 
-
+set(v, "<C-i>", "<cmd>CodeCompanionActions<CR>", { noremap = true, silent = true, desc = "Code companion" })

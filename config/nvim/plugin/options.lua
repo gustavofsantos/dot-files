@@ -1,10 +1,12 @@
 vim.opt.background = "dark"
 vim.cmd.colorscheme("jellybeans")
-vim.opt.termguicolors = true
+vim.opt.inccommand = "split"
+vim.opt.ignorecase = true
+vim.opt.smartcase = true
+vim.opt.number = false
+vim.opt.relativenumber = false
 vim.opt.hidden = true
 vim.opt.encoding = "utf-8"
-vim.opt.number = true
-vim.opt.relativenumber = true
 vim.opt.hidden = true
 vim.opt.ai = true
 vim.opt.si = true
@@ -16,14 +18,10 @@ vim.opt.laststatus = 2
 vim.opt.expandtab = true
 vim.opt.smarttab = true
 vim.opt.cindent = true
-vim.opt.shell = "zsh"
 vim.opt.backup = true
 vim.opt.backupdir = { vim.fn.expand('$HOME/.local/share/nvim/backups') }
 vim.opt.backupskip = { "/tmp/*", "/private/tmp/*" }
 vim.opt.writebackup = true
-vim.opt.inccommand = "split"
-vim.opt.ignorecase = true
-vim.opt.smartcase = true
 vim.opt.breakindent = true
 vim.opt.backspace = "start,eol,indent"
 vim.opt.wrap = false
@@ -45,18 +43,21 @@ vim.opt.wildmode = "longest,full"
 vim.opt.updatetime = 100
 vim.opt.splitright = true
 vim.opt.splitbelow = true
-vim.opt.signcolumn = "no"
+vim.opt.signcolumn = "yes"
+vim.opt.shada = { "'10", "<0", "s10", "h" }
 vim.opt.cursorline = true
+vim.opt.clipboard = "unnamedplus"
 vim.opt.swapfile = false
 vim.opt.showtabline = 1
 vim.opt.winbar = ""
+vim.opt.title = true
+vim.opt.titlestring = '%t%( %M%)%( (%{expand("%:~:h")})%)%a (nvim)'
 -- vim.opt.mouse = "nv"
 vim.opt.colorcolumn = "80,100"
 
 vim.opt.path:append({ "**" })
 vim.opt.wildignore:append({ "*/node_modules/*" })
 vim.opt.formatoptions:append({ "r" })
-vim.opt.clipboard:append({ "unnamedplus" })
 vim.opt.shortmess:append({
   I = false, -- No splash screen
   W = false, -- Don't print "written" when editing

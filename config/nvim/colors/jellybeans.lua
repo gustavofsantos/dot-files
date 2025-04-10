@@ -107,7 +107,7 @@ function M.setup()
   local groups = {
     -- Editor UI
     Normal = { fg = colors.foreground, bg = colors.background },
-    NormalFloat = { fg = colors.foreground, bg = colors.background },
+    NormalFloat = { fg = colors.foreground, bg = "#000000" },
     Cursor = { fg = colors.background, bg = "#b0d0f0" },
     CursorLine = { bg = config.display_cursor_line and colors.cursor_line or 'NONE' },
     CursorColumn = { bg = colors.cursor_line },
@@ -115,7 +115,7 @@ function M.setup()
 
     LineNr = { fg = colors.line_nr, bg = colors.background },
     CursorLineNr = { fg = "#ccc5c4" },
-    SignColumn = { fg = "#777777", bg = "#333333" },
+    SignColumn = { fg = "#777777", bg = colors.background },
 
     VertSplit = { fg = "#777777", bg = colors.background },
     WinSeparator = { link = "VertSplit" },
