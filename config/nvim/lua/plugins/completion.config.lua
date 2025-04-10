@@ -10,6 +10,7 @@ return {
       "hrsh7th/cmp-buffer",
       "hrsh7th/cmp-path",
       "hrsh7th/cmp-cmdline",
+      "onsails/lspkind.nvim",
       "L3MON4D3/LuaSnip",
       "saadparwaiz1/cmp_luasnip",
       {
@@ -20,6 +21,7 @@ return {
     },
     config = function()
       local cmp = require("cmp")
+      local lspkind = require('lspkind')
       local cmp_mappings = {
         ["<C-d>"] = cmp.mapping.scroll_docs(-4),
         ["<C-u>"] = cmp.mapping.scroll_docs(4),
@@ -29,6 +31,12 @@ return {
         ["<C-p>"] = cmp.mapping.select_prev_item(),
         ["<C-n>"] = cmp.mapping.select_next_item(),
       }
+
+      lspkind.init({
+        symbol_map = {
+          Copilot = "",
+        },
+      })
 
       if utils.is_copilot_enabled() then
         require("copilot_cmp").setup()
@@ -43,11 +51,17 @@ return {
             require("luasnip").lsp_expand(args.body)
           end,
         },
+        formatting = {
+          format = lspkind.cmp_format({
+            mode = "symbol"
+          }),
+        },
         window = {
           documentation = cmp.config.window.bordered({
             scrolloff = 2,
             side_padding = 2,
             max_height = 10,
+            max_width = 80,
           }),
         },
         mapping = cmp_mappings,
