@@ -53,7 +53,7 @@ return {
         },
         formatting = {
           format = lspkind.cmp_format({
-            mode = "symbol"
+            mode = "symbol",
           }),
         },
         window = {
@@ -69,7 +69,7 @@ return {
           max_view_entries = 20,
         },
         sources = {
-          { name = "copilot",  max_item_count = 3,  priority = 10 },
+          { name = "copilot",  max_item_count = 3,  priority = 5 },
           { name = "luasnip",  max_item_count = 2,  priority = 10 },
           { name = "nvim_lsp", max_item_count = 10, priority = 5 },
           { name = "nvim_lua", max_item_count = 4,  keyword_length = 2, priority = 2 },
