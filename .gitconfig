@@ -3,7 +3,7 @@
 
 [alias]
   aa            = add --all
-  az		    = "!git ls-files -m -o --exclude-standard | fzf --print0 -m | xargs -0 -t -o git add"
+  az		= "!git ls-files -m -o --exclude-standard | fzf --print0 -m | xargs -0 -t -o git add"
   b             = branch
   c             = commit
   co            = checkout
@@ -65,7 +65,7 @@
   pager = delta
 
 [merge]
-  conflictstyle = diff3
+  conflictstyle = zdiff3
 
 [interactive]
     diffFilter = delta --color-only
@@ -81,18 +81,9 @@
 [pull]
   rebase = true
 
-[diff]
-  ; tool = difftastic
-  colorMoved = default
-
-[difftool]
-  prompt = false
-
-[difftool "difftastic"]
-  cmd = difft "$LOCAL" "$REMOTE"
-
 [pager]
   difftool = true
+  blame = true
 
 [rerere]
   enabled = true
@@ -128,9 +119,11 @@
   defaultBranch = main
 
 [delta]
-  features = side-by-side line-numbers
+  ; features = side-by-side
   syntax-theme = Kanagawa
   true-color = always
+  line-numbers = true
+  hyperlinks = true
   navigate = true
 
 [delta "decorations"]
