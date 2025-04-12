@@ -38,14 +38,7 @@ return {
   {
     "vim-test/vim-test",
     dependencies = { "christoomey/vim-tmux-runner" },
-    event = "BufRead",
-    keys = {
-      { "<leader>tn", "<cmd>TestNearest<cr>", noremap = true, silent = true },
-      { "<leader>tf", "<cmd>TestFile<cr>", noremap = true, silent = true },
-      { "<leader>ta", "<cmd>TestSuite<cr>", noremap = true, silent = true },
-      { "<leader>tl", "<cmd>TestLast<cr>", noremap = true, silent = true },
-      { "<leader>tv", "<cmd>TestVisit<cr>", noremap = true, silent = true },
-    },
+    cmd = { "TestFile", "TestNearest", "TestSuite", "TestLast" },
     config = function()
       if vim.env.TMUX then
         vim.cmd([[let test#strategy = "vtr"]])

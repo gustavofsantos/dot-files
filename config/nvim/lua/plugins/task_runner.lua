@@ -1,12 +1,6 @@
 return {
   "stevearc/overseer.nvim",
   event = "VeryLazy",
-  keys = {
-    { "<leader>r", "<cmd>OverseerRun<cr>" },
-    { "<CR>", "<cmd>OverseerRun super\\ run<CR>" },
-    { "<M-CR>", "<cmd>OverseerRestartLast<CR>" },
-    { "<C-\\>", "<cmd>OverseerToggle<CR>" },
-  },
   config = function()
     local overseer = require("overseer")
     local overseer_constants = require("overseer.constants")

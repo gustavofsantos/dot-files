@@ -41,11 +41,6 @@ return {
             return {}
           end
 
-          vim.api.nvim_set_hl(0, "NeotestPassed", { fg = colors.theme.diff.add })
-          vim.api.nvim_set_hl(0, "NeotestRunning", { fg = colors.theme.diff.text })
-          vim.api.nvim_set_hl(0, "NeotestFailed", { fg = colors.theme.diff.delete })
-
-
           return {
             Constant = { fg = colors.palette.fujiWhite },
 
@@ -87,44 +82,9 @@ return {
           }
         end,
       })
-
-      vim.cmd.colorscheme('kanagawa')
     end,
   },
-  {
-    "gbprod/nord.nvim",
-    lazy = false,
-    priority = 1000,
-    enabled = false,
-    config = function()
-      require("nord").setup({
-        transparent = true
-      })
-      vim.cmd.colorscheme("nord")
-    end,
-  },
-  {
-    'maxmx03/solarized.nvim',
-    lazy = false,
-    enabled = false,
-    priority = 1000,
-    ---@type solarized.config
-    opts = {},
-    config = function(_, opts)
-      vim.o.termguicolors = true
-
-      require('solarized').setup(opts)
-      vim.cmd.colorscheme('solarized')
-    end,
-  },
-  {
-    'datsfilipe/vesper.nvim',
-    lazy = false,
-    enabled = false,
-    priority = 1000,
-    config = function()
-      require('vesper').setup({})
-      vim.cmd([[colorscheme vesper]])
-    end
-  },
+  { "zenbones-theme/zenbones.nvim", dependencies = "rktjmp/lush.nvim" },
+  { "gbprod/nord.nvim" },
+  { 'datsfilipe/vesper.nvim' },
 }

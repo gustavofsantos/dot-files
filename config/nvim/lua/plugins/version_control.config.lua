@@ -12,13 +12,9 @@ return {
       "nvim-telescope/telescope.nvim",
     },
     event = "BufRead",
-    keys = {
-      { "]h", "<cmd>Gitsigns next_hunk<cr>", desc = "Next hunk" },
-      { "[h", "<cmd>Gitsigns prev_hunk<cr>", desc = "Previous hunk" },
-    },
     config = function()
       require("gitsigns").setup({
-        signcolumn = false,
+        signcolumn = true,
         numhl = false,
         linehl = false,
         attach_to_untracked = false,

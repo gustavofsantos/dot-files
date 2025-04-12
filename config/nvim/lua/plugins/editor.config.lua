@@ -58,12 +58,6 @@ return {
     "numToStr/Navigator.nvim",
     event = "VeryLazy",
     opts = {},
-    keys = {
-      { "<C-h>", "<cmd>NavigatorLeft<cr>" },
-      { "<C-l>", "<cmd>NavigatorRight<cr>" },
-      { "<C-k>", "<cmd>NavigatorUp<cr>" },
-      { "<C-j>", "<cmd>NavigatorDown<cr>" },
-    }
   },
   {
     "echasnovski/mini.hipatterns",
@@ -84,7 +78,6 @@ return {
     version = false,
     dependencies = {
       "nvim-treesitter/nvim-treesitter-textobjects",
-      "nvim-treesitter/nvim-tree-docs",
       "windwp/nvim-ts-autotag",
     },
     config = function()
@@ -105,7 +98,26 @@ return {
           enable_close = true,
           enable_close_on_slash = true,
         },
-        tree_docs = { enable = false },
+        textobjects = {
+          select = {
+            lookahead = true,
+            keymaps = {
+              ["af"] = "@function.outer",
+              ["if"] = "@function.inner",
+              ["ac"] = "@class.outer",
+              ["ic"] = { query = "@class.inner", desc = "Select inner part of a class region" },
+            },
+          },
+          lsp_interop = {
+            enable = true,
+            border = 'none',
+            floating_preview_opts = {},
+            peek_definition_code = {
+              ["<leader>df"] = "@function.outer",
+              ["<leader>dF"] = "@class.outer",
+            },
+          },
+        }
       })
     end,
   }
