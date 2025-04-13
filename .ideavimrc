@@ -38,26 +38,28 @@ set nohlsearch
 
 """ mappings --------------------------------
 " Common LSP mappings
-map gd <Action>(GotoDeclaration)
-map gi <Action>(GotoImplementation)
-map gR <Action>(RenameElement)
-map g. <Action>(ShowIntentionActions)
-map K <Action>(QuickDocumentation)
+nmap gd <Action>(GotoDeclaration)<CR>
+nmap gi <Action>(GotoImplementation)<CR>
+nmap gR <Action>(RenameElement)<CR>
+nmap g. <Action>(ShowIntentionActions)<CR>
+nmap K <Action>(QuickDocumentation)<CR>
 
 
 " Editor mappings
-map <leader><leader> <C-^>
-map <leader>p <Action>(GotoAction)
-map <leader>o <Action>(GotoFile)
-map <leader>e <Action>(RecentFiles)
-map <leader>b <Action>(RecentFiles)
-map <leader>l <Action>(FindInPath)
-map <leader>ws <Action>(SplitVertically)
-map <leader>wS <Action>(SplitHorizontally)
-map <leader>rc <Action>(RunClass)
+nmap <leader><leader> <C-^>
+nmap <leader>p <Action>(GotoAction)<CR>
+nmap <leader>o <Action>(GotoFile)<CR>
+nmap <leader>e <Action>(RecentFiles)<CR>
+nmap <leader>b <Action>(RecentFiles)<CR>
+nmap <leader>l <Action>(FindInPath)<CR>
+
+nmap <leader>ws <Action>(SplitVertically)<CR>
+nmap <leader>wS <Action>(SplitHorizontally)<CR>
+nmap <leader>wq <Action>(CloseAllEditors)<CR>
+map <leader>rc <Action>(RunClass)<CR>
 map <leader>tl <Action>(Rerun)
-map <M-l> <Action>(copilot.applyInlays)
-map <C-\\> <Action>(ActivateTerminalToolWindow)
+imap <M-l> <Action>(copilot.applyInlays)
+nmap <C-\\> <Action>(ActivateTerminalToolWindow)<CR>
 
 map [[ <Action>(MethodUp)
 map ]] <Action>(MethodDown)
@@ -68,20 +70,6 @@ nmap <C-h> <C-w>h
 nmap <C-l> <C-w>l
 nmap <C-k> <C-w>k
 nmap <C-j> <C-w>j
-
-" Version control
-map <leader>ghr <Action>(Vcs.RollbackChangedLines)
-
-" project mappings
-map <C-b> :NERDTreeToggle<CR>
-map <leader>ff <Action>(GotoFile)
-map <leader>pa <Action>(GotoAction)
-map <leader>py <Action>(GotoSymbol)
-map <leader>fl <Action>(SearchEverywhere)
-map <leader>fe <Action>(RecentFiles)
-map <leader>fee <Action>(RecentLocations)
-
-""" File mappings ---------------------------
 
 " -- Window and tab mappings
 " Close a window
