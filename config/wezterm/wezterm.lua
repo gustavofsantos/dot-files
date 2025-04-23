@@ -2,23 +2,23 @@ local config = {}
 
 local wezterm = require("wezterm")
 require("navigation").setup()
--- require("keymapping").setup(config)
--- require("statusline").setup()
+require("keymapping").setup(config)
+require("statusline").setup()
 
 
 config.automatically_reload_config = false
 config.force_reverse_video_cursor = true
-config.color_scheme = "Kanagawa"
+config.colors = require("colors.Kanagawa")
 
--- config.font = wezterm.font("MonoLisa Nerd Font")
+config.font = wezterm.font("MonoLisa Nerd Font")
 -- config.font = wezterm.font_with_fallback({
 --     { family = "OperatorMono Nerd Font", weight = "Regular" },
 --     "JetBrains Mono",
 --     "Noto Color Emoji",
 --     "Symbols Nerd Font Mono",
 -- })
-config.font = wezterm.font("BerkeleyMono Nerd Font")
-config.font_size = 12
+-- config.font = wezterm.font("BerkeleyMono Nerd Font")
+config.font_size = 14
 config.max_fps = 120
 config.harfbuzz_features = { "calt=1", "clig=1", "liga=0" }
 
