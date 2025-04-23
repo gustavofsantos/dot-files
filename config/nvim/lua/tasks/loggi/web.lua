@@ -51,6 +51,18 @@ local function register_tasks(overseer)
   })
 
   overseer.register_template({
+    name = "black format",
+    builder = function()
+      return {
+        cmd = { "docker" },
+        args = { "compose", "exec", "-w", "/opt/loggi", "loggi_web_app", "./ops/black.sh", "fix" },
+        cwd = "/opt/loggi/web/",
+        components = { "default" },
+      }
+    end,
+  })
+
+  overseer.register_template({
     name = "loggi web: buildproto",
     builder = function()
       return {

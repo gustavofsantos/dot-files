@@ -1,3 +1,7 @@
+local function is_loggiweb()
+  return vim.fn.expand("%:p:h"):find("/opt/loggi/web/") ~= nil
+end
+
 return {
   "neovim/nvim-lspconfig",
   event = { "BufEnter", "BufReadPre", "BufNewFile" },
@@ -83,21 +87,43 @@ return {
           },
         })
       end,
+      ["ruff"] = function()
+        local lspconfig = require("lspconfig")
+        local config = {}
+        if is_loggiweb() then
+          config.cmd = {"docker", "compose", "exec", "-w", "/opt/loggi/loggi/", "loggi_web_dev", "ruff", "server" }
+        end
+
+        lspconfig.ruff.setup(config)
+      end,
+      ["ruff_lsp"] = function ()
+        local lspconfig = require("lspconfig")
+        local config = {}
+        if is_loggiweb() then
+          config.cmd = {"docker", "compose", "exec", "-w", "/opt/loggi/loggi/", "loggi_web_dev", "ruff-lsp" }
+        end
+
+        lspconfig.ruff_lsp.setup(config)
+      end,
       ["pyright"] = function()
         local lspconfig = require("lspconfig")
-        local is_loggi_web = vim.fn.getcwd():match("loggi/web")
-        lspconfig.pyright.setup({
+        local config = {
           capabilities = capabilities,
           settings = {
             python = {
               analysis = {
                 typeCheckingMode = "basic",
-                extraPaths = is_loggi_web and { "/var/lib/docker/volumes/web_python_site_packages/_data" } or nil,
                 useLibraryCodeForTypes = true,
               },
             },
           },
-        })
+        }
+
+        -- if is_loggiweb() then
+        --   config.cmd = { "docker", "compose", "exec", "-w", "/opt/loggi/loggi/", "loggi_web_dev", "pyright-langserver", "--stdio" }
+        -- end
+
+        lspconfig.pyright.setup(config)
       end,
       ["vtsls"] = function()
         local lspconfig = require("lspconfig")
