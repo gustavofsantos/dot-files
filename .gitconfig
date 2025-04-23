@@ -65,7 +65,7 @@
   pager = delta
 
 [merge]
-  conflictstyle = zdiff3
+  conflictstyle = diff3
 
 [interactive]
     diffFilter = delta --color-only
