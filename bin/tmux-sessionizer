@@ -1,9 +1,21 @@
 #!/usr/bin/env bash
 
+paths=(
+    "$HOME/dot-files"
+    "$HOME/.config/nvim"
+    "$HOME/.config/ghostty"
+)
+
 if [[ $# -eq 1 ]]; then
     selected=$1
 else
-    selected=$(find ~/Projects /opt/loggi /opt/loggi/py/apps /opt/loggi/jvm/apps ~/.config ~/ -mindepth 1 -maxdepth 1 -type d | fzf)
+    selected=$( (
+        tmux ls -F "#{session_name}"
+        for path in "${paths[@]}"; do
+            echo "$path"
+        done
+        find ~/Projects /opt/loggi /opt/loggi/py/apps /opt/loggi/jvm/apps -mindepth 1 -maxdepth 1 -type d
+    ) | gum filter --limit 1 --placeholder 'Choose a session' --height 15 --prompt='⚡')
 fi
 
 if [[ -z $selected ]]; then
@@ -18,7 +30,7 @@ if [[ -z $TMUX ]] && [[ -z $tmux_running ]]; then
     exit 0
 fi
 
-if ! tmux has-session -t=$selected_name 2> /dev/null; then
+if ! tmux has-session -t=$selected_name 2>/dev/null; then
     tmux new-session -ds $selected_name -c $selected
 fi
 
