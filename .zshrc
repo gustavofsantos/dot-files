@@ -30,3 +30,4 @@ eval "$(starship init zsh)"
 eval "$(mise activate zsh)"
 
 if [ -e "$HOME/.zshlocal" ]; then source "$HOME/.zshlocal"; fi
+eval "$(pyenv virtualenv-init -)"
