@@ -1,7 +1,3 @@
-local function is_loggiweb()
-  return vim.fn.expand("%:p:h"):find("/opt/loggi/web/") ~= nil
-end
-
 return {
   "neovim/nvim-lspconfig",
   event = { "BufEnter", "BufReadPre", "BufNewFile" },
@@ -87,24 +83,6 @@ return {
           },
         })
       end,
-      ["ruff"] = function()
-        local lspconfig = require("lspconfig")
-        local config = {}
-        if is_loggiweb() then
-          config.cmd = {"docker", "compose", "exec", "-w", "/opt/loggi/loggi/", "loggi_web_dev", "ruff", "server" }
-        end
-
-        lspconfig.ruff.setup(config)
-      end,
-      ["ruff_lsp"] = function ()
-        local lspconfig = require("lspconfig")
-        local config = {}
-        if is_loggiweb() then
-          config.cmd = {"docker", "compose", "exec", "-w", "/opt/loggi/loggi/", "loggi_web_dev", "ruff-lsp" }
-        end
-
-        lspconfig.ruff_lsp.setup(config)
-      end,
       ["pyright"] = function()
         local lspconfig = require("lspconfig")
         local config = {
@@ -118,10 +96,6 @@ return {
             },
           },
         }
-
-        -- if is_loggiweb() then
-        --   config.cmd = { "docker", "compose", "exec", "-w", "/opt/loggi/loggi/", "loggi_web_dev", "pyright-langserver", "--stdio" }
-        -- end
 
         lspconfig.pyright.setup(config)
       end,
