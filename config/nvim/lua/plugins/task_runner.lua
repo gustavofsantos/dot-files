@@ -1,6 +1,7 @@
 return {
   "stevearc/overseer.nvim",
   event = "VeryLazy",
+  enabled = false,
   config = function()
     local overseer = require("overseer")
     local overseer_constants = require("overseer.constants")

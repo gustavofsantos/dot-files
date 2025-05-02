@@ -37,6 +37,7 @@ end
 return {
   {
     "vim-test/vim-test",
+    enabled = false,
     dependencies = { "christoomey/vim-tmux-runner" },
     cmd = { "TestFile", "TestNearest", "TestSuite", "TestLast" },
     config = function()
@@ -56,9 +57,7 @@ return {
         vim.keymap.set("n", "<leader>tn",
           "<cmd>TestNearest UNLEASH_URL=http://localhost:4242/api APP_DB_HOST=localhost POSTGRES_HOST=localhost POSTGRES_DB=dev_db POSTGRES_PASSWORD=postgres POSTGRES_HOST=localhost POSTGRES_PORT=5432<CR>",
           opts)
-        vim.keymap.set("n", "<leader>tf",
-          "<cmd>TestFile UNLEASH_URL=http://localhost:4242/api APP_DB_HOST=localhost POSTGRES_HOST=localhost POSTGRES_DB=dev_db POSTGRES_PASSWORD=postgres POSTGRES_HOST=localhost POSTGRES_PORT=5432<CR>",
-          opts)
+        vim.keymap.set("n", "<leader>tf","<cmd>TestFile<CR>",opts)
         vim.keymap.set("n", "<leader>ta",
           "<cmd>TestSuite UNLEASH_URL=http://localhost:4242/api APP_DB_HOST=localhost POSTGRES_HOST=localhost POSTGRES_DB=dev_db POSTGRES_PASSWORD=postgres POSTGRES_HOST=localhost POSTGRES_PORT=5432<CR>",
           opts)

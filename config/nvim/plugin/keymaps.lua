@@ -31,6 +31,7 @@ set(v, "<leader>b",
 set(n, "<leader>o", "<cmd>Telescope find_files<CR>", { noremap = true, silent = true, desc = "Find files" })
 set(n, "<leader>b", "<cmd>Telescope buffers<CR>", { noremap = true, silent = true, desc = "Find buffer" })
 set(n, "<leader>l", "<cmd>Telescope live_grep<CR>", { noremap = true, silent = true, desc = "Live grep" })
+set(n, "<leader>t", "<cmd>TermExec cmd=\"testfile %:p\" name=\"testfile\"<CR>", {noremap = true, silent = true, desc = "Test file" })
 set(n, "<leader>f", "<cmd>Telescope current_buffer_fuzzy_find<CR>",
   { noremap = true, silent = true, desc = "Buffer fuzzy find" })
 set(v, "<F3>", '"zy:Telescope grep_string default_text=<C-r>z<cr>',
@@ -50,11 +51,7 @@ set(n, "<leader>;g", "<cmd>GlobalBookmarks<CR>", { desc = "All bookmarks" })
 
 set(n, "-", "<cmd>Oil<CR>", { noremap = true, silent = true, desc = "File explorer" })
 
-
-set(n, "<leader>ro", "<cmd>OverseerRun<cr>", { noremap = true, silent = true })
-set(n, "<leader>rl", "<cmd>OverseerRestartLast<CR>", { noremap = true, silent = true })
-set(n, "<C-\\>", "<cmd>OverseerToggle<CR>", { noremap = true, silent = true })
-
+set(n, "<C-\\>", "<cmd>ToggleTerm<CR>", { noremap = true, silent = true })
 
 set(n, "<leader>tn", "<cmd>TestNearest<cr>", { noremap = true, silent = true })
 set(n, "<leader>tf", "<cmd>TestFile<cr>", {noremap = true, silent = true })
