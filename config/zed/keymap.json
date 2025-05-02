@@ -15,6 +15,12 @@
     }
   },
   {
+    "context": "EmptyPane || SharedScreen || vim_mode == normal",
+    "bindings": {
+      "space t": ["task::Spawn", {"task_name": "testfile", "reveal": "no_focus"} ]
+    }
+  },
+  {
     "context": "Extension || (Workspace &&  vim_mode == normal && !VimWaiting && !VimCount)",
     "bindings": {
       "-": "workspace::ToggleLeftDock",
@@ -111,8 +117,7 @@
   {
     "context": "Editor && vim_mode == normal",
     "bindings": {
-      "g c c": "editor::ToggleComments",
-      "space t f": ["task::Spawn", { "task_name": "Test file" }]
+      "g c c": "editor::ToggleComments"
     }
   },
   {

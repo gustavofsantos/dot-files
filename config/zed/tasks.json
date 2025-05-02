@@ -3,7 +3,7 @@
 // Example:
 [
   {
-    "label": "test file",
+    "label": "testfile",
     "command": "testfile",
     "args": ["$ZED_FILE"]
   }
