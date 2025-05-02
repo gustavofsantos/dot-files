@@ -3,12 +3,8 @@
 // Example:
 [
   {
-    "label": "Run file",
-    "command": "./$ZED_FILE"
-  },
-  {
-    "label": "loggi web: test file",
-    "command": "docker",
-    "args": ["compose", "exec", "-e", "DJANGO_SETTINGS_MODULE=settings.test", "loggi_web_app", "pytest", "--", "$ZED_FILE"]
+    "label": "test file",
+    "command": "testfile",
+    "args": ["$ZED_FILE"]
   }
 ]

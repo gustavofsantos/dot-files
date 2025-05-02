@@ -7,10 +7,11 @@
 // from the command palette.
 [
   {
-    "context": "Workspace",
+    "context": "Editor || Workspace",
     "bindings": {
+      "ctrl-b": "workspace::ToggleLeftDock",
       "ctrl-\\": "terminal_panel::ToggleFocus",
-      "ctrl-shift-f": "project_search::ToggleFocus",
+      "ctrl-shift-f": "project_search::ToggleFocus"
     }
   },
   {
@@ -91,6 +92,7 @@
   {
     "context": "ProjectPanel && not_editing",
     "bindings": {
+      "ctrl-b": "workspace::ToggleLeftDock",
       "-": "workspace::ToggleLeftDock"
     }
   },

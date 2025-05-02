@@ -110,12 +110,8 @@
       "language_servers": ["ruby-lsp", "!solargraph", "!rubocop"]
     }
   },
-  "collaboration_panel": {
-    "button": false
-  },
-  "tab_bar": {
-    "show": false
-  },
+  "collaboration_panel": { "button": false },
+  "tab_bar": { "show": true },
   "project_panel": {
     "show_diagnostics": "all",
     "scrollbar": {
@@ -132,7 +128,7 @@
   },
   "theme": {
     "mode": "system",
-    "light": "Gruvbox Dark",
+    "light": "Modus Operandi",
     "dark": "Gruvbox Dark"
   },
   "indent_guides": {
@@ -148,21 +144,7 @@
       "enabled": false
     }
   },
-  "context_servers": {
-    "memory": {
-      "command": {
-        "path": "/home/gustavo-santos/.nix-profile/bin/npx",
-        "args": ["-y", "@modelcontextprotocol/server-memory"],
-        "env": {}
-      },
-      "settings": {}
-    },
-    "postgres-context-server": {
-      "settings": {
-        "database_url": "postgres://teleport@localhost:53189/prod"
-      }
-    }
-  },
+  "context_servers": { },
   "features": {
     "edit_prediction_provider": "zed"
   },
