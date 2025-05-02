@@ -10,7 +10,7 @@ font-style-bold = Medium
 font-style-italic = Italic
 font-style-bold-italic = Medium Italic
 font-feature = -liga,-dlig,+calt
-font-size = 13
+font-size = 12
 
 # Operator Mono
 # font-family = OperatorMono Nerd Font
