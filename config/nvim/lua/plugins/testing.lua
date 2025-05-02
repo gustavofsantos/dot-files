@@ -40,13 +40,11 @@ return {
     dependencies = { "christoomey/vim-tmux-runner" },
     cmd = { "TestFile", "TestNearest", "TestSuite", "TestLast" },
     config = function()
-      if vim.env.TMUX then
-        vim.cmd([[let test#strategy = "vtr"]])
-      -- elseif vim.env.WEZTERM_PANE then
-      --   vim.cmd([[let test#strategy = "wezterm"]])
-      else
-        vim.cmd([[let test#strategy = "toggleterm"]])
-      end
+      -- if vim.env.TMUX then
+      --   vim.cmd([[let test#strategy = "vtr"]])
+      -- else
+      --   vim.cmd([[let test#strategy = "toggleterm"]])
+      -- end
       vim.cmd([[let test#strategy = "toggleterm"]])
 
       vim.cmd([[let test#javascript#playwright#options = "--headed --retries 0 --workers 1"]])
