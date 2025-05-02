@@ -11,7 +11,7 @@ file_path="$1"
 # Loggi's beyond test
 if [[ "$file_path" == *"/opt/loggi/py/apps/beyond/"* ]]; then
     envs="UNLEASH_URL=http://localhost:4242/api APP_DB_HOST=localhost POSTGRES_HOST=localhost POSTGRES_DB=dev_db POSTGRES_PASSWORD=postgres POSTGRES_HOST=localhost POSTGRES_PORT=5432"
-    test_arg="$(echo $file_path | sed 's/\/opt\/loggi\/py\/apps\/beyond\///')"
+    test_arg="$(echo "$file_path" | sed 's/\/opt\/loggi\/py\/apps\/beyond\///')"
     test_command="$envs poetry run pytest -x --disable-warnings -q --ds beyond_app.settings.test $test_arg"
     eval "$test_command"
     exit 0
@@ -19,7 +19,7 @@ fi
 
 # Loggi's web test
 if [[ "$file_path" == *"/opt/loggi/web/"* ]]; then
-    test_arg="$(echo $file_path | sed 's/\/opt\/loggi\/web\/loggi\///')"
+    test_arg="$(echo "$file_path" | sed 's/\/opt\/loggi\/web\/loggi\///')"
     test_command="docker compose exec -e DJANGO_SETTINGS_MODULE=settings.test loggi_web_app pytest -x --disable-warnings -q $test_arg"
     eval "$test_command"
     exit 0
