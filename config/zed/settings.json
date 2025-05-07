@@ -25,11 +25,11 @@
   },
   "vim_mode": true,
   "autosave": "on_focus_change",
-  "ui_font_family": "SF Pro Text",
-  "ui_font_size": 14,
+  "ui_font_family": "Univers",
+  "ui_font_size": 16,
   "buffer_font_family": "BerkeleyMono Nerd Font",
   "buffer_font_size": 16,
-  "buffer_line_height": { "custom": 1.75 },
+  "buffer_line_height": { "custom": 1.5 },
   "wrap_guides": [80, 120],
   "ui_font_features": {
     "calt": true
@@ -120,7 +120,7 @@
   },
   "terminal": {
     "dock": "bottom",
-    "font_size": 14,
+    "font_size": 16,
     "font_family": "BerkeleyMono Nerd Font",
     "env": {
       "GIT_EDITOR": "zed --wait"
@@ -128,7 +128,7 @@
   },
   "theme": {
     "mode": "system",
-    "light": "Modus Operandi",
+    "light": "Nord",
     "dark": "Gruvbox Dark"
   },
   "indent_guides": {
@@ -148,7 +148,7 @@
   "features": {
     "edit_prediction_provider": "zed"
   },
-  "assistant": {
+  "agent": {
     "default_model": {
       "provider": "zed.dev",
       "model": "claude-3-7-sonnet-latest"
