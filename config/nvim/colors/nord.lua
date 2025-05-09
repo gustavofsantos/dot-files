@@ -1,356 +1,310 @@
-local function clear_highlights()
-  if vim.fn.exists("syntax_on") then
-    vim.cmd("syntax reset")
-  end
+vim.g.colors_name = "nord"
+vim.o.background = "dark"
+
+-- Helper function to set highlight groups
+local function highlight(group, opts)
+  vim.api.nvim_set_hl(0, group, opts)
 end
 
-local function setup()
-  clear_highlights()
+local palette = {
+  nord00 = "#2E3440",
+  nord01 = "#3B4252",
+  nord02 = "#434C5E",
+  nord03 = "#4C566A",
+  nord04 = "#616E88",
+  nord05 = "#D8DEE9",
+  nord06 = "#E5E9F0",
+  nord07 = "#ECEFF4",
 
-  vim.g.colors_name = "nord"
-  vim.o.background = "dark"
 
-  local nord = {
-    nord0_gui = "#2E3440",
-    nord1_gui = "#3B4252",
-    nord2_gui = "#434C5E",
-    nord3_gui = "#4C566A",
-    nord3_gui_bright = "#616E88",
-    nord4_gui = "#D8DEE9",
-    nord5_gui = "#E5E9F0",
-    nord6_gui = "#ECEFF4",
-    nord7_gui = "#8FBCBB",
-    nord8_gui = "#88C0D0",
-    nord9_gui = "#81A1C1",
-    nord10_gui = "#5E81AC",
-    nord11_gui = "#BF616A",
-    nord12_gui = "#D08770",
-    nord13_gui = "#EBCB8B",
-    nord14_gui = "#A3BE8C",
-    nord15_gui = "#B48EAD",
-  }
+  gray00         = '#191D24',
+  gray01         = '#1E222A',
+  gray02         = '#222630',
+  gray0          = '#242933',
+  gray1          = '#2E3440',
+  gray2          = '#3B4252',
+  gray3          = '#434C5E',
+  gray4          = '#4C566A',
+  gray5          = '#60728A',
+  gray6          = '#BBC3D4',
+  gray7          = '#C0C8D8',
+  gray8          = '#D8DEE9',
+  gray9          = '#E5E9F0',
+  gray10         = '#ECEFF4',
 
-  local nord_term = {
-    nord1_term = "0",
-    nord3_term = "8",
-    nord5_term = "7",
-    nord6_term = "15",
-    nord7_term = "14",
-    nord8_term = "6",
-    nord9_term = "4",
-    nord10_term = "12",
-    nord11_term = "1",
-    nord12_term = "11",
-    nord13_term = "3",
-    nord14_term = "2",
-    nord15_term = "5"
-  }
+  cyan_bright    = '#9FC6C5',
+  cyan           = "#8FBCBB",
+  cyan_dim       = '#80B3B2',
+  sky            = "#88C0D0",
+  blue_bright    = "#81A1C1",
+  blue           = "#5E81AC",
+  red_bright     = "#C5727A",
+  red            = "#BF616A",
+  red_dim        = "#B74E58",
+  orange_bright  = '#D79784',
+  orange         = "#D08770",
+  orange_dim     = '#CB775D',
+  yellow_bright  = '#EFD49F',
+  yellow         = "#EBCB8B",
+  yellow_dim     = '#E7C173',
+  green_bright   = '#B1C89D',
+  green          = "#A3BE8C",
+  green_dim      = '#97B67C',
+  magenta_bright = '#BE9DB8',
+  magenta        = "#B48EAD",
+  magenta_dim    = '#A97EA1',
+}
 
-  -- Generated brightened colors
-  nord.nord3_gui_brightened = {
-    nord.nord3_gui,
-    "#4e586d",
-    "#505b70",
-    "#525d73",
-    "#556076",
-    "#576279",
-    "#59647c",
-    "#5b677f",
-    "#5d6982",
-    "#5f6c85",
-    "#616e88",
-    "#63718b",
-    "#66738e",
-    "#687591",
-    "#6a7894",
-    "#6d7a96",
-    "#6f7d98",
-    "#72809a",
-    "#75829c",
-    "#78859e",
-    "#7b88a1"
-  }
+local components = {
+  editor_bg = palette.gray0,
+  popup_bg = palette.gray01,
+  border = palette.gray00
+}
 
-  -- Get user configuration options
-  local nord_bold = (vim.g.nord_bold == 0) and "" or "bold,"
-  local nord_underline = (vim.g.nord_underline == 0) and "NONE," or "underline,"
+-- Attributes
+highlight("Bold", { bold = true })
+highlight("Italic", { italic = true })
+highlight("Underline", { underline = true })
 
-  local term_italic_enabled = (vim.fn.has("gui_running") == 1 or vim.env.TERM_ITALICS == "true")
-  local nord_italic = (vim.g.nord_italic == 0 or not term_italic_enabled) and "" or "italic,"
+-- Editor
+highlight("ColorColumn", { bg = palette.gray02 })
+highlight("Cursor", { fg = palette.nord00, bg = palette.nord05 })
+highlight("CursorLine", { bg = palette.gray2 })
+highlight("Error", { fg = palette.nord05, bg = palette.red })
+highlight("iCursor", { fg = palette.nord00, bg = palette.nord05 })
+highlight("LineNr", { fg = palette.nord03 })
+highlight("MatchParen", { fg = palette.sky, bg = palette.nord03 })
+highlight("NonText", { fg = palette.nord02 })
+highlight("Normal", { fg = palette.gray6, bg = palette.gray0 })
+highlight("NormalNC", { fg = palette.gray6, bg = palette.gray0 })
+highlight("NormalSB", { fg = palette.gray6, bg = palette.gray0 })
+highlight("NormalFloat", { fg = palette.gray6, bg = palette.gray01 })
+highlight("Pmenu", { fg = palette.gray6, bg = palette.gray00 })
+highlight("PmenuSbar", { fg = palette.gray6, bg = palette.gray02 })
+highlight("PmenuSel", { fg = palette.cyan, bg = palette.nord03 })
+highlight("PmenuThumb", { fg = palette.gray02, bg = palette.gray02 })
+highlight("SpecialKey", { fg = palette.nord03 })
+highlight("SpellBad", { fg = palette.red, bg = palette.nord00, undercurl = true, sp = palette.red })
+highlight("SpellCap", { fg = palette.yellow, bg = palette.nord00, undercurl = true, sp = palette.yellow })
+highlight("SpellLocal", { fg = palette.nord06, bg = palette.nord00, undercurl = true, sp = palette.nord06 })
+highlight("SpellRare", { fg = palette.nord07, bg = palette.nord00, undercurl = true, sp = palette.nord07 })
+highlight("Visual", { bg = palette.nord02 })
+highlight("VisualNOS", { bg = palette.nord02 })
 
-  local nord_italic_comments = (vim.g.nord_italic_comments == 0) and "" or nord_italic
+-- Neovim specific highlights
+highlight("healthError", { fg = palette.red, bg = palette.nord01 })
+highlight("healthSuccess", { fg = palette.green, bg = palette.nord01 })
+highlight("healthWarning", { fg = palette.yellow, bg = palette.nord01 })
+highlight("TermCursorNC", { bg = palette.nord01 })
 
-  -- Helper function to set highlight groups
-  local function highlight(group, opts)
-    local fg = opts.fg or "NONE"
-    local bg = opts.bg or "NONE"
-    local sp = opts.sp or ""
+-- Neovim Diagnostics API (for LSP)
+highlight("DiagnosticWarn", { fg = palette.yellow })
+highlight("DiagnosticError", { fg = palette.red })
+highlight("DiagnosticInfo", { fg = palette.sky })
+highlight("DiagnosticHint", { fg = palette.blue })
+highlight("DiagnosticUnderlineWarn", { fg = palette.yellow, undercurl = true })
+highlight("DiagnosticUnderlineError", { fg = palette.red, undercurl = true })
+highlight("DiagnosticUnderlineInfo", { fg = palette.sky, undercurl = true })
+highlight("DiagnosticUnderlineHint", { fg = palette.blue, undercurl = true })
 
-    local style = opts.style or ""
+-- Neovim DocumentHighlight
+highlight("LspReferenceText", { bg = palette.nord03 })
+highlight("LspReferenceRead", { bg = palette.nord03 })
+highlight("LspReferenceWrite", { bg = palette.nord03 })
 
-    -- Handle cterm style conversion (underline special case)
-    local cterm_style = style
-    if cterm_style:find("undercurl") then
-      cterm_style = cterm_style:gsub("undercurl", nord_underline)
-    end
+-- Neovim LspSignatureHelp
+highlight("LspSignatureActiveParameter", { fg = palette.sky, underline = true })
 
-    vim.api.nvim_set_hl(0, group, {
-      fg = fg,
-      bg = bg,
-      sp = sp ~= "" and sp or nil,
-      bold = style:find("bold") ~= nil,
-      italic = style:find("italic") ~= nil,
-      underline = style:find("underline") ~= nil,
-      undercurl = style:find("undercurl") ~= nil,
-    })
-  end
+-- Gutter
+highlight("CursorColumn", { bg = palette.nord01 })
+highlight("CursorLineNr", { fg = palette.yellow, bg = palette.nord01 })
+highlight("CursorLineSign", { bg = palette.nord01 })
+highlight("Folded", { fg = palette.nord03, bg = palette.nord01, bold = true })
+highlight("FoldColumn", { fg = palette.nord03, bg = palette.nord00 })
+highlight("SignColumn", { fg = palette.nord01, bg = palette.nord01 })
+highlight("SignColumnSB", { fg = palette.nord01, bg = palette.nord01 })
 
-  -- UI Components
-  -- Attributes
-  highlight("Bold", { style = nord_bold })
-  highlight("Italic", { style = nord_italic })
-  highlight("Underline", { style = nord_underline })
+-- Navigation
+highlight("Directory", { fg = palette.sky })
 
-  -- Editor
-  highlight("ColorColumn", { bg = nord.nord1_gui })
-  highlight("Cursor", { fg = nord.nord0_gui, bg = nord.nord4_gui })
-  highlight("CursorLine", { bg = nord.nord1_gui, style = "NONE" })
-  highlight("Error", { fg = nord.nord4_gui, bg = nord.nord11_gui })
-  highlight("iCursor", { fg = nord.nord0_gui, bg = nord.nord4_gui })
-  highlight("LineNr", { fg = nord.nord3_gui })
-  highlight("MatchParen", { fg = nord.nord8_gui, bg = nord.nord3_gui })
-  highlight("NonText", { fg = nord.nord2_gui })
-  highlight("Normal", { fg = nord.nord4_gui, bg = nord.nord0_gui })
-  highlight("Pmenu", { fg = nord.nord4_gui, bg = nord.nord2_gui, style = "NONE" })
-  highlight("PmenuSbar", { fg = nord.nord4_gui, bg = nord.nord2_gui })
-  highlight("PmenuSel", { fg = nord.nord8_gui, bg = nord.nord3_gui })
-  highlight("PmenuThumb", { fg = nord.nord8_gui, bg = nord.nord3_gui })
-  highlight("SpecialKey", { fg = nord.nord3_gui })
-  highlight("SpellBad", { fg = nord.nord11_gui, bg = nord.nord0_gui, style = "undercurl", sp = nord.nord11_gui })
-  highlight("SpellCap", { fg = nord.nord13_gui, bg = nord.nord0_gui, style = "undercurl", sp = nord.nord13_gui })
-  highlight("SpellLocal", { fg = nord.nord5_gui, bg = nord.nord0_gui, style = "undercurl", sp = nord.nord5_gui })
-  highlight("SpellRare", { fg = nord.nord6_gui, bg = nord.nord0_gui, style = "undercurl", sp = nord.nord6_gui })
-  highlight("Visual", { bg = nord.nord2_gui })
-  highlight("VisualNOS", { bg = nord.nord2_gui })
+-- Prompt/Status
+highlight("EndOfBuffer", { fg = palette.nord01 })
+highlight("ErrorMsg", { fg = palette.nord05, bg = palette.red })
+highlight("ModeMsg", { fg = palette.nord05 })
+highlight("MoreMsg", { fg = palette.sky })
+highlight("Question", { fg = palette.nord05 })
 
-    vim.g.terminal_color_0 = nord.nord1_gui
-    vim.g.terminal_color_1 = nord.nord11_gui
-    vim.g.terminal_color_2 = nord.nord14_gui
-    vim.g.terminal_color_3 = nord.nord13_gui
-    vim.g.terminal_color_4 = nord.nord9_gui
-    vim.g.terminal_color_5 = nord.nord15_gui
-    vim.g.terminal_color_6 = nord.nord8_gui
-    vim.g.terminal_color_7 = nord.nord5_gui
-    vim.g.terminal_color_8 = nord.nord3_gui
-    vim.g.terminal_color_9 = nord.nord11_gui
-    vim.g.terminal_color_10 = nord.nord14_gui
-    vim.g.terminal_color_11 = nord.nord13_gui
-    vim.g.terminal_color_12 = nord.nord9_gui
-    vim.g.terminal_color_13 = nord.nord15_gui
-    vim.g.terminal_color_14 = nord.nord7_gui
-    vim.g.terminal_color_15 = nord.nord6_gui
+highlight("StatusLine", { fg = palette.sky, bg = palette.nord03 })
+highlight("StatusLineNC", { fg = palette.nord05, bg = palette.nord03 })
+highlight("StatusLineTerm", { fg = palette.sky, bg = palette.nord03 })
+highlight("StatusLineTermNC", { fg = palette.nord05, bg = palette.nord03 })
 
-    -- Neovim specific highlights
-    highlight("healthError", { fg = nord.nord11_gui, bg = nord.nord1_gui })
-    highlight("healthSuccess", { fg = nord.nord14_gui, bg = nord.nord1_gui })
-    highlight("healthWarning", { fg = nord.nord13_gui, bg = nord.nord1_gui })
-    highlight("TermCursorNC", { bg = nord.nord1_gui })
+highlight("WarningMsg", { fg = palette.nord00, bg = palette.yellow })
+highlight("WildMenu", { fg = palette.sky, bg = palette.nord01 })
 
-    -- Neovim Diagnostics API (for LSP)
-    highlight("DiagnosticWarn", { fg = nord.nord13_gui })
-    highlight("DiagnosticError", { fg = nord.nord11_gui })
-    highlight("DiagnosticInfo", { fg = nord.nord8_gui })
-    highlight("DiagnosticHint", { fg = nord.nord10_gui })
-    highlight("DiagnosticUnderlineWarn", { fg = nord.nord13_gui, style = "undercurl" })
-    highlight("DiagnosticUnderlineError", { fg = nord.nord11_gui, style = "undercurl" })
-    highlight("DiagnosticUnderlineInfo", { fg = nord.nord8_gui, style = "undercurl" })
-    highlight("DiagnosticUnderlineHint", { fg = nord.nord10_gui, style = "undercurl" })
+-- Search
+highlight("IncSearch", { fg = palette.nord07, bg = palette.blue, underline = true })
+highlight("Search", { fg = palette.nord01, bg = palette.sky })
 
-    -- Neovim DocumentHighlight
-    highlight("LspReferenceText", { bg = nord.nord3_gui })
-    highlight("LspReferenceRead", { bg = nord.nord3_gui })
-    highlight("LspReferenceWrite", { bg = nord.nord3_gui })
+-- Tabs
+highlight("TabLine", { fg = palette.nord05, bg = palette.gray01 })
+highlight("TabLineFill", { fg = palette.nord05, bg = palette.gray00 })
+highlight("TabLineSel", { fg = palette.gray6, bg = components.editor_bg })
 
-    -- Neovim LspSignatureHelp
-    highlight("LspSignatureActiveParameter", { fg = nord.nord8_gui, style = nord_underline })
+-- Window
+highlight("Title", { fg = palette.nord05 })
+highlight("VertSplit", { fg = palette.gray00, bg = components.editor_bg })
+highlight("WinSeparator", { link = "VertSplit" })
 
-  -- Gutter
-  highlight("CursorColumn", { bg = nord.nord1_gui })
-  if vim.g.nord_cursor_line_number_background == 0 then
-    highlight("CursorLineNr", { fg = nord.nord4_gui, style = "NONE" })
-  else
-    highlight("CursorLineNr", { fg = nord.nord4_gui, bg = nord.nord1_gui, style = "NONE" })
-  end
-  highlight("Folded", { fg = nord.nord3_gui, bg = nord.nord1_gui, style = nord_bold })
-  highlight("FoldColumn", { fg = nord.nord3_gui, bg = nord.nord0_gui })
-  highlight("SignColumn", { fg = nord.nord1_gui, bg = nord.nord0_gui })
+-- Language Base Groups
+highlight("Boolean", { fg = palette.blue_bright })
+highlight("Builtin", { fg = palette.blue })
+highlight("Character", { fg = palette.green })
+highlight("Comment", { fg = palette.nord04, italic = true })
+highlight("Conceal", { bg = "NONE" })
+highlight("Conditional", { fg = palette.blue_bright })
+highlight("Constant", { fg = palette.magenta_bright })
+highlight("Decorator", { fg = palette.orange })
+highlight("Define", { fg = palette.blue_bright })
+highlight("Delimiter", { fg = palette.nord07 })
+highlight("Exception", { fg = palette.blue_bright })
+highlight("Float", { fg = palette.magenta })
+highlight("Field", { fg = palette.cyan })
+highlight("Function", { fg = palette.sky })
+highlight("Identifier", { fg = palette.nord05 })
+highlight("Include", { fg = palette.blue_bright })
+highlight("Keyword", { fg = palette.orange })
+highlight("Label", { fg = palette.blue_bright })
+highlight("Number", { link = "Constant" })
+highlight("Namespace", { fg = palette.yellow_dim })
+highlight("Operator", { fg = palette.blue_bright })
+highlight("PreProc", { fg = palette.blue_bright })
+highlight("Repeat", { fg = palette.blue_bright })
+highlight("Special", { fg = palette.nord05 })
+highlight("SpecialChar", { fg = palette.yellow })
+highlight("SpecialComment", { fg = palette.sky, italic = true })
+highlight("Statement", { fg = palette.blue_bright })
+highlight("StorageClass", { fg = palette.blue_bright })
+highlight("String", { fg = palette.green })
+highlight("Structure", { fg = palette.blue_bright })
+highlight("Tag", { fg = palette.nord05 })
+highlight("Todo", { fg = palette.yellow, bg = "NONE" })
+highlight("Type", { fg = palette.blue_bright })
+highlight("Typedef", { fg = palette.blue_bright })
 
-  -- Navigation
-  highlight("Directory", { fg = nord.nord8_gui })
+-- Link common groups
+local links = {
+  ["Annotation"] = "Decorator",
+  ["Macro"] = "Define",
+  ["PreCondit"] = "PreProc",
+  ["Variable"] = "Identifier",
+}
 
-  -- Prompt/Status
-  highlight("EndOfBuffer", { fg = nord.nord1_gui })
-  highlight("ErrorMsg", { fg = nord.nord4_gui, bg = nord.nord11_gui })
-  highlight("ModeMsg", { fg = nord.nord4_gui })
-  highlight("MoreMsg", { fg = nord.nord8_gui })
-  highlight("Question", { fg = nord.nord4_gui })
-
-  -- Status line configuration
-  if vim.g.nord_uniform_status_lines == 0 then
-    highlight("StatusLine", { fg = nord.nord8_gui, bg = nord.nord3_gui, style = "NONE" })
-    highlight("StatusLineNC", { fg = nord.nord4_gui, bg = nord.nord1_gui, style = "NONE" })
-    highlight("StatusLineTerm", { fg = nord.nord8_gui, bg = nord.nord3_gui, style = "NONE" })
-    highlight("StatusLineTermNC", { fg = nord.nord4_gui, bg = nord.nord1_gui, style = "NONE" })
-  else
-    highlight("StatusLine", { fg = nord.nord8_gui, bg = nord.nord3_gui, style = "NONE" })
-    highlight("StatusLineNC", { fg = nord.nord4_gui, bg = nord.nord3_gui, style = "NONE" })
-    highlight("StatusLineTerm", { fg = nord.nord8_gui, bg = nord.nord3_gui, style = "NONE" })
-    highlight("StatusLineTermNC", { fg = nord.nord4_gui, bg = nord.nord3_gui, style = "NONE" })
-  end
-
-  highlight("WarningMsg", { fg = nord.nord0_gui, bg = nord.nord13_gui })
-  highlight("WildMenu", { fg = nord.nord8_gui, bg = nord.nord1_gui })
-
-  -- Search
-  highlight("IncSearch", { fg = nord.nord6_gui, bg = nord.nord10_gui, style = nord_underline })
-  highlight("Search", { fg = nord.nord1_gui, bg = nord.nord8_gui, style = "NONE" })
-
-  -- Tabs
-  highlight("TabLine", { fg = nord.nord4_gui, bg = nord.nord1_gui, style = "NONE" })
-  highlight("TabLineFill", { fg = nord.nord4_gui, bg = nord.nord1_gui, style = "NONE" })
-  highlight("TabLineSel", { fg = nord.nord8_gui, bg = nord.nord3_gui, style = "NONE" })
-
-  -- Window
-  highlight("Title", { fg = nord.nord4_gui, style = "NONE" })
-
-  -- Vertical split styling
-  if vim.g.nord_bold_vertical_split_line == 0 then
-    highlight("VertSplit", { fg = nord.nord2_gui, bg = nord.nord0_gui, style = "NONE" })
-  else
-    highlight("VertSplit", { fg = nord.nord2_gui, bg = nord.nord1_gui, style = "NONE" })
-  end
-
-  -- Language Base Groups
-  highlight("Boolean", { fg = nord.nord9_gui })
-  highlight("Character", { fg = nord.nord14_gui })
-  highlight("Comment", { fg = nord.nord3_gui_bright, style = nord_italic_comments })
-  highlight("Conceal", { bg = "NONE" })
-  highlight("Conditional", { fg = nord.nord9_gui })
-  highlight("Constant", { fg = nord.nord4_gui })
-  highlight("Decorator", { fg = nord.nord12_gui })
-  highlight("Define", { fg = nord.nord9_gui })
-  highlight("Delimiter", { fg = nord.nord6_gui })
-  highlight("Exception", { fg = nord.nord9_gui })
-  highlight("Float", { fg = nord.nord15_gui })
-  highlight("Function", { fg = nord.nord8_gui })
-  highlight("Identifier", { fg = nord.nord4_gui, style = "NONE" })
-  highlight("Include", { fg = nord.nord9_gui })
-  highlight("Keyword", { fg = nord.nord9_gui })
-  highlight("Label", { fg = nord.nord9_gui })
-  highlight("Number", { fg = nord.nord15_gui })
-  highlight("Operator", { fg = nord.nord9_gui, style = "NONE" })
-  highlight("PreProc", { fg = nord.nord9_gui, style = "NONE" })
-  highlight("Repeat", { fg = nord.nord9_gui })
-  highlight("Special", { fg = nord.nord4_gui })
-  highlight("SpecialChar", { fg = nord.nord13_gui })
-  highlight("SpecialComment", { fg = nord.nord8_gui, style = nord_italic_comments })
-  highlight("Statement", { fg = nord.nord9_gui })
-  highlight("StorageClass", { fg = nord.nord9_gui })
-  highlight("String", { fg = nord.nord14_gui })
-  highlight("Structure", { fg = nord.nord9_gui })
-  highlight("Tag", { fg = nord.nord4_gui })
-  highlight("Todo", { fg = nord.nord13_gui, bg = "NONE" })
-  highlight("Type", { fg = nord.nord9_gui, style = "NONE" })
-  highlight("Typedef", { fg = nord.nord9_gui })
-
-  -- Link common groups
-  local links = {
-    ["Annotation"] = "Decorator",
-    ["Macro"] = "Define",
-    ["PreCondit"] = "PreProc",
-    ["Variable"] = "Identifier",
-  }
-
-  for newgroup, oldgroup in pairs(links) do
-    vim.api.nvim_set_hl(0, newgroup, { link = oldgroup })
-  end
-
-  -- Language specific highlights
-  -- Only adding a subset of the language-specific highlights for brevity
-  -- More can be added based on your needs
-
-  -- Diff highlighting
-  if vim.g.nord_uniform_diff_background == 0 then
-    highlight("DiffAdd", { fg = nord.nord14_gui, bg = nord.nord0_gui, style = "inverse" })
-    highlight("DiffChange", { fg = nord.nord13_gui, bg = nord.nord0_gui, style = "inverse" })
-    highlight("DiffDelete", { fg = nord.nord11_gui, bg = nord.nord0_gui, style = "inverse" })
-    highlight("DiffText", { fg = nord.nord9_gui, bg = nord.nord0_gui, style = "inverse" })
-  else
-    highlight("DiffAdd", { fg = nord.nord14_gui, bg = nord.nord1_gui })
-    highlight("DiffChange", { fg = nord.nord13_gui, bg = nord.nord1_gui })
-    highlight("DiffDelete", { fg = nord.nord11_gui, bg = nord.nord1_gui })
-    highlight("DiffText", { fg = nord.nord9_gui, bg = nord.nord1_gui })
-  end
-
-  -- Legacy diff groups
-  vim.api.nvim_set_hl(0, "diffAdded", { link = "DiffAdd" })
-  vim.api.nvim_set_hl(0, "diffChanged", { link = "DiffChange" })
-  vim.api.nvim_set_hl(0, "diffRemoved", { link = "DiffDelete" })
-
-  -- Git related highlights
-  highlight("gitcommitDiscardedFile", { fg = nord.nord11_gui })
-  highlight("gitcommitUntrackedFile", { fg = nord.nord11_gui })
-  highlight("gitcommitSelectedFile", { fg = nord.nord14_gui })
-
-  -- Plugin support - Only adding a subset for brevity
-  -- DiagnosticSign highlights for LSP
-  highlight("DiagnosticSignError", { fg = nord.nord11_gui, bg = "NONE" })
-  highlight("DiagnosticSignWarn", { fg = nord.nord13_gui, bg = "NONE" })
-  highlight("DiagnosticSignHint", { fg = nord.nord8_gui, bg = "NONE" })
-  highlight("DiagnosticSignInfo", { fg = nord.nord9_gui, bg = "NONE" })
-
-  -- GitSigns plugin support
-  highlight("GitSignsAdd", { fg = nord.nord14_gui })
-  highlight("GitSignsChange", { fg = nord.nord13_gui })
-  highlight("GitSignsDelete", { fg = nord.nord11_gui })
-
-  -- Nvim-Treesitter
-  vim.api.nvim_set_hl(0, "TSAnnotation", { link = "Annotation" })
-  vim.api.nvim_set_hl(0, "TSConstBuiltin", { link = "Constant" })
-  vim.api.nvim_set_hl(0, "TSConstructor", { link = "Function" })
-  vim.api.nvim_set_hl(0, "TSEmphasis", { link = "Italic" })
-  vim.api.nvim_set_hl(0, "TSFuncBuiltin", { link = "Function" })
-  vim.api.nvim_set_hl(0, "TSFuncMacro", { link = "Function" })
-  vim.api.nvim_set_hl(0, "TSStringRegex", { link = "SpecialChar" })
-  vim.api.nvim_set_hl(0, "TSStrong", { link = "Bold" })
-  vim.api.nvim_set_hl(0, "TSStructure", { link = "Structure" })
-  vim.api.nvim_set_hl(0, "TSTagDelimiter", { link = "TSTag" })
-  vim.api.nvim_set_hl(0, "TSUnderline", { link = "Underline" })
-  vim.api.nvim_set_hl(0, "TSVariable", { link = "Variable" })
-  vim.api.nvim_set_hl(0, "TSVariableBuiltin", { link = "Keyword" })
-
-  -- Public API: Return the Nord color palette
-  _G.NordPalette = function()
-    return {
-      nord0 = nord.nord0_gui,
-      nord1 = nord.nord1_gui,
-      nord2 = nord.nord2_gui,
-      nord3 = nord.nord3_gui,
-      nord4 = nord.nord4_gui,
-      nord5 = nord.nord5_gui,
-      nord6 = nord.nord6_gui,
-      nord7 = nord.nord7_gui,
-      nord8 = nord.nord8_gui,
-      nord9 = nord.nord9_gui,
-      nord10 = nord.nord10_gui,
-      nord11 = nord.nord11_gui,
-      nord12 = nord.nord12_gui,
-      nord13 = nord.nord13_gui,
-      nord14 = nord.nord14_gui,
-      nord15 = nord.nord15_gui,
-      nord3_bright = nord.nord3_gui_bright
-    }
-  end
+for newgroup, oldgroup in pairs(links) do
+  vim.api.nvim_set_hl(0, newgroup, { link = oldgroup })
 end
 
-return setup()
+-- Language specific highlights
+-- Only adding a subset of the language-specific highlights for brevity
+-- More can be added based on your needs
+
+-- Diff highlighting
+highlight("DiffAdd", { fg = palette.green, bg = palette.nord00 })
+highlight("DiffChange", { fg = palette.yellow, bg = palette.nord00 })
+highlight("DiffDelete", { fg = palette.red, bg = palette.nord00 })
+highlight("DiffText", { fg = palette.blue_bright, bg = palette.nord00 })
+
+-- Legacy diff groups
+highlight("diffAdded", { link = "DiffAdd" })
+highlight("diffChanged", { link = "DiffChange" })
+highlight("diffRemoved", { link = "DiffDelete" })
+
+-- Git related highlights
+highlight("gitcommitDiscardedFile", { fg = palette.red })
+highlight("gitcommitUntrackedFile", { fg = palette.red })
+highlight("gitcommitSelectedFile", { fg = palette.green })
+
+-- Plugin support - Only adding a subset for brevity
+-- DiagnosticSign highlights for LSP
+highlight("DiagnosticSignError", { fg = palette.red, bg = "NONE" })
+highlight("DiagnosticSignWarn", { fg = palette.yellow, bg = "NONE" })
+highlight("DiagnosticSignHint", { fg = palette.sky, bg = "NONE" })
+highlight("DiagnosticSignInfo", { fg = palette.blue_bright, bg = "NONE" })
+
+-- GitSigns plugin support
+highlight("GitSignsAdd", { fg = palette.green })
+highlight("GitSignsChange", { fg = palette.yellow })
+highlight("GitSignsDelete", { fg = palette.red })
+
+-- Nvim-Treesitter
+highlight("TSAnnotation", { link = "Annotation" })
+highlight("TSConstBuiltin", { link = "Constant" })
+highlight("TSConstructor", { link = "Function" })
+highlight("TSEmphasis", { link = "Italic" })
+highlight("TSFuncBuiltin", { link = "Function" })
+highlight("TSFuncMacro", { link = "Function" })
+highlight("TSStringRegex", { link = "SpecialChar" })
+highlight("TSStrong", { link = "Bold" })
+highlight("TSStructure", { link = "Structure" })
+highlight("TSTagDelimiter", { link = "TSTag" })
+highlight("TSUnderline", { link = "Underline" })
+highlight("TSVariable", { link = "Variable" })
+highlight("TSVariableBuiltin", { link = "Keyword" })
+
+-- Telescope plugin support
+highlight("TelescopeBorder", { fg = palette.nord03, bg = palette.nord01 })
+highlight("TelescopePromptBorder", { fg = palette.nord03, bg = palette.nord01 })
+highlight("TelescopePromptNormal", { fg = palette.nord05, bg = palette.nord01 })
+highlight("TelescopePromptTitle", { fg = palette.nord01, bg = palette.sky })
+highlight("TelescopeResultsBorder", { fg = palette.nord03, bg = palette.nord01 })
+highlight("TelescopeResultsNormal", { fg = palette.nord05, bg = palette.nord01 })
+highlight("TelescopeResultsTitle", { fg = palette.nord01, bg = palette.sky })
+highlight("TelescopePreviewBorder", { fg = palette.nord03, bg = palette.nord01 })
+highlight("TelescopePreviewNormal", { fg = palette.nord05, bg = palette.nord01 })
+highlight("TelescopePreviewTitle", { fg = palette.nord01, bg = palette.sky })
+highlight("TelescopeSelection", { fg = palette.sky, bg = palette.nord03 })
+highlight("TelescopeSelectionCaret", { fg = palette.sky, bg = palette.nord03 })
+highlight("TelescopeMultiSelection", { fg = palette.sky, bg = palette.nord03 })
+
+-- Tree view
+highlight("TreeNormal", { link = "Normal" })
+highlight("TreeNormalNC", { link = "Normal" })
+highlight("TreeRootName", { fg = palette.gray6, bold = true })
+highlight("TreeFileIcon", { fg = palette.sky })
+highlight("TreeFileNameOpened", { fg = palette.gray6 })
+highlight("TreeSpecialFile", { fg = palette.magenta_bright })
+highlight("TreeGitConflict", { fg = palette.red })
+highlight("TreeGitModified", { fg = palette.blue_bright })
+highlight("TreeGitDirty", { fg = palette.gray4 })
+highlight("TreeGitAdded", { fg = palette.green })
+highlight("TreeGitNew", { fg = palette.gray4 })
+highlight("TreeGitDeleted", { fg = palette.gray4 })
+highlight("TreeGitStaged", { fg = palette.gray4 })
+highlight("TreeGitUntracked", { fg = palette.orange_base })
+highlight("TreeTitleBar", { link = 'WinBar' })
+highlight("TreeFloatBorder", { link = 'FloatBorder' })
+highlight("TreeCursorLine", { bg = palette.gray2 })
+highlight("TreeCursor", { bg = "NONE", fg = "NONE" })
+highlight("TreeFolderIcon", { fg = palette.yellow_dim })
+highlight("TreeIndentMarker", { fg = palette.gray4 })
+highlight("TreeSymlink", { fg = palette.sky })
+highlight("TreeFolderName", { fg = palette.blue_bright })
+highlight("TreeWinSeparator", { link = 'WinSeparator' })
+
+-- Terminal
+vim.g.terminal_color_0 = palette.nord01
+vim.g.terminal_color_1 = palette.red
+vim.g.terminal_color_2 = palette.green
+vim.g.terminal_color_3 = palette.yellow
+vim.g.terminal_color_4 = palette.blue_bright
+vim.g.terminal_color_5 = palette.magenta
+vim.g.terminal_color_6 = palette.sky
+vim.g.terminal_color_7 = palette.nord06
+vim.g.terminal_color_8 = palette.nord03
+vim.g.terminal_color_9 = palette.red
+vim.g.terminal_color_10 = palette.green
+vim.g.terminal_color_11 = palette.yellow
+vim.g.terminal_color_12 = palette.blue_bright
+vim.g.terminal_color_13 = palette.magenta
+vim.g.terminal_color_14 = palette.cyan
+vim.g.terminal_color_15 = palette.nord07
