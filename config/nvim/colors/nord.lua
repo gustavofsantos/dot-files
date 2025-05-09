@@ -121,8 +121,8 @@ highlight("CursorLineNr", { fg = palette.yellow, bg = palette.nord01 })
 highlight("CursorLineSign", { bg = palette.nord01 })
 highlight("Folded", { fg = palette.nord03, bg = palette.nord01, bold = true })
 highlight("FoldColumn", { fg = palette.nord03, bg = palette.nord00 })
-highlight("SignColumn", { fg = palette.nord01, bg = palette.nord01 })
-highlight("SignColumnSB", { fg = palette.nord01, bg = palette.nord01 })
+highlight("SignColumn", { fg = palette.nord01, bg = components.editor_bg })
+highlight("SignColumnSB", { fg = palette.nord01, bg = components.editor_bg })
 
 -- Navigation
 highlight("Directory", { fg = palette.sky })
