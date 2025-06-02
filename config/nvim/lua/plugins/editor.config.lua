@@ -1,6 +1,7 @@
 return {
   { "tpope/vim-sleuth" },
   { "tpope/vim-surround" },
+  { "tpope/vim-repeat" },
   { "justinmk/vim-sneak" },
   {
     "mbbill/undotree",
@@ -58,6 +59,32 @@ return {
     "numToStr/Navigator.nvim",
     event = "VeryLazy",
     opts = {},
+  },
+  {
+    "Olical/conjure",
+    ft = { "clojure" }, -- etc
+    lazy = true,
+    init = function()
+      -- Set configuration options here
+      -- Uncomment this to get verbose logging to help diagnose internal Conjure issues
+      -- This is VERY helpful when reporting an issue with the project
+      -- vim.g["conjure#debug"] = true
+      vim.g["conjure#mapping#doc_word"] = "gk"
+    end,
+    dependencies = {
+      "guns/vim-sexp",
+      "tpope/vim-sexp-mappings-for-regular-people",
+      {
+        "PaterJason/cmp-conjure",
+        lazy = true,
+        config = function()
+          local cmp = require("cmp")
+          local config = cmp.get_config()
+          table.insert(config.sources, { name = "conjure" })
+          return cmp.setup(config)
+        end,
+      }
+    },
   },
   {
     "echasnovski/mini.hipatterns",
@@ -120,5 +147,11 @@ return {
         }
       })
     end,
+  },
+  {
+    "folke/which-key.nvim",
+    event = "VeryLazy",
+    opts = {
+    },
   }
 }
