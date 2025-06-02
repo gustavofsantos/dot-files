@@ -62,15 +62,18 @@ style = "bright-black"
 disabled = true
 
 [git_status]
-format = "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](218) ($ahead_behind$stashed)]($style)"
-style = "cyan"
-conflicted = "​"
-untracked = "​"
-modified = "​"
-staged = "​"
-renamed = "​"
-deleted = "​"
-stashed = "​"
+# format = "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](218) ($ahead_behind$stashed)]($style)"
+conflicted = ''
+ahead = ''
+behind = ''
+diverged = ''
+up_to_date = ''
+untracked = ''
+stashed = ''
+modified = ''
+# staged = '[++\($count\)](green)'
+renamed = ''
+deleted = ''
 
 [kubernetes]
 format = 'on [⛵ ($user on )($cluster in )$context \($namespace\)](dimmed green) '

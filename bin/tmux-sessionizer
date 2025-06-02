@@ -14,7 +14,7 @@ else
         for path in "${paths[@]}"; do
             echo "$path"
         done
-        find ~/Projects /opt/loggi /opt/loggi/py/apps /opt/loggi/jvm/apps -mindepth 1 -maxdepth 1 -type d
+        find ~/Workplace -mindepth 1 -maxdepth 1 -type d
     ) | gum filter --limit 1 --placeholder 'Choose a session' --height 15 --prompt='⚡')
 fi
 
