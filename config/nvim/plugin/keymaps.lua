@@ -13,46 +13,28 @@ set(n, "<c-q>", "<cmd>q<cr>")
 set(n, "<Esc>", ":noh<cr><Esc>")
 set(t, "<Esc>", "<c-\\><c-n>")
 set(n, "<leader><leader>", "<c-^>", { desc = "Switch buffer" })
-
 set(n, "]c", "<cmd>cnext<cr>", { desc = "quickfix next" })
 set(n, "[c", "<cmd>cprevious<cr>", { desc = "quickfix previous" })
+set(n, "<leader>ws", "<cmd>vsplit<cr>", { desc = "split window", noremap = true, silent = true })
+set(n, "<leader>wS", "<cmd>split<cr>", { desc = "split window down", noremap = true, silent = true })
+
 set(n, "]h", "<cmd>Gitsigns next_hunk<cr>", { noremap = true, desc = "Next hunk" })
 set(n, "[h", "<cmd>Gitsigns prev_hunk<cr>", { noremap = true, desc = "Previous hunk" })
 
-set(n, "<C-h>", "<cmd>NavigatorLeft<cr>")
-set(n, "<C-l>", "<cmd>NavigatorRight<cr>")
-set(n, "<C-k>", "<cmd>NavigatorUp<cr>")
-set(n, "<C-j>", "<cmd>NavigatorDown<cr>")
-
-set(n, "<leader>u", "<cmd>UndotreeToggle<cr>", { desc = "Undo tree" })
 set(v, "<leader>b",
   ':<C-U>!git blame <C-R>=expand("%:p") <CR> | sed -n <C-R>=line("\'<") <CR>,<C-R>=line("\'>") <CR>p <CR>')
 
-set(n, "<leader>o", "<cmd>Telescope find_files<CR>", { noremap = true, silent = true, desc = "Find files" })
-set(n, "<leader>b", "<cmd>Telescope buffers<CR>", { noremap = true, silent = true, desc = "Find buffer" })
-set(n, "<leader>l", "<cmd>Telescope live_grep<CR>", { noremap = true, silent = true, desc = "Live grep" })
 set(n, "<leader>t", "<cmd>TermExec cmd=\"testfile %:p\" name=\"testfile\"<CR>",
   { noremap = true, silent = true, desc = "Test file" })
 set(n, "<leader>so", vim.lsp.buf.outgoing_calls, { noremap = true, silent = true, desc = "Symbol outgoing calls" })
 set(n, "<leader>si", vim.lsp.buf.incoming_calls, { noremap = true, silent = true, desc = "Symbol incoming calls" })
 set(n, "g@", "<cmd>Telescope lsp_document_symbols<cr>", { noremap = true, silent = true, desc = "Document symbols" })
-set(n, "g#", "<cmd>Telescope lsp_dynamic_workspace_symbols<cr>", { noremap = true, silent = true, desc =
-"Workspace symbols" })
-set(n, "<leader>f", "<cmd>Telescope current_buffer_fuzzy_find<CR>",
-  { noremap = true, silent = true, desc = "Buffer fuzzy find" })
-set(n, "<C-p>", "<cmd>Telescope find_files<CR>", { noremap = true, silent = true, desc = "Find files" })
-set(n, "<C-f>", "<cmd>Telescope current_buffer_fuzzy_find<CR>", { noremap = true, silent = true, desc =
-"Fuzzy find buffer" })
-set(v, "<F3>", '"zy:Telescope grep_string default_text=<C-r>z<cr>',
-  { noremap = true, silent = true, desc = "Find Selected" })
-set(n, "<F3>", "<cmd>Telescope grep_string<cr>", { noremap = true, silent = true, desc = "Find Word" })
-
-set(n, "<leader>?", "<cmd>AvanteToggle<CR>", { noremap = true, silent = true, desc = "Open Avante" })
-set(n, "<leader>ss", "<cmd>Switch<CR>", { noremap = true, silent = true, desc = "Switch" })
-set(n, "<leader>ws", "<cmd>vsplit<cr>", { desc = "split window", noremap = true, silent = true })
-set(n, "<leader>wS", "<cmd>split<cr>", { desc = "split window down", noremap = true, silent = true })
-
-set({ n, x, o }, "s", function() require("flash").jump() end, { desc = "Flash", noremap = true, silent = true })
+set(n, "g#", "<cmd>Telescope lsp_dynamic_workspace_symbols<cr>", {
+  noremap = true,
+  silent = true,
+  desc =
+  "Workspace symbols"
+})
 
 set(n, "<leader>;a", "<cmd>NewBookmark<CR>", { desc = "Add bookmark" })
 set(n, "<leader>;f", "<cmd>ProjectBookmarks<CR>", { desc = "Project bookmarks" })

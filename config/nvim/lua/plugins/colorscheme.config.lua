@@ -12,6 +12,7 @@ return {
     enabled = true,
     priority = 1000,
     config = function()
+      local utils = require("utils")
       require("kanagawa").setup({
         dimInactive = false,
         globalStatus = true,
@@ -21,7 +22,7 @@ return {
         statementStyle = { italic = false },
         typeStyle = { italic = true },
         variablebuiltinStyle = { italic = false },
-        transparent = false,
+        transparent = utils.is_transparent_background_enabled(),
         background = {
           dark = "wave",
           light = "lotus",
@@ -84,7 +85,6 @@ return {
       })
     end,
   },
-  { "zenbones-theme/zenbones.nvim", dependencies = "rktjmp/lush.nvim" },
   { "gbprod/nord.nvim" },
   { 'datsfilipe/vesper.nvim' },
 }
