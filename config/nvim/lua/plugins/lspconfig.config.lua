@@ -127,6 +127,10 @@ return {
         vim.keymap.set("n", "gR", '<cmd>Glance references<CR>', { buffer = ev.buf, desc = "References" })
         vim.keymap.set("n", "g.", vim.lsp.buf.code_action, { buffer = ev.buf, desc = "Code actions" })
         vim.keymap.set("n", "K", vim.lsp.buf.hover, { buffer = ev.buf, desc = "Hover" })
+        vim.keymap.set("n", "<leader>so", vim.lsp.buf.outgoing_calls, { noremap = true, silent = true, desc = "Symbol outgoing calls" })
+        vim.keymap.set("n", "<leader>si", vim.lsp.buf.incoming_calls, { noremap = true, silent = true, desc = "Symbol incoming calls" })
+        vim.keymap.set("n", "g@", "<cmd>Telescope lsp_document_symbols<cr>", { noremap = true, silent = true, desc = "Document symbols" })
+        vim.keymap.set("n", "g#", "<cmd>Telescope lsp_dynamic_workspace_symbols<cr>", { noremap = true, silent = true, desc = "Workspace symbols" })
       end,
     })
 

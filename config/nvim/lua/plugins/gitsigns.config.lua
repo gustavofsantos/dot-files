@@ -5,6 +5,10 @@ return {
     "sindrets/diffview.nvim",
     "nvim-telescope/telescope.nvim",
   },
+  keys = {
+    { "]h", "<cmd>Gitsigns next_hunk<cr>", noremap = true, desc = "Next hunk" },
+    { "[h", "<cmd>Gitsigns prev_hunk<cr>", noremap = true, desc = "Previous hunk" }
+  },
   event = "BufRead",
   config = function()
     require("gitsigns").setup({

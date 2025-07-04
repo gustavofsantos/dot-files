@@ -1,5 +1,5 @@
 vim.opt.background = "dark"
-vim.cmd.colorscheme("kanagawa")
+vim.cmd.colorscheme("gruvbox")
 vim.opt.inccommand = "split"
 vim.opt.ignorecase = true
 vim.opt.smartcase = true

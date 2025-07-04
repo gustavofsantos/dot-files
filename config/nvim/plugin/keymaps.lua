@@ -18,23 +18,11 @@ set(n, "[c", "<cmd>cprevious<cr>", { desc = "quickfix previous" })
 set(n, "<leader>ws", "<cmd>vsplit<cr>", { desc = "split window", noremap = true, silent = true })
 set(n, "<leader>wS", "<cmd>split<cr>", { desc = "split window down", noremap = true, silent = true })
 
-set(n, "]h", "<cmd>Gitsigns next_hunk<cr>", { noremap = true, desc = "Next hunk" })
-set(n, "[h", "<cmd>Gitsigns prev_hunk<cr>", { noremap = true, desc = "Previous hunk" })
-
 set(v, "<leader>b",
   ':<C-U>!git blame <C-R>=expand("%:p") <CR> | sed -n <C-R>=line("\'<") <CR>,<C-R>=line("\'>") <CR>p <CR>')
 
 set(n, "<leader>t", "<cmd>TermExec cmd=\"testfile %:p\" name=\"testfile\"<CR>",
   { noremap = true, silent = true, desc = "Test file" })
-set(n, "<leader>so", vim.lsp.buf.outgoing_calls, { noremap = true, silent = true, desc = "Symbol outgoing calls" })
-set(n, "<leader>si", vim.lsp.buf.incoming_calls, { noremap = true, silent = true, desc = "Symbol incoming calls" })
-set(n, "g@", "<cmd>Telescope lsp_document_symbols<cr>", { noremap = true, silent = true, desc = "Document symbols" })
-set(n, "g#", "<cmd>Telescope lsp_dynamic_workspace_symbols<cr>", {
-  noremap = true,
-  silent = true,
-  desc =
-  "Workspace symbols"
-})
 
 set(n, "<leader>;a", "<cmd>NewBookmark<CR>", { desc = "Add bookmark" })
 set(n, "<leader>;f", "<cmd>ProjectBookmarks<CR>", { desc = "Project bookmarks" })

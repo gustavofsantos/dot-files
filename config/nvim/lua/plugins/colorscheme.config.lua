@@ -9,7 +9,6 @@ return {
   {
     "rebelot/kanagawa.nvim",
     lazy = false,
-    enabled = true,
     priority = 1000,
     config = function()
       local utils = require("utils")
@@ -85,6 +84,19 @@ return {
       })
     end,
   },
+  {
+    'maxmx03/solarized.nvim',
+    ---@type solarized.config
+    opts = {},
+  },
   { "gbprod/nord.nvim" },
+  {
+    "ellisonleao/gruvbox.nvim",
+    opts = {
+      overrides = {
+        SignColumn = { link = "Normal" },
+      }
+    }
+  },
   { 'datsfilipe/vesper.nvim' },
 }

@@ -17,7 +17,10 @@ return {
         lualine_b = {},
         lualine_c = {
           { "filename", path = 1 },
+          "branch",
           "searchcount",
+        },
+        lualine_x = {
           {
             "diagnostics",
             colored = true,
@@ -25,8 +28,6 @@ return {
             sections = { 'error', 'warn' },
             symbols = { error = "■ ", warn = "■ ", hint = "■ ", info = "■ " },
           },
-        },
-        lualine_x = {
           "overseer",
           "location",
           { "filetype", colored = true, icon_only = true },
