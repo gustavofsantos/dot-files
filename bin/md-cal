@@ -1,0 +1,204 @@
+#!/bin/bash
+
+# ==============================================================================
+# md-cal.sh - A shell script to generate Markdown calendars.
+#
+# Now with macOS (BSD date) and Linux (GNU date) compatibility.
+#
+# USAGE:
+#   ./md-cal.sh [options]
+#
+# OPTIONS:
+#   -w          Generate calendar for the current week.
+#   -m [month]  Generate calendar for the given month (e.g., 5). Defaults to the current month.
+#   -y [year]   Generate calendar for the given year (e.g., 2025). Defaults to the current year.
+#   -h          Show this help message.
+# ==============================================================================
+
+# --- Configuration & OS Detection ---
+
+# Set to 0 for Sunday, 1 for Monday
+WEEK_START_DAY=0
+# Detect the OS for date command compatibility
+OS=$(uname -s)
+
+# --- Helper Functions ---
+
+# Function to print usage information
+usage() {
+    echo "Usage: $0 [-w] [-m month] [-y year] [-h]"
+    echo "  -w          Generate calendar for the current week."
+    echo "  -m [month]  Generate calendar for a specific month (defaults to current)."
+    echo "  -y [year]   Generate calendar for a specific year (defaults to current)."
+    echo "  -h          Display this help message."
+    exit 1
+}
+
+# Function to generate the markdown for a single month
+# Arguments: $1 = Year, $2 = Month
+print_month() {
+    local year=$1
+    local month=$2
+    local month_name
+    local first_day_weekday
+    local days_in_month
+
+    if [[ "$OS" == "Linux" ]]; then
+        month_name=$(date -d "${year}-${month}-01" "+%B %Y")
+        first_day_weekday=$(date -d "${year}-${month}-01" +%w)
+        days_in_month=$(date -d "${year}-${month}-01 +1 month -1 day" +%d)
+    elif [[ "$OS" == "Darwin" ]]; then
+        month_name=$(date -j -f "%Y-%m-%d" "${year}-${month}-01" "+%B %Y")
+        first_day_weekday=$(date -j -f "%Y-%m-%d" "${year}-${month}-01" +%w)
+        # The 'cal' command is the most portable way to get the number of days in a month.
+        days_in_month=$(cal "$month" "$year" | awk 'NF {d = $NF}; END {print d}')
+    fi
+
+    echo "### ${month_name}"
+    echo
+    echo "|   S |   M |   T |   W |   T |   F |   S |           |"
+    echo "| --: | --: | --: | --: | --: | --: | --: | --------: |"
+
+    local current_day=1
+    printf "|"
+    for (( i=0; i<first_day_weekday; i++ )); do
+        printf "     |"
+    done
+
+    while [[ ${current_day} -le ${days_in_month} ]]; do
+        local full_date="${year}-$(printf "%02d" ${month})-$(printf "%02d" ${current_day})"
+        local current_weekday
+        local week_num
+
+        if [[ "$OS" == "Linux" ]]; then
+            current_weekday=$(date -d "${full_date}" +%w)
+            week_num=$(date -d "${full_date}" "+%W")
+        elif [[ "$OS" == "Darwin" ]]; then
+            current_weekday=$(date -j -f "%Y-%m-%d" "${full_date}" +%w)
+            week_num=$(date -j -f "%Y-%m-%d" "${full_date}" "+%W" | sed 's/^0*//')
+        fi
+
+        if [[ ${current_weekday} -eq ${WEEK_START_DAY} && ${current_day} -ne 1 ]]; then
+            printf "\n|"
+        fi
+        
+        local padded_day=$(printf "%2d" "${current_day}")
+        printf "   [[Journal/%s\|%s]] |" "${full_date}" "${padded_day}"
+
+        if [[ ${current_weekday} -eq 6 ]]; then
+            local week_link="${year}-W$(printf "%02d" ${week_num})"
+            printf " ***[[Journal/%s\|W%02d]]*** |" "${week_link}" "${week_num}"
+        fi
+        
+        ((current_day++))
+    done
+
+    local last_day_weekday
+    if [[ "$OS" == "Linux" ]]; then
+        last_day_weekday=$(date -d "${year}-${month}-${days_in_month}" +%w)
+    elif [[ "$OS" == "Darwin" ]]; then
+        last_day_weekday=$(date -j -f "%Y-%m-%d" "${year}-${month}-$(printf "%02d" ${days_in_month})" +%w)
+    fi
+    
+    if [[ ${last_day_weekday} -ne 6 ]]; then
+        for (( i=last_day_weekday; i<5; i++ )); do
+            printf "     |"
+        done
+        local week_num
+        local full_date="${year}-${month}-$(printf "%02d" ${days_in_month})"
+        if [[ "$OS" == "Linux" ]]; then
+             week_num=$(date -d "${full_date}" "+%W")
+        elif [[ "$OS" == "Darwin" ]]; then
+             week_num=$(date -j -f "%Y-%m-%d" "${full_date}" "+%W" | sed 's/^0*//')
+        fi
+        # echo "week_num: ${week_num}"
+        # echo "full_date: ${full_date}"
+        # echo "year: ${year}"
+        # echo "week_link: ${week_link}"
+        local week_link="${year}-W$(printf "%02d" ${week_num})"
+        printf "     | ***[[Journal/%s\|W%02d]]*** |" "${week_link}" "${week_num}"
+    fi
+    echo -e "\n"
+}
+
+# Function to generate the markdown for the current week
+print_week() {
+    echo "|   S |   M |   T |   W |   T |   F |   S |           |"
+    echo "| --: | --: | --: | --: | --: | --: | --: | --------: |"
+
+    local today_weekday=$(date +%w)
+    
+    printf "|"
+    for i in {0..6}; do
+        local day_offset=$((i - today_weekday))
+        local target_date
+        local day_num
+
+        if [[ "$OS" == "Linux" ]]; then
+            target_date=$(date -d "${day_offset} days" "+%Y-%m-%d")
+        elif [[ "$OS" == "Darwin" ]]; then
+            # Format the offset with a sign for BSD date
+            local sign=""
+            if [[ ${day_offset} -ge 0 ]]; then
+                sign="+"
+            fi
+            target_date=$(date -v${sign}${day_offset}d "+%Y-%m-%d")
+        fi
+        
+        day_num=$(date -j -f "%Y-%m-%d" "${target_date}" "+%e" | sed 's/ //')
+        printf "   [[Journal/%s\|%s]] |" "${target_date}" "${day_num}"
+    done
+
+    local week_num=$(date "+%W")
+    local year=$(date "+%Y")
+    local week_link="${year}-W$(printf "%02d" ${week_num})"
+    printf " ***[[Journal/%s\|W%02d]]*** |" "${week_link}" "${week_num}"
+    echo -e "\n"
+}
+
+
+# --- Main Logic ---
+
+YEAR=$(date +%Y)
+MONTH=$(date +%m)
+MODE="month" 
+
+while getopts "wm:y:h" opt; do
+  case ${opt} in
+    w)
+      MODE="week"
+      ;;
+    m)
+      MONTH=${OPTARG}
+      MODE="month"
+      ;;
+    y)
+      YEAR=${OPTARG}
+      if ! [[ "$*" =~ "-m" ]]; then
+          MODE="year"
+      fi
+      ;;
+    h)
+      usage
+      ;;
+    \?)
+      echo "Invalid option: -${OPTARG}" >&2
+      usage
+      ;;
+  esac
+done
+
+
+case ${MODE} in
+  "week")
+    print_week
+    ;;
+  "month")
+    print_month "${YEAR}" "${MONTH}"
+    ;;
+  "year")
+    for m in {1..12}; do
+      print_month "${YEAR}" "${m}"
+    done
+    ;;
+esac

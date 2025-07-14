@@ -1,5 +1,6 @@
 """ map leader to space ---------------------
 let mapleader=" "
+let maplocalleader=","
 
 """ plugins ---------------------------------
 Plug 'justinmk/vim-sneak'
@@ -21,7 +22,7 @@ set idearefactormode=keep
 
 """ common settings -------------------------
 set scrolloff=5
-set clipboard+=ideaput
+set clipboard+=unnamedplus
 set showmode
 set ignorecase
 set smartcase
@@ -41,9 +42,15 @@ set nohlsearch
 nmap gd <Action>(GotoDeclaration)<CR>
 nmap gi <Action>(GotoImplementation)<CR>
 nmap gR <Action>(RenameElement)<CR>
+nmap gr <Action>(ShowUsages)<CR>
 nmap g. <Action>(ShowIntentionActions)<CR>
 nmap K <Action>(QuickDocumentation)<CR>
 
+" Autocomplete mappings
+imap <C-n> <Action>(HippieCompletion)<CR>
+imap <C-p> <Action>(HippieBackwardCompletion)<CR>
+imap <C-n> <Action>(PopupMenu-selectNext)
+imap <C-p> <Action>(PopupMenu-selectPrev)
 
 " Editor mappings
 nmap <leader><leader> <C-^>
