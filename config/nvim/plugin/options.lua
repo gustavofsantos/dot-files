@@ -1,5 +1,5 @@
 vim.opt.background = "dark"
-vim.cmd.colorscheme("gruvbox")
+vim.cmd.colorscheme("kanagawa")
 vim.opt.inccommand = "split"
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
@@ -53,7 +53,7 @@ vim.opt.winbar = ""
 vim.opt.title = true
 vim.opt.titlestring = '%t%( %M%)%( (%{expand("%:~:h")})%)%a (nvim)'
 -- vim.opt.mouse = "nv"
-vim.opt.colorcolumn = "80,100"
+vim.opt.colorcolumn = ""
 
 vim.opt.path:append({ "**" })
 vim.opt.wildignore:append({ "*/node_modules/*" })
