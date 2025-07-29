@@ -4,6 +4,6 @@ return {
   event = "VeryLazy",
   cmd = "UndotreeToggle",
   keys = {
-    { "<leader>u", "<cmd>UndotreeToggle<cr>", desc = "Undo tree" }
+    { "<leader>ut", "<cmd>UndotreeToggle<cr>", desc = "Undo tree" }
   }
 }

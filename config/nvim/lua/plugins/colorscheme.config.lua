@@ -89,7 +89,7 @@ return {
     ---@type solarized.config
     opts = {},
   },
-  { "gbprod/nord.nvim" },
+  -- { "gbprod/nord.nvim" },
   {
     "ellisonleao/gruvbox.nvim",
     opts = {
@@ -107,14 +107,17 @@ return {
       strikethrough = true,
       invert_selection = false,
       invert_signs = false,
-      invert_tabline = false,
+      invert_tabline = true,
       inverse = false, -- invert background for search, diffs, statuslines and errors
-      contrast = "hard", -- can be "hard", "soft" or empty string
+      contrast = "",   -- can be "hard", "soft" or empty string
       palette_overrides = {},
       dim_inactive = false,
       transparent_mode = false,
       overrides = {
         SignColumn = { link = "Normal" },
+        DiagnosticSignWarn = { link = "Normal" },
+        DiagnosticSignInfo = { link = "Normal" },
+        DiagnosticSignHint = { link = "Normal" },
       }
     }
   },

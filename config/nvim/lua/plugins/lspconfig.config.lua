@@ -39,6 +39,7 @@ return {
 
     mason.setup()
     mason_lspconfig.setup({
+      automatic_enable = true,
       ensure_installed = {
         "lua_ls",
         "vtsls",
@@ -51,72 +52,72 @@ return {
       },
     })
 
-    mason_lspconfig.setup_handlers({
-      function(server_name)
-        require("lspconfig")[server_name].setup({ capabilities = capabilities })
-      end,
-      ["lua_ls"] = function()
-        require("lspconfig").lua_ls.setup({ capabilities = capabilities })
-      end,
-      ["jsonls"] = function()
-        require("lspconfig").jsonls.setup({
-          capabilities = capabilities,
-          settings = {
-            json = {
-              schemas = require("schemastore").json.schemas(),
-              validate = { enable = true },
-            },
-          },
-        })
-      end,
-      ["yamlls"] = function()
-        require("lspconfig").yamlls.setup({
-          capabilities = capabilities,
-          settings = {
-            yaml = {
-              schemaStore = {
-                enable = false,
-                url = "",
-              },
-              schemas = require("schemastore").yaml.schemas(),
-            },
-          },
-        })
-      end,
-      ["pyright"] = function()
-        local lspconfig = require("lspconfig")
-        local config = {
-          capabilities = capabilities,
-          settings = {
-            python = {
-              analysis = {
-                typeCheckingMode = "basic",
-                useLibraryCodeForTypes = true,
-              },
-            },
-          },
-        }
+    vim.lsp.config("*", {capabilities = capabilities})
 
-        lspconfig.pyright.setup(config)
-      end,
-      ["vtsls"] = function()
-        local lspconfig = require("lspconfig")
-        lspconfig.vtsls.setup({
-          capabilities = capabilities,
-          root_dir = lspconfig.util.root_pattern("package.json"),
-          single_file_support = false
-        })
-      end,
-      ["denols"] = function()
-        local lspconfig = require("lspconfig")
-        lspconfig.denols.setup({
-          capabilities = capabilities,
-          root_dir = lspconfig.util.root_pattern("deno.json", "deno.jsonc"),
-        })
-      end,
-      -- disable the kotlin language server
-      -- ["kotlin_language_server"] = nil
-    })
+
+    -- mason_lspconfig.setup_handlers({
+    --   ["lua_ls"] = function()
+    --     require("lspconfig").lua_ls.setup({ capabilities = capabilities })
+    --   end,
+    --   ["jsonls"] = function()
+    --     require("lspconfig").jsonls.setup({
+    --       capabilities = capabilities,
+    --       settings = {
+    --         json = {
+    --           schemas = require("schemastore").json.schemas(),
+    --           validate = { enable = true },
+    --         },
+    --       },
+    --     })
+    --   end,
+    --   ["yamlls"] = function()
+    --     require("lspconfig").yamlls.setup({
+    --       capabilities = capabilities,
+    --       settings = {
+    --         yaml = {
+    --           schemaStore = {
+    --             enable = false,
+    --             url = "",
+    --           },
+    --           schemas = require("schemastore").yaml.schemas(),
+    --         },
+    --       },
+    --     })
+    --   end,
+    --   ["pyright"] = function()
+    --     local lspconfig = require("lspconfig")
+    --     local config = {
+    --       capabilities = capabilities,
+    --       settings = {
+    --         python = {
+    --           analysis = {
+    --             typeCheckingMode = "basic",
+    --             useLibraryCodeForTypes = true,
+    --           },
+    --         },
+    --       },
+    --     }
+    --
+    --     lspconfig.pyright.setup(config)
+    --   end,
+    --   ["vtsls"] = function()
+    --     local lspconfig = require("lspconfig")
+    --     lspconfig.vtsls.setup({
+    --       capabilities = capabilities,
+    --       root_dir = lspconfig.util.root_pattern("package.json"),
+    --       single_file_support = false
+    --     })
+    --   end,
+    --   ["denols"] = function()
+    --     local lspconfig = require("lspconfig")
+    --     lspconfig.denols.setup({
+    --       capabilities = capabilities,
+    --       root_dir = lspconfig.util.root_pattern("deno.json", "deno.jsonc"),
+    --     })
+    --   end,
+    --   -- disable the kotlin language server
+    --   -- ["kotlin_language_server"] = nil
+    -- })
 
     vim.api.nvim_create_autocmd("LspAttach", {
       group = vim.api.nvim_create_augroup("UserLspConfig", { clear = true }),
@@ -127,6 +128,7 @@ return {
         vim.keymap.set("n", "gR", '<cmd>Glance references<CR>', { buffer = ev.buf, desc = "References" })
         vim.keymap.set("n", "g.", vim.lsp.buf.code_action, { buffer = ev.buf, desc = "Code actions" })
         vim.keymap.set("n", "K", vim.lsp.buf.hover, { buffer = ev.buf, desc = "Hover" })
+        vim.keymap.set("n", "gf", "<cmd>Format<cr>", { buffer = ev.buf, desc = "Format async" })
         vim.keymap.set("n", "<leader>so", vim.lsp.buf.outgoing_calls, { noremap = true, silent = true, desc = "Symbol outgoing calls" })
         vim.keymap.set("n", "<leader>si", vim.lsp.buf.incoming_calls, { noremap = true, silent = true, desc = "Symbol incoming calls" })
         vim.keymap.set("n", "g@", "<cmd>Telescope lsp_document_symbols<cr>", { noremap = true, silent = true, desc = "Document symbols" })
@@ -157,5 +159,20 @@ return {
         source = "if_many",
       },
     })
+    local function toggle_diagnostic_lines()
+      local _1_
+      if vim.diagnostic.config().virtual_lines then
+        _1_ = false
+      else
+        _1_ = { current_line = true }
+      end
+      return vim.diagnostic.config({ virtual_lines = _1_ })
+    end
+
+    local function toggle_diagnostic_text()
+      return vim.diagnostic.config({ virtual_text = not vim.diagnostic.config().virtual_text })
+    end
+    vim.keymap.set("n", "<leader>tdl", toggle_diagnostic_lines, { desc = "Toggle diagnostic virtual lines." })
+    vim.keymap.set("n", "<leader>tdt", toggle_diagnostic_text, { desc = "Toggle diagnostic virtual text." })
   end,
 }

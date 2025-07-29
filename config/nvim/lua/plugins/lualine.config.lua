@@ -17,20 +17,19 @@ return {
         lualine_b = {},
         lualine_c = {
           { "filename", path = 1 },
-          "branch",
           "searchcount",
         },
         lualine_x = {
           {
             "diagnostics",
             colored = true,
-            sources = { "nvim_diagnostic", "nvim_workspace_diagnostic" },
+            sources = { "nvim_diagnostic" },
             sections = { 'error', 'warn' },
             symbols = { error = "■ ", warn = "■ ", hint = "■ ", info = "■ " },
           },
           "overseer",
-          "location",
           { "filetype", colored = true, icon_only = true },
+          "location",
         },
         lualine_y = { "lsp_status", "lsp_progress" },
         lualine_z = {},

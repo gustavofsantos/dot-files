@@ -66,15 +66,14 @@ return {
         },
         mapping = cmp_mappings,
         performance = {
-          max_view_entries = 20,
+          max_view_entries = 25,
         },
         sources = {
-          { name = "luasnip",  max_item_count = 2,  priority = 10 },
-          { name = "nvim_lsp", max_item_count = 10, priority = 5 },
-          { name = "nvim_lua", max_item_count = 4,  keyword_length = 2, priority = 2 },
-          -- { name = "codecompanion", max_item_count = 3,  priority = 5 },
-          { name = "path",     keyword_length = 3,  max_item_count = 5, priority = 2 },
-          { name = "buffer",   max_item_count = 4,  keyword_length = 5, priority = 1 },
+          { name = "nvim_lsp" },
+          { name = "luasnip",  keyword_length = 2, max_item_count = 5 },
+          { name = "nvim_lua", keyword_length = 2, max_item_count = 4 },
+          { name = "path",     keyword_length = 3, max_item_count = 5 },
+          { name = "buffer",   keyword_length = 5, max_item_count = 3 },
         },
       })
     end
