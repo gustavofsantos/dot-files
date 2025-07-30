@@ -120,7 +120,7 @@
 
 [delta]
   ; features = side-by-side
-  syntax-theme = Kanagawa
+  syntax-theme = Nord
   true-color = always
   line-numbers = true
   hyperlinks = true

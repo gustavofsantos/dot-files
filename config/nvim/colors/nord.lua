@@ -284,6 +284,9 @@ local highlights = {
   -- Custom for languages -------------------------------------------
   -------------------------------------------------------------------
 
+  -- Lua
+  ["@punctuation.bracket.lua"] = { link = "Delimiter" },
+
   -- Clojure
   ["@punctuation.bracket.clojure"] = { fg = palette.gray6 }
 }
