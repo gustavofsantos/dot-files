@@ -62,7 +62,7 @@ local highlights = {
   -- Editor
   ColorColumn = { bg = palette.gray02 },
   Cursor = { fg = palette.nord00, bg = palette.nord05 },
-  CursorLine = { bg = palette.gray2 },
+  CursorLine = { bg = "NONE" },
   Error = { fg = palette.nord05, bg = palette.red },
   iCursor = { fg = palette.nord00, bg = palette.nord05 },
   LineNr = { fg = palette.nord03 },
@@ -217,6 +217,14 @@ local highlights = {
   GitSignsChange = { fg = palette.yellow },
   GitSignsDelete = { fg = palette.red },
 
+  -- Flash
+  FlashMatch = { link = "Visual" },
+  FlashCurrent = { fg = palette.gray00, bg = palette.orange },
+  FlashLabel = { fg = palette.gray00, bg = palette.yellow_dim },
+  FlashPrompt = { link = "MsgArea" },
+  FlashPromptIcon = { link = "Special" },
+  FlashCursor = { link = "Cursor" },
+
   -- Nvim-Treesitter
   TSAnnotation = { link = "Annotation" },
   TSConstBuiltin = { link = "Constant" },
@@ -272,6 +280,12 @@ local highlights = {
   TreeFolderName = { fg = palette.blue_bright },
   TreeWinSeparator = { link = 'WinSeparator' },
 
+  -------------------------------------------------------------------
+  -- Custom for languages -------------------------------------------
+  -------------------------------------------------------------------
+
+  -- Clojure
+  ["@punctuation.bracket.clojure"] = { fg = palette.gray6 }
 }
 
 for group, opts in pairs(highlights) do
