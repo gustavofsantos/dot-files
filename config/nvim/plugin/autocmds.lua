@@ -77,3 +77,25 @@ vim.api.nvim_create_user_command("TaskNotes", function()
     vim.fn.setfile(file_path, content)
   end
 end, { desc = "Open task notes", bang = true, nargs = 0 })
+
+
+-- vim.cmd([[
+--   autocmd TermOpen * setlocal nonumber norelativenumber
+-- ]])
+
+vim.cmd([[augroup highlight_yank
+    autocmd!
+    au TextYankPost * silent! lua vim.highlight.on_yank({higroup="IncSearch", timeout=500})
+augroup END]])
+
+vim.api.nvim_create_user_command(
+  'YankPath',
+  function()
+    vim.fn.setreg('+', vim.fn.expand('%:.:p'))
+    print('Current buffer relative path yanked!')
+  end,
+  {
+    desc = 'Yank the relative path of the current buffer',
+    force = true, -- Overwrite if command already exists
+  }
+)

@@ -127,10 +127,10 @@ local highlights = {
   MoreMsg = { fg = palette.sky },
   Question = { fg = palette.nord05 },
 
-  StatusLine = { fg = palette.sky, bg = palette.nord03 },
-  StatusLineNC = { fg = palette.nord05, bg = palette.nord03 },
-  StatusLineTerm = { fg = palette.sky, bg = palette.nord03 },
-  StatusLineTermNC = { fg = palette.nord05, bg = palette.nord03 },
+  StatusLine = { fg = palette.sky, bg = palette.nord01 },
+  StatusLineNC = { fg = palette.nord05, bg = palette.nord01 },
+  StatusLineTerm = { fg = palette.sky, bg = palette.nord01 },
+  StatusLineTermNC = { fg = palette.nord05, bg = palette.nord01 },
 
   WarningMsg = { fg = palette.nord00, bg = palette.yellow },
   WildMenu = { fg = palette.sky, bg = palette.nord01 },
