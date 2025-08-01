@@ -288,12 +288,7 @@ return {
   {
     "folke/flash.nvim",
     event = "VeryLazy",
-    ---@type Flash.Config
     opts = {},
-    keys = {
-      { "s", function() require("flash").jump() end,       desc = "Flash",            mode = { "n", "x", "o" }, noremap = true, silent = true },
-      { "S", function() require("flash").treesitter() end, desc = "Flash Treesitter", mode = { "n", "x", "o" }, noremap = true, silent = true },
-    }
   },
   {
     "tpope/vim-fugitive",
@@ -306,10 +301,6 @@ return {
       "nvim-lua/plenary.nvim",
       "sindrets/diffview.nvim",
       "nvim-telescope/telescope.nvim",
-    },
-    keys = {
-      { "]h", "<cmd>Gitsigns next_hunk<cr>", noremap = true, desc = "Next hunk" },
-      { "[h", "<cmd>Gitsigns prev_hunk<cr>", noremap = true, desc = "Previous hunk" }
     },
     event = "BufRead",
     config = function()
@@ -400,19 +391,6 @@ return {
       local mason = require("mason")
       local mason_lspconfig = require("mason-lspconfig")
       local capabilities = require("cmp_nvim_lsp").default_capabilities()
-      local function toggle_diagnostic_lines()
-        local _1_
-        if vim.diagnostic.config().virtual_lines then
-          _1_ = false
-        else
-          _1_ = { current_line = true }
-        end
-        return vim.diagnostic.config({ virtual_lines = _1_ })
-      end
-
-      local function toggle_diagnostic_text()
-        return vim.diagnostic.config({ virtual_text = not vim.diagnostic.config().virtual_text })
-      end
 
       mason.setup()
       mason_lspconfig.setup({
@@ -430,30 +408,6 @@ return {
       })
 
       vim.lsp.config("*", { capabilities = capabilities })
-
-      vim.api.nvim_create_autocmd("LspAttach", {
-        group = vim.api.nvim_create_augroup("UserLspConfig", { clear = true }),
-        callback = function(ev)
-          vim.keymap.set("n", "gd", '<cmd>Glance definitions<CR>', { buffer = ev.buf, desc = "Definition" })
-          vim.keymap.set("n", "gi", '<cmd>Glance implementations<CR>', { buffer = ev.buf, desc = "Implementation" })
-          vim.keymap.set("n", "gr", vim.lsp.buf.rename, { buffer = ev.buf, desc = "Rename symbol" })
-          vim.keymap.set("n", "gR", '<cmd>Glance references<CR>', { buffer = ev.buf, desc = "References" })
-          vim.keymap.set("n", "g.", vim.lsp.buf.code_action, { buffer = ev.buf, desc = "Code actions" })
-          vim.keymap.set("n", "K", vim.lsp.buf.hover, { buffer = ev.buf, desc = "Hover" })
-          vim.keymap.set("n", "gf", "<cmd>Format<cr>", { buffer = ev.buf, desc = "Format async" })
-          vim.keymap.set("n", "<leader>so", vim.lsp.buf.outgoing_calls,
-            { noremap = true, silent = true, desc = "Symbol outgoing calls" })
-          vim.keymap.set("n", "<leader>si", vim.lsp.buf.incoming_calls,
-            { noremap = true, silent = true, desc = "Symbol incoming calls" })
-          vim.keymap.set("n", "g@", "<cmd>Telescope lsp_document_symbols<cr>",
-            { noremap = true, silent = true, desc = "Document symbols" })
-          vim.keymap.set("n", "g#", "<cmd>Telescope lsp_dynamic_workspace_symbols<cr>",
-            { noremap = true, silent = true, desc = "Workspace symbols" })
-
-          vim.keymap.set("n", "<leader>tdl", toggle_diagnostic_lines, { desc = "Toggle diagnostic virtual lines." })
-          vim.keymap.set("n", "<leader>tdt", toggle_diagnostic_text, { desc = "Toggle diagnostic virtual text." })
-        end,
-      })
     end,
   },
 
@@ -533,23 +487,16 @@ return {
   { "echasnovski/mini.move", version = '*', event = "BufRead", opts = {} },
   {
     "numToStr/Navigator.nvim",
-    lazy = true,
-    event = "VeryLazy",
     opts = {},
-    keys = {
-      { "<C-h>", "<cmd>NavigatorLeft<cr>" },
-      { "<C-l>", "<cmd>NavigatorRight<cr>" },
-      { "<C-k>", "<cmd>NavigatorUp<cr>" },
-      { "<C-j>", "<cmd>NavigatorDown<cr>" },
-    }
+    cmd = { "Navigator" },
   },
   "tpope/vim-sleuth",
   "tpope/vim-surround",
   "tpope/vim-repeat",
   {
     "stevearc/oil.nvim",
-    event = "VeryLazy",
     dependencies = { "nvim-tree/nvim-web-devicons" },
+    cmd = { "Oil" },
     config = function()
       require("oil").setup({
         default_file_explorer = true,
@@ -564,9 +511,6 @@ return {
   {
     "AndrewRadev/switch.vim",
     cmd = { "Switch" },
-    keys = {
-      { "<leader>ss", "<cmd>Switch<CR>", noremap = true, silent = true, desc = "Switch" }
-    },
     config = function()
       vim.cmd([[let g:switch_custom_definitions =
           \ [
@@ -670,42 +614,22 @@ return {
         }
       })
 
-
       vim.wo.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
     end,
   },
   {
     "mbbill/undotree",
-    lazy = true,
-    event = "VeryLazy",
     cmd = "UndotreeToggle",
-    keys = {
-      { "<leader>ut", "<cmd>UndotreeToggle<cr>", desc = "Undo tree" }
-    }
   },
   {
     "vim-test/vim-test",
-    enabled = true,
     dependencies = { "christoomey/vim-tmux-runner" },
     cmd = { "TestFile", "TestNearest", "TestSuite", "TestLast" },
-    config = function()
-      -- if vim.env.TMUX then
-      --   vim.cmd([[let test#strategy = "vtr"]])
-      -- else
-      --   vim.cmd([[let test#strategy = "toggleterm"]])
-      -- end
-      vim.cmd([[let test#strategy = "toggleterm"]])
-      vim.cmd([[let test#javascript#playwright#options = "--headed --retries 0 --workers 1"]])
-      vim.cmd([[let test#clojure#runner = "leintest"]])
-      vim.cmd([[let test#clojure#leintest#executable = "lein with-profile test midje"]])
-      vim.cmd([[let test#clojure#leintest#options = ""]])
-    end,
   },
   {
     "folke/which-key.nvim",
     event = "VeryLazy",
-    opts = {
-    },
+    opts = {},
   },
 
   {
@@ -717,43 +641,7 @@ return {
   {
     "nvim-telescope/telescope.nvim",
     tag = "0.1.8",
-    lazy = true,
-    event = "VeryLazy",
-    keys = {
-      { "<leader>o", "<cmd>Telescope find_files<CR>",                desc = "Find files" },
-      { "<leader>b", "<cmd>Telescope buffers<CR>",                   desc = "Find buffer" },
-      { "<leader>l", "<cmd>Telescope live_grep<CR>",                 desc = "Live grep" },
-      { "<leader>f", "<cmd>Telescope current_buffer_fuzzy_find<CR>", desc = "Buffer fuzzy find" },
-      { "<C-p>",     "<cmd>Telescope find_files<CR>",                desc = "Find files" },
-      { "<C-f>",     "<cmd>Telescope current_buffer_fuzzy_find<CR>", desc = "Fuzzy find buffer" },
-      { "<F3>",      "<cmd>Telescope grep_string<cr>",               desc = "Find Word" },
-      {
-        "<F3>",
-        function()
-          local function get_current_visual_selection()
-            local selected_text = ""
-            local temp_reg = "z"
-            local old_reg_content = vim.fn.getreg(temp_reg)
-            local old_reg_type = vim.fn.getregtype(temp_reg)
-
-            vim.cmd('normal! "' .. temp_reg .. 'y')
-
-            selected_text = vim.fn.getreg(temp_reg, true)
-
-            vim.fn.setreg(temp_reg, old_reg_content, old_reg_type)
-
-            return selected_text
-          end
-          local selection = get_current_visual_selection()
-          vim.cmd("Telescope grep_string default_text=" .. selection)
-        end,
-        mode = { "v" },
-        desc = "Find selection"
-      }
-
-      -- set(v, "<F3>", '"zy:Telescope grep_string default_text=<C-r>z<cr>',
-      --   { noremap = true, silent = true, desc = "Find Selected" })
-    },
+    cmd = "Telescope",
     dependencies = {
       "nvim-telescope/telescope-symbols.nvim",
       { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
