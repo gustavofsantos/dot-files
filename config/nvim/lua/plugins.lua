@@ -488,7 +488,7 @@ return {
   {
     "numToStr/Navigator.nvim",
     opts = {},
-    cmd = { "Navigator" },
+    cmd = { "NavigatorLeft", "NavigatorRight", "NavigatorUp", "NavigatorDown" },
   },
   "tpope/vim-sleuth",
   "tpope/vim-surround",
