@@ -52,8 +52,7 @@ vim.opt.showtabline = 1
 vim.opt.winbar = ""
 vim.opt.title = true
 vim.opt.titlestring = '%t%( %M%)%( (%{expand("%:~:h")})%)%a (nvim)'
--- vim.opt.mouse = "nv"
-vim.opt.colorcolumn = ""
+vim.opt.colorcolumn = "80"
 
 vim.opt.path:append({ "**" })
 vim.opt.wildignore:append({ "*/node_modules/*" })
@@ -88,6 +87,31 @@ vim.opt.fillchars = {
 vim.opt.undofile = true
 vim.opt.undodir = vim.fn.stdpath("data") .. "/undo"
 
+
+vim.diagnostic.config({
+  underline = false,
+  virtual_text = false,
+  update_in_insert = false,
+  signs = {
+    text = {
+      [vim.diagnostic.severity.ERROR] = '■',
+      [vim.diagnostic.severity.WARN] = '■',
+      [vim.diagnostic.severity.HINT] = '■',
+      [vim.diagnostic.severity.INFO] = '■',
+    }
+  },
+  float = {
+    source = "if_many",
+  },
+})
+
+-- Diagnostic symbols in the sign column (gutter)
+local signs = { Error = "■", Warn = "■", Hint = '■', Info = '■' }
+for type, _ in pairs(signs) do
+  local hl = "DiagnosticSign" .. type
+  vim.fn.sign_define(hl, { text = "", texthl = hl, numhl = "" })
+end
+
 -- -- undercurl
 -- vim.cmd([[let &t_Cs = "\e[4:3m"]])
 -- vim.cmd([[let &t_Ce = "\e[4:0m"]])
@@ -100,26 +124,6 @@ vim.opt.undodir = vim.fn.stdpath("data") .. "/undo"
 -- vim.opt.statusline:append("%{exists('g:loaded_fugitive')?fugitive#statusline():''}")
 -- vim.opt.statusline:append("%h%m%r%=%-14.(%l,%c%V%) %P")
 
--- vim.cmd([[
---   autocmd TermOpen * setlocal nonumber norelativenumber
--- ]])
-
-vim.cmd([[augroup highlight_yank
-    autocmd!
-    au TextYankPost * silent! lua vim.highlight.on_yank({higroup="IncSearch", timeout=500})
-augroup END]])
-
-vim.api.nvim_create_user_command(
-  'YankPath',
-  function()
-    vim.fn.setreg('+', vim.fn.expand('%:.:p'))
-    print('Current buffer relative path yanked!')
-  end,
-  {
-    desc = 'Yank the relative path of the current buffer',
-    force = true, -- Overwrite if command already exists
-  }
-)
 
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not vim.loop.fs_stat(lazypath) then
@@ -150,5 +154,3 @@ require("lazy").setup({
     path = "~/Code/nvim-plugins"
   }
 })
-
-
