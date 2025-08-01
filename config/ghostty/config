@@ -1,7 +1,7 @@
 # Berkeley Mono
 font-family = BerkeleyMono Nerd Font
 font-feature = -calt, +liga, -dlig.
-font-size = 14
+font-size = 16
 
 # Mono Lisa
 # font-family = MonoLisa Nerd Font
@@ -30,8 +30,8 @@ theme = nord
 gtk-titlebar = false
 background-opacity = 0.975
 background-blur = true
-window-padding-x = 4
-window-padding-y = 4
+window-padding-x = 0
+window-padding-y = 0
 custom-shader = false
 # custom-shader = ~/.config/ghostty/shaders/crt-shader-with-chromatic-aberration-glow-scanlines-dot-matrix.glsl
 # custom-shader-animation=true
@@ -60,9 +60,9 @@ keybind = super+shift+comma=reload_config
 # keybind = ctrl+a>s=new_split:right
 # keybind = ctrl+a>ctrl+s=new_split:right
 # keybind = ctrl+a>shift+s=new_split:down
-# keybind = ctrl+a>j=goto_split:bottom
-# keybind = ctrl+a>k=goto_split:top
-# keybind = ctrl+a>h=goto_split:left
-# keybind = ctrl+a>l=goto_split:right
+keybind = super+j=goto_split:bottom
+keybind = super+k=goto_split:top
+keybind = super+h=goto_split:left
+keybind = super+l=goto_split:right
 # keybind = ctrl+a>z=toggle_split_zoom
 # keybind = ctrl+a>e=equalize_splits
