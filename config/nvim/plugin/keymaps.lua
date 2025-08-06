@@ -17,6 +17,7 @@ set(n, "]c", "<cmd>cnext<cr>", { desc = "quickfix next" })
 set(n, "[c", "<cmd>cprevious<cr>", { desc = "quickfix previous" })
 set(n, "<leader>ws", "<cmd>vsplit<cr>", { desc = "split window", noremap = true })
 set(n, "<leader>wS", "<cmd>split<cr>", { desc = "split window down", noremap = true })
+set(n, "<leader>Q", "<cmd>qa!<cr>", { desc = "quit" })
 
 set(n, "<C-h>", "<cmd>NavigatorLeft<cr>")
 set(n, "<C-l>", "<cmd>NavigatorRight<cr>")
