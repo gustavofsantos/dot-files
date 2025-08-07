@@ -1,7 +1,13 @@
+# Commit Mono
+font-family = CommitMono
+font-size = 16
+
 # Berkeley Mono
 font-family = BerkeleyMono Nerd Font
-font-feature = -calt, +liga, -dlig.
-font-size = 16
+# font-feature = -calt, +liga, -dlig.
+# font-size = 16
+# adjust-cell-height = 4
+
 
 # Mono Lisa
 # font-family = MonoLisa Nerd Font
@@ -21,7 +27,6 @@ font-size = 16
 # font-size = 14
 # font-feature = -liga,-dlig,+calt
 
-adjust-cell-height = 4
 cursor-style = block
 cursor-invert-fg-bg = true
 # theme = kanagawa-wave
