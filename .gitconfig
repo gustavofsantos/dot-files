@@ -16,23 +16,36 @@
   dh1           = diff HEAD~1
   l             = log --color --abbrev-commit --branches --graph --date=relative --format='%C(auto,yellow)%<(12,trunc)%ar%C(auto,reset) %C(auto,green)%<(10)%h%C(auto,reset) %C(auto,blue)%<(20)%an%C(auto,reset) %s'
   lg            = log --color --graph --abbrev-commit --branches --date=relative --pretty=format:'%C(red)%h%C(reset) -%C(yellow)%d%C(reset) %s %C(green)(%cr) %C(bold blue)<%an>%C(reset)'
-  ll		    = log --pretty=deploy
-  lz		    = log --graph --oneline
+  ll		= log --pretty=deploy
+  lz		= log --graph --oneline
   rh            = reset --hard
   dft           = difftool
   undo          = reset --soft HEAD~1
-  compress	    = gc --aggressive --prune=now
+  compress	= gc --aggressive --prune=now
   tags          = tag -l
   amend         = commit --amend --reuse-message=HEAD --no-verify
   contributors  = shortlog --summary --numbered
   export        = archive --format=zip --output=repo.zip HEAD
   su            = submodule update --init --recursive
-  conflict	    = !nvim +DiffviewOpen
-  dash		    = !gh dash
-  nuke		    = !git clean -fd && git reset --hard
-  w		        = worktree
-  wa		    = worktree add
-  wl		    = worktree list --porcelain
+  conflict	= !nvim +DiffviewOpen
+  dash		= !gh dash
+  nuke		= !git clean -fd && git reset --hard
+
+  # Add new branch as worktree
+  # git wta feature-branch
+  wta		= "!git-add-worktree"
+  # Remove worktree (by dir name)
+  # git wtr feature-branch
+  wtr		= "!git-remove-worktree"
+  # List all worktrees
+  wtl		= "worktree list"
+  # Prune orphaned worktree
+  wtp		= "worktree prune"
+  # Remove merged branches, prune worktrees
+  tidy		= "!f() { git branch --merged | grep -v '\\*\\|main\\|master\\|develop\\|staging\\|forno' | xargs -r git branch -d; git worktree prune; }; f"
+  # Update everything
+  updateall	= "!f() { git fetch --all && git worktree prune && git status; }; f"
+  pushu		= "!f() { git push -u origin $(git rev-parse --abbrev-ref HEAD); }; f"
 
   h             = !git head
   hp            = "!. ~/.githelpers && show_git_head"
@@ -43,9 +56,9 @@
   b             = "!. ~/.githelpers && pretty_git_branch"
   bs            = !git checkout $(git branch | fzf)
   ski           = !git stash --keep-index
-  lcom		    = !git-diff-list-commits
-  drev		    = !git-diff
-  lazy		    = !lazygit
+  lcom		= !git-diff-list-commits
+  drev		= !git-diff
+  lazy		= !lazygit
 
 [gpg]
   format = ssh
@@ -62,7 +75,7 @@
 
 [core]
   editor = nvim
-  pager = delta
+  ; pager = delta
 
 [merge]
   conflictstyle = diff3
