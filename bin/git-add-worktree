@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Usage: git-add-worktree <worktree-name> [<base-branch>]
+
+REPO_DIR=$(git rev-parse --show-toplevel)
+WORKSPACE_DIR=$(dirname "$REPO_DIR")
+PROJECT_NAME=$(basename "$REPO_DIR")
+WORKTREE_PARENT="$WORKSPACE_DIR/${PROJECT_NAME}-worktrees"
+
+mkdir -p "$WORKTREE_PARENT"
+
+WORKTREE_NAME="$1"
+BASE_BRANCH="${2:-HEAD}"
+
+WORKTREE_PATH="$WORKTREE_PARENT/$WORKTREE_NAME"
+
+# Check if worktree path is empty or does not exist
+if [ -e "$WORKTREE_PATH" ] && [ "$(ls -A $WORKTREE_PATH)" ]; then
+    echo "Error: Directory $WORKTREE_PATH exists and is not empty. Aborting."
+    exit 1
+fi
+
+# Create the new worktree
+if [ "$BASE_BRANCH" = "HEAD" ]; then
+    git worktree add -b "$WORKTREE_NAME" "$WORKTREE_PATH"
+else
+    git worktree add -b "$WORKTREE_NAME" "$WORKTREE_PATH" "$BASE_BRANCH"
+fi
+
+# Output the worktree path for the parent shell to use
+echo "$WORKTREE_PATH"

@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Usage: git-remove-worktree <worktree-name>
+
+WORKTREE_NAME="$1"
+
+# Check if worktree name is provided
+if [ -z "$WORKTREE_NAME" ]; then
+    echo "Usage: git-remove-worktree <worktree-name>"
+    exit 1
+fi
+
+# Get repository information
+REPO_DIR=$(git rev-parse --show-toplevel)
+WORKSPACE_DIR=$(dirname "$REPO_DIR")
+PROJECT_NAME=$(basename "$REPO_DIR")
+WORKTREE_PARENT="$WORKSPACE_DIR/${PROJECT_NAME}-worktrees"
+WORKTREE_PATH="$WORKTREE_PARENT/$WORKTREE_NAME"
+
+# Check if worktree exists
+if [ ! -d "$WORKTREE_PATH" ]; then
+    echo "Error: Worktree '$WORKTREE_NAME' does not exist at $WORKTREE_PATH"
+    exit 1
+fi
+
+# Remove the worktree
+echo "Removing worktree: $WORKTREE_NAME"
+git worktree remove "$WORKTREE_PATH"
+
+if [ $? -eq 0 ]; then
+    echo "Successfully removed worktree: $WORKTREE_NAME"
+else
+    echo "Error: Failed to remove worktree: $WORKTREE_NAME"
+    exit 1
+fi
