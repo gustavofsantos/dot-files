@@ -1,6 +1,17 @@
 return {
   { "windwp/nvim-autopairs", event = "InsertEnter", opts = { enable_check_bracket_line = false } },
-  { "kevinhwang91/nvim-bqf", filetypes = { "qf" } },
+  {
+    "kevinhwang91/nvim-bqf",
+    filetypes = { "qf" },
+    opts = {
+      preview = {
+        winblend = {
+          description = [[The winblend for preview window, `:h winblend`]],
+          default = 0
+        },
+      }
+    }
+  },
   {
     "hrsh7th/nvim-cmp",
     event = "InsertEnter",
@@ -153,7 +164,7 @@ return {
   },
   'maxmx03/solarized.nvim',
   'datsfilipe/vesper.nvim',
-  { "numToStr/Comment.nvim",      event = "BufRead", opts = {} },
+  { "numToStr/Comment.nvim", event = "BufRead",     opts = {} },
   {
     "stevearc/conform.nvim",
     config = function()
@@ -410,7 +421,6 @@ return {
       vim.lsp.config("*", { capabilities = capabilities })
     end,
   },
-
   {
     "nvim-lualine/lualine.nvim",
     dependencies = {
@@ -470,8 +480,15 @@ return {
     end,
   },
 
-  { "echasnovski/mini.ai",        version = '*',     event = "BufRead", opts = {} },
-  { "echasnovski/mini.bracketed", version = '*',     event = "BufRead", opts = {} },
+  { "echasnovski/mini.ai",   version = '*', event = "BufRead", opts = {} },
+  {
+    "echasnovski/mini.bracketed",
+    version = '*',
+    event = "BufRead",
+    opts = {
+      diagnostic = { options = { severity = vim.diagnostic.severity.ERROR } },
+    }
+  },
   {
     "echasnovski/mini.hipatterns",
     event = "BufRead",
