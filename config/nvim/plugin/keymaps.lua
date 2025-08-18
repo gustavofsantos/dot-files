@@ -78,25 +78,3 @@ set({ n, x, o }, "S", function() require("flash").treesitter() end, { desc = "Fl
 
 set(n, "<leader>ss", "<cmd>Switch<CR>", { noremap = true, desc = "Switch" })
 
--- LSP
-vim.api.nvim_create_autocmd("LspAttach", {
-  group = vim.api.nvim_create_augroup("UserLspConfig", { clear = true }),
-  callback = function(ev)
-    set(n, "gd", "<cmd>Glance definitions<CR>", { buffer = ev.buf, desc = "Definition" })
-    set(n, "gi", "<cmd>Glance implementations<CR>", { buffer = ev.buf, desc = "Implementation" })
-    set(n, "gr", vim.lsp.buf.rename, { buffer = ev.buf, desc = "Rename symbol" })
-    set(n, "gR", '<cmd>Glance references<CR>', { buffer = ev.buf, desc = "References" })
-    set(n, "g.", vim.lsp.buf.code_action, { buffer = ev.buf, desc = "Code actions" })
-    set(n, "K", vim.lsp.buf.hover, { buffer = ev.buf, desc = "Hover" })
-    set(n, "gf", "<cmd>Format<cr>", { buffer = ev.buf, desc = "Format async" })
-    set(n, "<leader>so", vim.lsp.buf.outgoing_calls,
-      { noremap = true, desc = "Symbol outgoing calls" })
-    set(n, "<leader>si", vim.lsp.buf.incoming_calls,
-      { noremap = true, desc = "Symbol incoming calls" })
-    set(n, "g@", "<cmd>Telescope lsp_document_symbols<cr>",
-      { noremap = true, desc = "Document symbols" })
-    set(n, "g#", "<cmd>Telescope lsp_dynamic_workspace_symbols<cr>",
-      { noremap = true, desc = "Workspace symbols" })
-  end,
-})
-
