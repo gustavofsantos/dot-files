@@ -40,7 +40,9 @@ set(n, "<leader>;g", "<cmd>GlobalBookmarks<CR>", { desc = "All bookmarks" })
 set(n, "-", "<cmd>Oil<CR>", { noremap = true, desc = "File explorer" })
 set(n, "<leader>o", "<cmd>Telescope find_files<CR>", { desc = "Find files" })
 set(n, "<leader>b", "<cmd>Telescope buffers<CR>", { desc = "Find buffer", noremap = true })
-set(n, "<leader>l", "<cmd>Telescope live_grep<CR>", { desc = "Live grep", noremap = true })
+set(n, "<leader>lg", "<cmd>Telescope live_grep<CR>", { desc = "Live grep", noremap = true })
+set(n, "<leader>lt", "<cmd>LiveGrepTests<CR>", { desc = "Live grep in test files", noremap = true })
+set(n, "<leader>ls", "<cmd>LiveGrepNonTests<CR>", { desc = "Live grep in source files", noremap = true})
 set(n, "<leader>f", "<cmd>Telescope current_buffer_fuzzy_find<CR>", { desc = "Buffer fuzzy find", noremap = true })
 set(n, "<leader>h", "<cmd>Telescope help_tags<CR>", { desc = "Help", noremap = true })
 set(n, "<C-p>", "<cmd>Telescope find_files<CR>", { desc = "Find files", noremap = true })
@@ -80,8 +82,8 @@ set(n, "<leader>ss", "<cmd>Switch<CR>", { noremap = true, desc = "Switch" })
 vim.api.nvim_create_autocmd("LspAttach", {
   group = vim.api.nvim_create_augroup("UserLspConfig", { clear = true }),
   callback = function(ev)
-    set(n, "gd", vim.lsp.buf.definition, { buffer = ev.buf, desc = "Definition" })
-    set(n, "gi", vim.lsp.buf.implementation, { buffer = ev.buf, desc = "Implementation" })
+    set(n, "gd", "<cmd>Glance definitions<CR>", { buffer = ev.buf, desc = "Definition" })
+    set(n, "gi", "<cmd>Glance implementations<CR>", { buffer = ev.buf, desc = "Implementation" })
     set(n, "gr", vim.lsp.buf.rename, { buffer = ev.buf, desc = "Rename symbol" })
     set(n, "gR", '<cmd>Glance references<CR>', { buffer = ev.buf, desc = "References" })
     set(n, "g.", vim.lsp.buf.code_action, { buffer = ev.buf, desc = "Code actions" })
@@ -97,3 +99,4 @@ vim.api.nvim_create_autocmd("LspAttach", {
       { noremap = true, desc = "Workspace symbols" })
   end,
 })
+

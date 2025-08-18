@@ -170,7 +170,7 @@ local highlights = {
   Label = { fg = palette.blue_bright },
   Number = { link = "Constant" },
   Namespace = { fg = palette.yellow_dim },
-  Operator = { fg = palette.blue_bright },
+  Operator = { fg = palette.gray6 },
   PreProc = { fg = palette.blue_bright },
   Repeat = { fg = palette.blue_bright },
   Special = { fg = palette.nord05 },
@@ -240,6 +240,9 @@ local highlights = {
   TSVariable = { link = "Variable" },
   TSVariableBuiltin = { link = "Keyword" },
 
+  ["@variable"] = { link = "Variable" },
+  ["@markup.strong"] = { fg = palette.nord07, bold = true },
+
   -- Telescope plugin support
   TelescopeBorder = { fg = palette.nord03, bg = palette.nord01 },
   TelescopePromptBorder = { fg = palette.nord03, bg = palette.nord01 },
@@ -284,11 +287,23 @@ local highlights = {
   -- Custom for languages -------------------------------------------
   -------------------------------------------------------------------
 
+  -- JSON
+  ["@property.json"] = { fg = palette.cyan },
+
   -- Lua
   ["@punctuation.bracket.lua"] = { link = "Delimiter" },
 
   -- Clojure
-  ["@punctuation.bracket.clojure"] = { fg = palette.gray6 }
+  ["@punctuation.bracket.clojure"] = { fg = palette.nord04 },
+
+  -- Markdown
+  ["@markup.list.markdown"] = { fg = palette.nord04 },
+  ["@markup.heading.1.markdown"] = { fg = palette.cyan_bright },
+  ["@markup.heading.2.markdown"] = { fg = palette.cyan },
+  ["@markup.heading.3.markdown"] = { fg = palette.cyan },
+  ["@markup.heading.4.markdown"] = { fg = palette.cyan_dim },
+  ["@markup.heading.5.markdown"] = { fg = palette.cyan_dim },
+  ["@markup.heading.6.markdown"] = { fg = palette.cyan_dim },
 }
 
 for group, opts in pairs(highlights) do

@@ -22,6 +22,56 @@ M.navigation.live_grep = function()
   require("telescope.builtin").live_grep()
 end
 
+-- Grep only in test files
+M.navigation.live_grep_tests = function()
+  local builtin = require("telescope.builtin")
+  local test_globs = {
+    "**/*.test.*",
+    "**/*.spec.*",
+    "**/*_test.*",
+    "**/*Test.*",
+    "test/**",
+    "tests/**",
+    "**/__tests__/**",
+  }
+
+  builtin.live_grep({
+    additional_args = function(_)
+      local args = {}
+      for _, glob in ipairs(test_globs) do
+        table.insert(args, "-g")
+        table.insert(args, glob)
+      end
+      return args
+    end,
+  })
+end
+
+-- Grep in non-test files only
+M.navigation.live_grep_non_tests = function()
+  local builtin = require("telescope.builtin")
+  local exclude_test_globs = {
+    "!**/*.test.*",
+    "!**/*.spec.*",
+    "!**/*_test.*",
+    "!**/*Test.*",
+    "!test/**",
+    "!tests/**",
+    "!**/__tests__/**",
+  }
+
+  builtin.live_grep({
+    additional_args = function(_)
+      local args = {}
+      for _, glob in ipairs(exclude_test_globs) do
+        table.insert(args, "-g")
+        table.insert(args, glob)
+      end
+      return args
+    end,
+  })
+end
+
 M.navigation.buf_fuzzy_find = function()
   require("telescope.builtin").current_buffer_fuzzy_find()
 end
@@ -169,7 +219,5 @@ M.testing.run_file = function()
   local cfg = require("custom_project_configs.configs")
   return require("neotest").overseer.run({ vim.fn.expand("%"), env = cfg.get_testing_env() })
 end
-
-M.ai = require("config.ai")
 
 return M
