@@ -15,6 +15,7 @@ else
             echo "$path"
         done
         find ~/Workplace -mindepth 1 -maxdepth 1 -type d
+        find ~/Workplace/seubarriga-worktrees -mindepth 1 -maxdepth 1 -type d
     ) | gum filter --limit 1 --placeholder 'Choose a session' --height 15 --prompt='⚡')
 fi
 
