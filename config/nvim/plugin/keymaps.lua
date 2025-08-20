@@ -78,3 +78,13 @@ set({ n, x, o }, "S", function() require("flash").treesitter() end, { desc = "Fl
 
 set(n, "<leader>ss", "<cmd>Switch<CR>", { noremap = true, desc = "Switch" })
 
+-- LSP
+vim.api.nvim_create_autocmd("LspAttach", {
+  group = vim.api.nvim_create_augroup("UserLspConfig", { clear = true }),
+  callback = function(ev)
+    set(n, "K", function() vim.lsp.buf.hover({max_width = 60 }) end, { buffer = ev.buf, desc = "Hover" })
+    set(n, "grd", vim.lsp.buf.definition, { buffer = ev.buf, desc = "Go to definition"})
+    set(n, "gf", "<cmd>Format<cr>", { buffer = ev.buf, desc = "Format async" })
+  end,
+})
+
