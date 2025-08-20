@@ -15,7 +15,7 @@ BASE_BRANCH="${2:-HEAD}"
 WORKTREE_PATH="$WORKTREE_PARENT/$WORKTREE_NAME"
 
 # Check if worktree path is empty or does not exist
-if [ -e "$WORKTREE_PATH" ] && [ "$(ls -A $WORKTREE_PATH)" ]; then
+if [ -e "$WORKTREE_PATH" ] && [ "$(ls -A "$WORKTREE_PATH")" ]; then
     echo "Error: Directory $WORKTREE_PATH exists and is not empty. Aborting."
     exit 1
 fi
@@ -25,6 +25,16 @@ if [ "$BASE_BRANCH" = "HEAD" ]; then
     git worktree add -b "$WORKTREE_NAME" "$WORKTREE_PATH"
 else
     git worktree add -b "$WORKTREE_NAME" "$WORKTREE_PATH" "$BASE_BRANCH"
+fi
+
+# If the main repo has a .cursor directory, symlink it into the new worktree
+if [ -d "$REPO_DIR/.cursor" ]; then
+    if [ -e "$WORKTREE_PATH/.cursor" ]; then
+        echo "Info: $WORKTREE_PATH/.cursor already exists; skipping symlink."
+    else
+        ln -s "$REPO_DIR/.cursor" "$WORKTREE_PATH/.cursor"
+        echo "Symlinked .cursor from $REPO_DIR to $WORKTREE_PATH"
+    fi
 fi
 
 # Output the worktree path for the parent shell to use
