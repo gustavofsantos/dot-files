@@ -1,18 +1,6 @@
 return {
   { "windwp/nvim-autopairs", event = "InsertEnter", opts = { enable_check_bracket_line = false } },
   {
-    "kevinhwang91/nvim-bqf",
-    filetypes = { "qf" },
-    opts = {
-      preview = {
-        winblend = {
-          description = [[The winblend for preview window, `:h winblend`]],
-          default = 0
-        },
-      }
-    }
-  },
-  {
     "hrsh7th/nvim-cmp",
     event = "InsertEnter",
     dependencies = {
