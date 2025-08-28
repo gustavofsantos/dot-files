@@ -12,6 +12,7 @@ export JOURNALS_HOME="$HOME/Documents/Obsidian/vault/"
 export WORKLOG_PATH="$HOME/Documents/Obsidian/vault/worklog.md"
 export MEMORY_FILE_PATH="$HOME/.llm_memory.txt"
 export OLLAMA_API_BASE="http://127.0.0.1:11434"
+export HOMEBREW_NO_AUTO_UPDATE=1
 
 export PATH="$PNPM_HOME:$PATH"
 export PATH=$PATH:"$HOME"/.local/bin
