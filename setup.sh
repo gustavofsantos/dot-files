@@ -10,10 +10,11 @@ ln -sf "$(pwd)/.psqlrc" "$HOME/.psqlrc"
 ln -sf "$(pwd)/.zprofile" "$HOME/.zprofile"
 ln -sf "$(pwd)/.zshenv" "$HOME/.zshenv"
 ln -sf "$(pwd)/.zshrc" "$HOME/.zshrc"
+ln -sf "$(pwd)/.todo.cfg" "$HOME/.todo.cfg"
 echo "Linking home files... OK"
 
 echo "Linking bin files..."
-cd bin && find . -type f -exec ln -sf "$(pwd)/{}" "$HOME/.local/bin/{}" \; && cd ..
+cd bin && find . -type f -exec ln -sf "$(pwd)/{}" "$HOME/.bin/{}" \; && cd ..
 echo "Linking bin files... OK"
 
 echo "Linking xdg config..."
