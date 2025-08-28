@@ -15,3 +15,6 @@ worktrees
 json
 onboarding
 worktree
+midje
+homebrew
+env

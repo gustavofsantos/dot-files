@@ -549,7 +549,7 @@ return {
         terminal_mappings = true,
         persist_size = true,
         persist_mode = true,
-        shade_terminals = false,
+        shade_terminals = true,
         start_in_insert = true,
       })
     end,

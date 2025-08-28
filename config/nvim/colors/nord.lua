@@ -8,6 +8,7 @@ local palette = {
   nord06         = "#E5E9F0",
   nord07         = "#ECEFF4",
 
+  gray000        = '#1A1C21',
   gray00         = '#191D24',
   gray01         = '#1E222A',
   gray02         = '#222630',
@@ -118,7 +119,7 @@ local highlights = {
   SignColumnSB = { fg = palette.nord01, bg = components.editor_bg },
 
   -- Navigation
-  Directory = { fg = palette.sky },
+  Directory = { fg = palette.blue },
 
   -- Prompt/Status
   EndOfBuffer = { fg = palette.nord01 },
@@ -148,6 +149,9 @@ local highlights = {
   Title = { fg = palette.nord05 },
   VertSplit = { fg = palette.gray00, bg = components.editor_bg },
   WinSeparator = { link = "VertSplit" },
+
+  -- QuickFix
+  -- QuickFixText = { bg = palette.gray00 },
 
   -- Language Base Groups
   Boolean = { fg = palette.blue_bright },
@@ -224,6 +228,9 @@ local highlights = {
   FlashPrompt = { link = "MsgArea" },
   FlashPromptIcon = { link = "Special" },
   FlashCursor = { link = "Cursor" },
+
+  -- Oil
+  OilFile = { fg = palette.nord06 },
 
   -- Nvim-Treesitter
   TSAnnotation = { link = "Annotation" },
