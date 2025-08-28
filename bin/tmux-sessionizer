@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 paths=(
-    "$HOME/dot-files"
+    "$HOME/.dot-files"
     "$HOME/.config/nvim"
     "$HOME/.config/ghostty"
 )
