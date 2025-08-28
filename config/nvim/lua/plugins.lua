@@ -154,6 +154,13 @@ return {
   'datsfilipe/vesper.nvim',
   { "numToStr/Comment.nvim", event = "BufRead",     opts = {} },
   {
+    'stevearc/quicker.nvim',
+    event = "FileType qf",
+    ---@module "quicker"
+    ---@type quicker.SetupOptions
+    opts = {},
+  },
+  {
     "stevearc/conform.nvim",
     config = function()
       vim.g.disable_autoformat = true

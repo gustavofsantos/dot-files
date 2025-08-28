@@ -4,7 +4,7 @@ vim.g.maplocalleader = ","
 vim.opt.background = "dark"
 vim.cmd.colorscheme("nord")
 vim.opt.inccommand = "split"
-vim.opt.winwidth = 80
+vim.opt.winwidth = 100
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
 vim.opt.number = true
