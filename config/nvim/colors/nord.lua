@@ -177,7 +177,7 @@ local highlights = {
   Operator = { fg = palette.gray6 },
   PreProc = { fg = palette.blue_bright },
   Repeat = { fg = palette.blue_bright },
-  Special = { fg = palette.nord05 },
+  Special = { fg = palette.cyan_bright, italic = true },
   SpecialChar = { fg = palette.yellow },
   SpecialComment = { fg = palette.sky, italic = true },
   Statement = { fg = palette.blue_bright },
@@ -302,6 +302,8 @@ local highlights = {
 
   -- Clojure
   ["@punctuation.bracket.clojure"] = { fg = palette.nord04 },
+  ["@constructor.clojure"] = { link = "Function"},
+  ["@function.macro.clojure"] = { fg = palette.magenta_bright, bold = true },
 
   -- Markdown
   ["@markup.list.markdown"] = { fg = palette.nord04 },

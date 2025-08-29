@@ -114,17 +114,6 @@ return {
             StatusLineNC = { bg = colors.palette.sumiInk2 },
             ColorColumn = { bg = colors.palette.sumiInk2 },
 
-            -- CursorLine = { bg = "NONE" },
-            -- CursorLineSign = { bg = "#000000" },
-            -- CursorLineNr = { bg = "#000000"},
-
-            -- DiagnosticWarn = { link = "LineNr" },
-            -- DiagnosticInfo = { link = "LineNr" },
-            -- DiagnosticHint = { link = "LineNr" },
-            -- DiagnosticSignWarn = { link = "LineNr" },
-            -- DiagnosticSignInfo = { link = "LineNr" },
-            -- DiagnosticSignHint = { link = "LineNr" },
-
             TelescopeTitle = { fg = colors.theme.ui.special, bold = true },
             TelescopePromptNormal = { bg = colors.theme.ui.bg_p1 },
             TelescopePromptBorder = { fg = colors.theme.ui.bg_p1, bg = colors.theme.ui.bg_p1 },
@@ -158,7 +147,24 @@ return {
     event = "FileType qf",
     ---@module "quicker"
     ---@type quicker.SetupOptions
-    opts = {},
+    opts = {
+      keys = {
+        {
+          ">",
+          function()
+            require("quicker").expand({ before = 2, after = 2, add_to_existing = true })
+          end,
+          desc = "Expand quickfix context",
+        },
+        {
+          "<",
+          function()
+            require("quicker").collapse()
+          end,
+          desc = "Collapse quickfix context",
+        },
+      },
+    },
   },
   {
     "stevearc/conform.nvim",
@@ -604,8 +610,8 @@ return {
             border = 'none',
             floating_preview_opts = {},
             peek_definition_code = {
-              ["<leader>df"] = "@function.outer",
-              ["<leader>dF"] = "@class.outer",
+              ["gpd"] = "@function.outer",
+              ["gpc"] = "@class.outer",
             },
           },
         }
@@ -766,6 +772,32 @@ return {
             db_safe_mode = false,
           },
         },
+      })
+    end,
+  },
+  {
+    'stevearc/overseer.nvim',
+    event = "VeryLazy",
+    config = function()
+      local overseer = require('overseer')
+      overseer.setup({})
+
+      -- Create user command to rerun last task
+      vim.api.nvim_create_user_command('OverseerRunLast', function()
+        local tasks = overseer.list_tasks()
+        if #tasks == 0 then
+          vim.notify("No tasks to rerun", vim.log.levels.INFO)
+          return
+        end
+
+        -- Get the most recent task (first in the list)
+        local last_task = tasks[1]
+        if last_task then
+          last_task:restart()
+          vim.notify("Rerunning: " .. last_task.name, vim.log.levels.INFO)
+        end
+      end, {
+        desc = "Rerun the last Overseer task"
       })
     end,
   }

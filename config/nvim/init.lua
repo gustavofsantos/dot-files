@@ -119,13 +119,6 @@ end
 -- vim.cmd([[let &t_8f = "\<Esc>[38;2;%lu;%lu;%lum"]])
 -- vim.cmd([[let &t_8b = "\<Esc>[48;2;%lu;%lu;%lum"]])
 
-
--- vim.opt.statusline = "%<%f"
--- vim.opt.statusline:append("%{exists('g:loaded_fugitive')?' ':''}")
--- vim.opt.statusline:append("%{exists('g:loaded_fugitive')?fugitive#statusline():''}")
--- vim.opt.statusline:append("%h%m%r%=%-14.(%l,%c%V%) %P")
-
-
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not vim.loop.fs_stat(lazypath) then
   vim.fn.system({
@@ -143,7 +136,7 @@ require("lazy").setup({
   { import = "plugins" },
 }, {
   install = {
-    colorscheme = { "default" },
+    colorscheme = { "nord" },
   },
   checker = {
     notify = false,
