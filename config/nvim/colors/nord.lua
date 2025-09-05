@@ -1,3 +1,17 @@
+local blend_colors = function(base, target, ratio)
+  local r1, g1, b1 = base:match("#(%x%x)(%x%x)(%x%x)")
+  local r2, g2, b2 = target:match("#(%x%x)(%x%x)(%x%x)")
+
+  r1, g1, b1 = tonumber(r1, 16), tonumber(g1, 16), tonumber(b1, 16)
+  r2, g2, b2 = tonumber(r2, 16), tonumber(g2, 16), tonumber(b2, 16)
+
+  local r = math.floor(r1 * (1 - ratio) + r2 * ratio)
+  local g = math.floor(g1 * (1 - ratio) + g2 * ratio)
+  local b = math.floor(b1 * (1 - ratio) + b2 * ratio)
+
+  return string.format("#%02X%02X%02X", r, g, b)
+end
+
 local palette = {
   nord00         = "#2E3440",
   nord01         = "#3B4252",
@@ -30,15 +44,18 @@ local palette = {
   sky            = "#88C0D0",
   blue_bright    = "#81A1C1",
   blue           = "#5E81AC",
+  blue_muted     = "#415570",
   red_bright     = "#C5727A",
   red            = "#BF616A",
   red_dim        = "#B74E58",
+  red_muted      = "#72454F",
   orange_bright  = '#D79784',
   orange         = "#D08770",
   orange_dim     = '#CB775D',
   yellow_bright  = '#EFD49F',
   yellow         = "#EBCB8B",
   yellow_dim     = '#E7C173',
+  yellow_muted   = "#BAA375",
   green_bright   = '#B1C89D',
   green          = "#A3BE8C",
   green_dim      = '#97B67C',
@@ -92,9 +109,9 @@ local highlights = {
   TermCursorNC = { bg = palette.nord01 },
 
   -- Neovim Diagnostics API (for LSP)
-  DiagnosticWarn = { fg = palette.yellow },
-  DiagnosticError = { fg = palette.red },
-  DiagnosticInfo = { fg = palette.sky },
+  DiagnosticWarn = { fg = palette.yellow_muted },
+  DiagnosticError = { fg = palette.red_muted },
+  DiagnosticInfo = { fg = palette.blue_muted },
   DiagnosticHint = { fg = palette.blue },
   DiagnosticUnderlineWarn = { fg = palette.yellow, undercurl = true },
   DiagnosticUnderlineError = { fg = palette.red, undercurl = true },
@@ -120,6 +137,7 @@ local highlights = {
 
   -- Navigation
   Directory = { fg = palette.blue },
+  File = { fg = palette.nord05 },
 
   -- Prompt/Status
   EndOfBuffer = { fg = palette.nord01 },
@@ -129,9 +147,9 @@ local highlights = {
   Question = { fg = palette.nord05 },
 
   StatusLine = { fg = palette.sky, bg = palette.nord01 },
-  StatusLineNC = { fg = palette.nord05, bg = palette.nord01 },
+  StatusLineNC = { fg = palette.nord05, bg = palette.nord00 },
   StatusLineTerm = { fg = palette.sky, bg = palette.nord01 },
-  StatusLineTermNC = { fg = palette.nord05, bg = palette.nord01 },
+  StatusLineTermNC = { fg = palette.nord05, bg = palette.nord00 },
 
   WarningMsg = { fg = palette.nord00, bg = palette.yellow },
   WildMenu = { fg = palette.sky, bg = palette.nord01 },
@@ -152,6 +170,8 @@ local highlights = {
 
   -- QuickFix
   -- QuickFixText = { bg = palette.gray00 },
+  QuickFixLineNr = { link = "LineNr" },
+  QuickFixFilename = { link = "File" },
 
   -- Language Base Groups
   Boolean = { fg = palette.blue_bright },
@@ -163,7 +183,7 @@ local highlights = {
   Constant = { fg = palette.magenta_bright },
   Decorator = { fg = palette.orange },
   Define = { fg = palette.blue_bright },
-  Delimiter = { fg = palette.nord07 },
+  Delimiter = { fg = palette.nord04 },
   Exception = { fg = palette.blue_bright },
   Float = { fg = palette.magenta },
   Field = { fg = palette.cyan },
@@ -194,10 +214,10 @@ local highlights = {
   Variable = { link = "Identifier" },
 
   -- Diff highlighting
-  DiffAdd = { fg = palette.green, bg = palette.nord00 },
-  DiffChange = { fg = palette.yellow, bg = palette.nord00 },
-  DiffDelete = { fg = palette.red, bg = palette.nord00 },
-  DiffText = { fg = palette.blue_bright, bg = palette.nord00 },
+  DiffAdd = { fg = blend_colors(palette.green, palette.gray10, 0.25), bg = blend_colors(palette.green, palette.gray0, 0.95) },
+  DiffChange = { fg = blend_colors(palette.yellow, palette.gray10, 0.25), bg = blend_colors(palette.yellow, palette.gray0, 0.95) },
+  DiffDelete = { fg = blend_colors(palette.orange, palette.gray10, 0.25), bg = blend_colors(palette.orange, palette.gray0, 0.95) },
+  DiffText = { fg = palette.blue_bright, bg = palette.gray0 },
 
   -- Legacy diff groups
   diffAdded = { link = "DiffAdd" },
@@ -211,14 +231,14 @@ local highlights = {
 
   -- Plugin support - Only adding a subset for brevity
   -- DiagnosticSign highlights for LSP
-  DiagnosticSignError = { fg = palette.red, bg = "NONE" },
-  DiagnosticSignWarn = { fg = palette.yellow, bg = "NONE" },
+  DiagnosticSignError = { fg = palette.red_muted, bg = "NONE" },
+  DiagnosticSignWarn = { fg = palette.yellow_muted, bg = "NONE" },
   DiagnosticSignHint = { fg = palette.sky, bg = "NONE" },
   DiagnosticSignInfo = { fg = palette.blue_bright, bg = "NONE" },
 
   -- GitSigns plugin support
   GitSignsAdd = { fg = palette.green },
-  GitSignsChange = { fg = palette.yellow },
+  GitSignsChange = { fg = palette.orange },
   GitSignsDelete = { fg = palette.red },
 
   -- Flash
@@ -248,6 +268,7 @@ local highlights = {
   TSVariableBuiltin = { link = "Keyword" },
 
   ["@variable"] = { link = "Variable" },
+  ["@constructor"] = { link = "Function" },
   ["@markup.strong"] = { fg = palette.nord07, bold = true },
 
   -- Telescope plugin support
@@ -261,7 +282,7 @@ local highlights = {
   TelescopePreviewBorder = { fg = palette.nord03, bg = palette.nord01 },
   TelescopePreviewNormal = { fg = palette.nord05, bg = palette.nord01 },
   TelescopePreviewTitle = { fg = palette.nord01, bg = palette.sky },
-  TelescopeSelection = { fg = palette.sky, bg = palette.nord03 },
+  TelescopeSelection = { fg = palette.sky, bg = palette.nord03, italic = false },
   TelescopeSelectionCaret = { fg = palette.sky, bg = palette.nord03 },
   TelescopeMultiSelection = { fg = palette.sky, bg = palette.nord03 },
 
@@ -299,10 +320,11 @@ local highlights = {
 
   -- Lua
   ["@punctuation.bracket.lua"] = { link = "Delimiter" },
+  ["@constructor.lua"] = { link = "Delimiter" },
 
   -- Clojure
   ["@punctuation.bracket.clojure"] = { fg = palette.nord04 },
-  ["@constructor.clojure"] = { link = "Function"},
+  ["@constructor.clojure"] = { link = "Function" },
   ["@function.macro.clojure"] = { fg = palette.magenta_bright, bold = true },
 
   -- Markdown

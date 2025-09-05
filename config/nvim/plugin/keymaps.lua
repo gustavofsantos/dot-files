@@ -46,6 +46,9 @@ set(n, "<leader>lt", "<cmd>LiveGrepTests<CR>", { desc = "Live grep in test files
 set(n, "<leader>ls", "<cmd>LiveGrepNonTests<CR>", { desc = "Live grep in source files", noremap = true })
 set(n, "<leader>f", "<cmd>Telescope current_buffer_fuzzy_find<CR>", { desc = "Buffer fuzzy find", noremap = true })
 set(n, "<leader>h", "<cmd>Telescope help_tags<CR>", { desc = "Help", noremap = true })
+set(n, "<leader>p", function()
+  require("personal-plugins.cmd_palette").open()
+end, { desc = "Cmd Palette", noremap = true })
 set(n, "<C-p>", "<cmd>Telescope find_files<CR>", { desc = "Find files", noremap = true })
 set(n, "<C-f>", "<cmd>Telescope current_buffer_fuzzy_find<CR>", { desc = "Fuzzy find buffer", noremap = true })
 set(n, "<F3>", "<cmd>Telescope grep_string<cr>", { desc = "Find Word", noremap = true })
@@ -79,8 +82,8 @@ set({ n, x, o }, "S", function() require("flash").treesitter() end, { desc = "Fl
 
 set(n, "<leader>ss", "<cmd>Switch<CR>", { noremap = true, desc = "Switch" })
 
-set('n', '<C-CR>', '<cmd>OverseerRunLast<CR>', { silent = true, desc = "Rerun last Overseer task"})
-set('n', '<localleader>ot', '<cmd>OverseerToggle<CR>', { silent = true, desc = "Toggle Overseer"})
+set('n', '<C-CR>', '<cmd>OverseerRunLast<CR>', { silent = true, desc = "Rerun last Overseer task" })
+set('n', '<localleader>ot', '<cmd>OverseerToggle<CR>', { silent = true, desc = "Toggle Overseer" })
 
 -- LSP
 vim.api.nvim_create_autocmd("LspAttach", {

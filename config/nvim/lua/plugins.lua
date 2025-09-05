@@ -238,6 +238,106 @@ return {
       vim.g['conjure#extract#tree_sitter#enabled'] = true
       vim.g["conjure#mapping#doc_word"] = "gk"
     end,
+    config = function()
+      local cmd = require("personal-plugins.cmd_palette")
+
+      cmd.add {
+        name = "Conjure Connect",
+        cmd = ":ConjureConnect<CR>",
+        category = "lsp",
+        icon = "󰘧" }
+
+      cmd.add {
+        name = "Conjure Eval Current Form",
+        cmd = ":ConjureEvalCurrentForm<CR>",
+        category = "lsp",
+        icon = "󰘧" }
+
+      cmd.add {
+        name = "Conjure Eval Root Form",
+        cmd = ":ConjureEvalRootForm<CR>",
+        category = "lsp",
+        icon = "󰘧" }
+
+      cmd.add {
+        name = "Conjure Eval Buffer",
+        cmd = ":ConjureEvalBuffer<CR>",
+        category = "lsp",
+        icon = "󰘧" }
+
+      cmd.add {
+        name = "Conjure Eval Visual Selection",
+        cmd = ":ConjureEvalVisual<CR>",
+        mode = { "v" },
+        category = "lsp",
+        icon = "󰘧" }
+
+      cmd.add {
+        name = "Conjure Eval Word",
+        cmd = ":ConjureEvalWord<CR>",
+        category = "lsp",
+        icon = "󰘧" }
+
+      cmd.add {
+        name = "Conjure Eval Replace Form",
+        cmd = ":ConjureEvalReplaceForm<CR>",
+        category = "lsp",
+        icon = "󰘧" }
+
+      cmd.add {
+        name = "Conjure Doc",
+        cmd = ":ConjureDocWord<CR>",
+        category = "lsp",
+        icon = "󰘧" }
+
+      cmd.add {
+        name = "Conjure Log",
+        cmd = ":ConjureLogToggle<CR>",
+        category = "lsp",
+        icon = "󰘧" }
+
+      cmd.add {
+        name = "Conjure School",
+        cmd = ":ConjureSchool<CR>",
+        category = "lsp",
+        icon = "󰘧" }
+
+      cmd.add {
+        name = "Conjure Client State",
+        cmd = ":ConjureClientState<CR>",
+        category = "lsp",
+        icon = "󰘧" }
+
+      cmd.add {
+        name = "Conjure Last Exception",
+        cmd = ":ConjureLastException<CR>",
+        category = "lsp",
+        icon = "󰘧" }
+
+      cmd.add {
+        name = "Conjure Interrupt",
+        cmd = ":ConjureInterrupt<CR>",
+        category = "lsp",
+        icon = "󰘧" }
+
+      cmd.add {
+        name = "Conjure Test Current Namespace",
+        cmd = ":ConjureCljRunCurrentNsTests<CR>",
+        category = "testing",
+        icon = "󰘧" }
+
+      cmd.add {
+        name = "Conjure Test Current Form",
+        cmd = ":ConjureCljRunCurrentFormTests<CR>",
+        category = "testing",
+        icon = "󰘧" }
+
+      cmd.add {
+        name = "Conjure Shadow Select",
+        cmd = ":ConjureShadowSelect<CR>",
+        category = "lsp",
+        icon = "󰘧" }
+    end,
     dependencies = {
       "guns/vim-sexp",
       "tpope/vim-sexp-mappings-for-regular-people",
@@ -429,6 +529,7 @@ return {
             "searchcount",
           },
           lualine_x = {
+            "overseer",
             {
               "diagnostics",
               colored = true,
@@ -449,6 +550,7 @@ return {
             { "filename", path = 1 },
           },
           lualine_x = {
+            "overseer",
             { "filetype", colored = true, icon_only = true },
           },
           lualine_y = {},
@@ -456,6 +558,7 @@ return {
         },
         extensions = {
           "quickfix",
+          "overseer",
           "oil",
           "lazy",
           "neo-tree",
@@ -780,6 +883,7 @@ return {
     event = "VeryLazy",
     config = function()
       local overseer = require('overseer')
+      local cmd = require("personal-plugins.cmd_palette")
       overseer.setup({})
 
       -- Create user command to rerun last task
@@ -798,6 +902,14 @@ return {
         end
       end, {
         desc = "Rerun the last Overseer task"
+      })
+
+
+      cmd.add({
+        name = "Toggle tasks",
+        cmd = ":OverseerToggle!<cr>",
+        category = "action",
+        keymap = "<leader>kt"
       })
     end,
   }
