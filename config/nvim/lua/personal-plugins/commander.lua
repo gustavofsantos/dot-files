@@ -1,2 +1,0 @@
---- Commander is a simple plugin that allow users to register
---- executable commands to be run on select.
