@@ -1,12 +1,12 @@
 # Commit Mono
-font-family = CommitMono
-font-size = 16
+# font-family = CommitMono
+# font-size = 16
 
 # Berkeley Mono
 font-family = BerkeleyMono Nerd Font
-# font-feature = -calt, +liga, -dlig.
-# font-size = 16
-# adjust-cell-height = 4
+font-feature = -calt, +liga, -dlig.
+font-size = 16
+adjust-cell-height = 4
 
 
 # Mono Lisa
@@ -15,8 +15,8 @@ font-family = BerkeleyMono Nerd Font
 # font-style-bold = Medium
 # font-style-italic = Italic
 # font-style-bold-italic = Medium Italic
-# font-feature = -liga,-dlig,+calt
-# font-size = 12
+font-feature = -liga,-dlig,+calt
+# font-size = 16
 
 # Operator Mono
 # font-family = OperatorMono Nerd Font
