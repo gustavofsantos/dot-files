@@ -33,24 +33,19 @@ set(n, "[h", "<cmd>Gitsigns prev_hunk<cr>", { noremap = true, desc = "Previous h
 
 set(n, "<leader>u", "<cmd>UndotreeToggle<cr>", { desc = "Undo tree" })
 
-set(n, "<leader>;a", "<cmd>NewBookmark<CR>", { desc = "Add bookmark" })
-set(n, "<leader>;f", "<cmd>ProjectBookmarks<CR>", { desc = "Project bookmarks" })
-set(n, "<leader>;g", "<cmd>GlobalBookmarks<CR>", { desc = "All bookmarks" })
-
 -- Navigation
 set(n, "-", "<cmd>Oil<CR>", { noremap = true, desc = "File explorer" })
 set(n, "<leader>o", "<cmd>Telescope find_files<CR>", { desc = "Find files" })
 set(n, "<leader>b", "<cmd>Telescope buffers<CR>", { desc = "Find buffer", noremap = true })
+set(n, "<leader>e", "<cmd>Telescope oldfiles only_cwd=true<CR>", { desc = "Recent files", noremap = true, silent = true })
+set(n, "<leader>f", "<cmd>Telescope current_buffer_fuzzy_find<CR>", { desc = "Buffer fuzzy find", noremap = true })
 set(n, "<leader>lg", "<cmd>Telescope live_grep<CR>", { desc = "Live grep", noremap = true })
 set(n, "<leader>lt", "<cmd>LiveGrepTests<CR>", { desc = "Live grep in test files", noremap = true })
 set(n, "<leader>ls", "<cmd>LiveGrepNonTests<CR>", { desc = "Live grep in source files", noremap = true })
-set(n, "<leader>f", "<cmd>Telescope current_buffer_fuzzy_find<CR>", { desc = "Buffer fuzzy find", noremap = true })
 set(n, "<leader>h", "<cmd>Telescope help_tags<CR>", { desc = "Help", noremap = true })
 set(n, "<leader>p", function()
   require("personal-plugins.cmd_palette").open()
 end, { desc = "Cmd Palette", noremap = true })
-set(n, "<C-p>", "<cmd>Telescope find_files<CR>", { desc = "Find files", noremap = true })
-set(n, "<C-f>", "<cmd>Telescope current_buffer_fuzzy_find<CR>", { desc = "Fuzzy find buffer", noremap = true })
 set(n, "<F3>", "<cmd>Telescope grep_string<cr>", { desc = "Find Word", noremap = true })
 set(v, "<F3>",
   function()
