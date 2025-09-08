@@ -143,6 +143,56 @@ return {
   'datsfilipe/vesper.nvim',
   { "numToStr/Comment.nvim", event = "BufRead",     opts = {} },
   {
+    "ThePrimeagen/harpoon",
+    branch = "harpoon2",
+    dependencies = { "nvim-lua/plenary.nvim" },
+    config = function()
+      local cmd = require("personal-plugins.cmd_palette")
+      local harpoon = require("harpoon")
+      harpoon:setup()
+
+      cmd.add({
+        name = "Harpoon file",
+        cmd = function() harpoon:list():add() end,
+        category = cmd.categories.navigation,
+        keymap = "<leader>a"
+      })
+
+      cmd.add({
+        name = "Navigate 1",
+        cmd = function() harpoon:list():select(1) end,
+        category = cmd.categories.navigation,
+        keymap = "<leader>1"
+      })
+
+      cmd.add({
+        name = "Navigate 2",
+        cmd = function() harpoon:list():select(2) end,
+        category = cmd.categories.navigation,
+        keymap = "<leader>2"
+      })
+
+      cmd.add({
+        name = "Navigate 3",
+        cmd = function() harpoon:list():select(3) end,
+        category = cmd.categories.navigation,
+        keymap = "<leader>3"
+      })
+
+      cmd.add({
+        name = "Navigate 4",
+        cmd = function() harpoon:list():select(4) end,
+        category = cmd.categories.navigation,
+        keymap = "<leader>4"
+      })
+
+      vim.keymap.set("n", "<C-e>", function() harpoon.ui:toggle_quick_menu(harpoon:list()) end)
+
+      vim.keymap.set("n", "<C-S-P>", function() harpoon:list():prev() end)
+      vim.keymap.set("n", "<C-S-N>", function() harpoon:list():next() end)
+    end
+  },
+  {
     'stevearc/quicker.nvim',
     event = "FileType qf",
     ---@module "quicker"
