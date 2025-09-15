@@ -197,7 +197,7 @@ local highlights = {
   Operator = { fg = palette.gray6 },
   PreProc = { fg = palette.blue_bright },
   Repeat = { fg = palette.blue_bright },
-  Special = { fg = palette.cyan_bright, italic = true },
+  Special = { fg = palette.cyan_bright },
   SpecialChar = { fg = palette.yellow },
   SpecialComment = { fg = palette.sky, italic = true },
   Statement = { fg = palette.blue_bright },
@@ -267,10 +267,6 @@ local highlights = {
   TSVariable = { link = "Variable" },
   TSVariableBuiltin = { link = "Keyword" },
 
-  ["@variable"] = { link = "Variable" },
-  ["@constructor"] = { link = "Function" },
-  ["@markup.strong"] = { fg = palette.nord07, bold = true },
-
   -- Telescope plugin support
   TelescopeBorder = { fg = palette.nord03, bg = palette.nord01 },
   TelescopePromptBorder = { fg = palette.nord03, bg = palette.nord01 },
@@ -314,6 +310,11 @@ local highlights = {
   -------------------------------------------------------------------
   -- Custom for languages -------------------------------------------
   -------------------------------------------------------------------
+
+  ["@variable"] = { link = "Variable" },
+  ["@constructor"] = { link = "Function" },
+  ["@markup.strong"] = { fg = palette.nord07, bold = true },
+
 
   -- JSON
   ["@property.json"] = { fg = palette.cyan },
