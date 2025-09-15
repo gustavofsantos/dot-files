@@ -38,12 +38,23 @@ if [ -d "$REPO_DIR/.cursor" ]; then
 fi
 
 
+# If the main repo has a .gemini directory, symlink it into the new worktree
+if [ -d "$REPO_DIR/.gemini" ]; then
+    if [ -e "$WORKTREE_PATH/.gemini" ]; then
+        echo "Info: $WORKTREE_PATH/.gemini already exists; skipping symlink."
+    else
+        ln -s "$REPO_DIR/.gemini" "$WORKTREE_PATH/.gemini"
+        echo "Symlinked .gemini from $REPO_DIR to $WORKTREE_PATH"
+    fi
+fi
+
+
 # If the main repo has an AGENTS.md file, symlink it into the new worktree
 if [ -f "$REPO_DIR/AGENTS.md" ]; then
     if [ -e "$WORKTREE_PATH/AGENTS.md" ]; then
         echo "Info: $WORKTREE_PATH/AGENTS.md already exists; skipping symlink."
     else
-        ln -s "$REPO_DIR/AGENTS.md" "$WORKTREE_PATH/.cursor"
+        ln -s "$REPO_DIR/AGENTS.md" "$WORKTREE_PATH/AGENTS.md"
         echo "Symlinked AGENTS.md from $REPO_DIR to $WORKTREE_PATH"
     fi
 fi
