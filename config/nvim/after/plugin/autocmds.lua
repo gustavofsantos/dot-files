@@ -100,12 +100,11 @@ vim.api.nvim_create_user_command(
   }
 )
 
-
 -- Custom Telescope live_grep variants
-vim.api.nvim_create_user_command("LiveGrepTests", function()
-  require("config.init").navigation.live_grep_tests()
-end, { desc = "Telescope live_grep limited to test files" })
-
-vim.api.nvim_create_user_command("LiveGrepNonTests", function()
-  require("config.init").navigation.live_grep_non_tests()
-end, { desc = "Telescope live_grep limited to non-test files" })
+-- vim.api.nvim_create_user_command("LiveGrepTests", function()
+--   require("config.init").navigation.live_grep_tests()
+-- end, { desc = "Telescope live_grep limited to test files" })
+--
+-- vim.api.nvim_create_user_command("LiveGrepNonTests", function()
+--   require("config.init").navigation.live_grep_non_tests()
+-- end, { desc = "Telescope live_grep limited to non-test files" })
