@@ -23,7 +23,20 @@ if [[ -z $selected ]]; then
     exit 0
 fi
 
-selected_name=$(basename "$selected" | tr . _)
+generate_session_name() {
+    local selected_path="$1"
+    local parent_dir=$(basename "$(dirname "$selected_path")")
+
+    if [[ "$parent_dir" == *-worktrees ]]; then
+        local project_name=${parent_dir%-worktrees}
+        local branch_name=$(basename "$selected_path" | tr . _)
+        echo "${project_name}-${branch_name}"
+    else
+        echo "$(basename "$selected_path" | tr . _)"
+    fi
+}
+
+selected_name=$(generate_session_name "$selected")
 tmux_running=$(pgrep tmux)
 
 if [[ -z $TMUX ]] && [[ -z $tmux_running ]]; then
