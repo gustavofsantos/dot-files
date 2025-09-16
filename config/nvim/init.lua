@@ -37,10 +37,10 @@ vim.opt.foldlevelstart = 99
 vim.opt.foldenable = true
 vim.opt.foldmethod = "indent"
 vim.opt.wildmenu = true
+vim.opt.wildmode = "longest,list"
 vim.opt.completeopt = "menu,noinsert,preview"
 vim.opt.pumheight = 12
 vim.opt.pumwidth = 50
-vim.opt.wildmode = "longest,full"
 vim.opt.updatetime = 100
 vim.opt.splitright = true
 vim.opt.splitbelow = true
@@ -54,6 +54,7 @@ vim.opt.winbar = ""
 vim.opt.title = true
 vim.opt.titlestring = '%t%( %M%)%( (%{expand("%:~:h")})%)%a (nvim)'
 vim.opt.colorcolumn = "80"
+-- vim.opt.statusline = "%<%f\ (%{&ft})\ %-4(%m%)%=%-19(%3l,%02c%03V%)"
 
 vim.opt.path:append({ "**" })
 vim.opt.wildignore:append({ "*/node_modules/*" })
@@ -105,6 +106,24 @@ vim.diagnostic.config({
     source = "if_many",
   },
 })
+
+
+vim.keymap.set("n", "Q", "<Nop>")
+vim.keymap.set("n", "<c-s>", "<cmd>w<cr>")
+vim.keymap.set("i", "<c-c>", "<Esc>")
+vim.keymap.set("n", "<c-q>", "<cmd>q<cr>")
+vim.keymap.set("n", "<Esc>", ":noh<cr><Esc>")
+vim.keymap.set("t", "<Esc>", "<c-\\><c-n>")
+vim.keymap.set("n", "<leader><leader>", "<c-^>", { desc = "Switch buffer" })
+vim.keymap.set("n", "]c", "<cmd>cnext<cr>", { desc = "quickfix next" })
+vim.keymap.set("n", "[c", "<cmd>cprevious<cr>", { desc = "quickfix previous" })
+vim.keymap.set("n", "<leader>ws", "<cmd>vsplit<cr>", { desc = "split window", noremap = true })
+vim.keymap.set("n", "<leader>wS", "<cmd>split<cr>", { desc = "split window down", noremap = true })
+vim.keymap.set("n", "<leader>Q", "<cmd>qa!<cr>", { desc = "Quit!" })
+vim.keymap.set("n", "<leader>W", "<cmd>wa!<cr>", { desc = "Save all" })
+
+vim.keymap.set("v", "<leader>b",
+  ':<C-U>!git blame <C-R>=expand("%:p") <CR> | sed -n <C-R>=line("\'<") <CR>,<C-R>=line("\'>") <CR>p <CR>')
 
 -- Diagnostic symbols in the sign column (gutter)
 local signs = { Error = "■", Warn = "■", Hint = '■', Info = '■' }
