@@ -53,8 +53,8 @@ vim.opt.showtabline = 1
 vim.opt.winbar = ""
 vim.opt.title = true
 vim.opt.titlestring = '%t%( %M%)%( (%{expand("%:~:h")})%)%a (nvim)'
-vim.opt.colorcolumn = "80"
--- vim.opt.statusline = "%<%f\ (%{&ft})\ %-4(%m%)%=%-19(%3l,%02c%03V%)"
+vim.opt.colorcolumn = ""
+vim.opt.statusline = "%<%f (%{&ft}) %-4(%m%)%=%-19(%3l,%02c%03V%)"
 
 vim.opt.path:append({ "**" })
 vim.opt.wildignore:append({ "*/node_modules/*" })
@@ -124,6 +124,8 @@ vim.keymap.set("n", "<leader>W", "<cmd>wa!<cr>", { desc = "Save all" })
 
 vim.keymap.set("v", "<leader>b",
   ':<C-U>!git blame <C-R>=expand("%:p") <CR> | sed -n <C-R>=line("\'<") <CR>,<C-R>=line("\'>") <CR>p <CR>')
+
+vim.keymap.set("n", "<leader>t", "<cmd>RunTests<CR>", { desc = "Run tests for current file", noremap = true, silent = true })
 
 -- Diagnostic symbols in the sign column (gutter)
 local signs = { Error = "■", Warn = "■", Hint = '■', Info = '■' }
