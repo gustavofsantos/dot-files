@@ -146,10 +146,10 @@ local highlights = {
   MoreMsg = { fg = palette.sky },
   Question = { fg = palette.nord05 },
 
-  StatusLine = { fg = palette.sky, bg = palette.nord01 },
-  StatusLineNC = { fg = palette.nord05, bg = palette.nord00 },
-  StatusLineTerm = { fg = palette.sky, bg = palette.nord01 },
-  StatusLineTermNC = { fg = palette.nord05, bg = palette.nord00 },
+  StatusLine = { fg = palette.nord05, bg = palette.nord01 },
+  StatusLineNC = { fg = palette.nord04, bg = palette.nord00 },
+  StatusLineTerm = { fg = palette.nord05, bg = palette.nord01 },
+  StatusLineTermNC = { fg = palette.nord04, bg = palette.nord00 },
 
   WarningMsg = { fg = palette.nord00, bg = palette.yellow },
   WildMenu = { fg = palette.sky, bg = palette.nord01 },
