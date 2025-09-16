@@ -9,6 +9,30 @@ return {
     { "<leader>f", "<cmd>Telescope current_buffer_fuzzy_find<CR>", desc = "Fuzzy find current buffer" },
     { "<leader>l", "<cmd>Telescope live_grep<CR>",                 desc = "Fuzzy find" },
     { "<leader>h", "<cmd>Telescope help_tags<CR>",                 desc = "Help" },
+    { "<F3>",      "<cmd>Telescope grep_string<cr>",               desc = "Find Word" },
+    {
+      "<F3>",
+      function()
+        local function get_current_visual_selection()
+          local selected_text = ""
+          local temp_reg = "z"
+          local old_reg_content = vim.fn.getreg(temp_reg)
+          local old_reg_type = vim.fn.getregtype(temp_reg)
+
+          vim.cmd('normal! "' .. temp_reg .. 'y')
+
+          selected_text = vim.fn.getreg(temp_reg, true)
+
+          vim.fn.setreg(temp_reg, old_reg_content, old_reg_type)
+
+          return selected_text
+        end
+        local selection = get_current_visual_selection()
+        vim.cmd("Telescope grep_string default_text=" .. selection)
+      end,
+      mode = "v",
+      desc = "Find selection"
+    }
   },
   dependencies = {
     "nvim-telescope/telescope-symbols.nvim",
@@ -114,7 +138,6 @@ return {
           previewer = true,
           theme = theme,
           disable_coordinates = true,
-          entry_maker = require("cmd_palette.entry_maker").gen_from_diagnostics(),
         },
         buffers = {
           previewer = true,
