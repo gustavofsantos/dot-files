@@ -59,5 +59,15 @@ if [ -f "$REPO_DIR/AGENTS.md" ]; then
     fi
 fi
 
+# If the main repo has an AGENTS.md file, symlink it into the new worktree as CLAUDE.md
+if [ -f "$REPO_DIR/AGENTS.md" ]; then
+    if [ -e "$WORKTREE_PATH/CLAUDE.md" ]; then
+        echo "Info: $WORKTREE_PATH/CLAUDE.md already exists; skipping symlink."
+    else
+        ln -s "$REPO_DIR/AGENTS.md" "$WORKTREE_PATH/CLAUDE.md"
+        echo "Symlinked AGENTS.md from $REPO_DIR to $WORKTREE_PATH/CLAUDE.md"
+    fi
+fi
+
 # Output the worktree path for the parent shell to use
 echo "$WORKTREE_PATH"

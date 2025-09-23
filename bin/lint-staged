@@ -1,0 +1,280 @@
+#!/usr/bin/env bb
+
+(require '[babashka.process :as process]
+         '[clojure.java.io :as io]
+         '[clojure.edn :as edn]
+         '[clojure.string :as str])
+
+;;; Configuration
+;;; ============================================================================
+
+(defn get-current-directory
+  "Get the current working directory."
+  []
+  (try
+    (-> (process/shell {:out :string} "pwd")
+        :out
+        str/trim)
+    (catch Exception e
+      (println "⚠️  Failed to get current directory, using System property")
+      (System/getProperty "user.dir"))))
+
+(defn build-path-config
+  "Build path-based configuration based on current directory."
+  [current-dir]
+  (cond
+    ;; Clojure projects
+    (or (str/includes? current-dir "clojure")
+        (.exists (io/file current-dir "deps.edn"))
+        (.exists (io/file current-dir "project.clj"))
+        (.exists (io/file current-dir "lein-env")))
+    {"src"       ["clj-kondo" "--lint"]
+     "test"      ["clj-kondo" "--lint"]
+     "resources" ["clj-kondo" "--lint"]
+     "dev"       ["clj-kondo" "--lint"]}
+    
+    ;; Node.js projects
+    (.exists (io/file current-dir "package.json"))
+    {"src"        ["eslint" "--fix"]
+     "lib"        ["eslint" "--fix"]
+     "components" ["eslint" "--fix"]}
+    
+    ;; Generic paths - can be customized per project
+    :else
+    {"src"  ["echo" "No specific linter configured for src/"]
+     "test" ["echo" "No specific linter configured for test/"]}))
+
+(def default-config
+  (let [current-dir (get-current-directory)]
+    {:current-directory current-dir
+     :extension-rules
+     {".clj"  ["clj-kondo" "--lint"]
+      ".cljs" ["clj-kondo" "--lint"]
+      ".cljc" ["clj-kondo" "--lint"]
+      ".edn"  ["clj-kondo" "--lint"]
+      ".bb"   ["clj-kondo" "--lint"]
+      ".js"   ["eslint" "--fix"]
+      ".jsx"  ["eslint" "--fix"]
+      ".ts"   ["eslint" "--fix"]
+      ".tsx"  ["eslint" "--fix"]
+      ".json" ["jq" "."]}
+     
+     :path-rules (build-path-config current-dir)}))
+
+;;; Utility Functions
+;;; ============================================================================
+
+(defn get-file-extension
+  "Extract the file extension from a file path."
+  [file-path]
+  (when-let [dot-index (str/last-index-of file-path ".")]
+    (subs file-path dot-index)))
+
+(defn path-matches?
+  "Check if a file path starts with a given path prefix."
+  [file-path path-prefix]
+  (str/starts-with? file-path path-prefix))
+
+(defn find-longest-path-match
+  "Find the longest matching path rule for a given file path."
+  [file-path path-rules]
+  (->> path-rules
+       (filter (fn [[path-prefix _]] (path-matches? file-path path-prefix)))
+       (sort-by (fn [[path-prefix _]] (- (count path-prefix))))
+       first))
+
+(defn load-config
+  "Load configuration from a file or return default config."
+  [config-path]
+  (let [base-config default-config]
+    (if (and config-path (.exists (io/file config-path)))
+      (try
+        (let [user-config (edn/read-string (slurp config-path))]
+          (merge base-config user-config))
+        (catch Exception e
+          (println "⚠️  Failed to load config from" config-path "- using defaults")
+          (println "Error:" (.getMessage e))
+          base-config))
+      base-config)))
+
+;;; Core Functionality
+;;; ============================================================================
+
+(defn get-staged-files
+  "Get list of staged files from git."
+  []
+  (try
+    (-> (process/shell {:out :string} "git" "diff" "--cached" "--name-only")
+        :out
+        str/split-lines
+        (as-> files (remove str/blank? files)))
+    (catch Exception e
+      (println "❌ Failed to get staged files from git")
+      (println "Error:" (.getMessage e))
+      [])))
+
+(defn resolve-linter-command
+  "Resolve the appropriate linter command for a file path based on config rules."
+  [file-path {:keys [extension-rules path-rules]}]
+  (or
+    ;; First try to match by path rules (more specific)
+    (when-let [[_path-prefix command] (find-longest-path-match file-path path-rules)]
+      command)
+    ;; Fall back to extension rules
+    (when-let [extension (get-file-extension file-path)]
+      (get extension-rules extension))
+    ;; No matching rule found
+    nil))
+
+(defn group-files-by-linter
+  "Group files by their linter commands."
+  [staged-files config]
+  (reduce
+    (fn [acc file-path]
+      (if-let [linter-command (resolve-linter-command file-path config)]
+        (update acc linter-command (fnil conj []) file-path)
+        acc))
+    {}
+    staged-files))
+
+(defn run-linter
+  "Run a linter command on a list of files."
+  [linter-command files]
+  (let [cmd (concat linter-command files)]
+    (println "🔍 Running:" (str/join " " cmd))
+    (try
+      (let [result (process/shell {:continue true} cmd)]
+        {:command cmd
+         :exit-code (:exit result)
+         :files files})
+      (catch Exception e
+        (println "❌ Failed to run linter command:" (str/join " " cmd))
+        (println "Error:" (.getMessage e))
+        {:command cmd
+         :exit-code 1
+         :files files
+         :error (.getMessage e)}))))
+
+(defn run-all-linters
+  "Run all linters on their respective files and collect results."
+  [linter-groups]
+  (doall
+    (for [[linter-command files] linter-groups]
+      (run-linter linter-command files))))
+
+(defn print-results
+  "Print summary of linting results."
+  [results]
+  (let [failed-results (filter #(not= 0 (:exit-code %)) results)
+        success-count (- (count results) (count failed-results))]
+    
+    (println)
+    (println "📋 Linting Summary:")
+    (println "  ✅ Passed:" success-count)
+    (println "  ❌ Failed:" (count failed-results))
+    
+    (when (seq failed-results)
+      (println)
+      (println "❌ Failed commands:")
+      (doseq [{:keys [command exit-code files error]} failed-results]
+        (println "  " (str/join " " command) "-> exit code:" exit-code)
+        (when error
+          (println "     Error:" error))
+        (println "     Files:" (str/join ", " files))))))
+
+;;; CLI Handling
+;;; ============================================================================
+
+(defn print-help []
+  (println "Smart Lint-Staged - Run linters on git staged files")
+  (println)
+  (println "Usage:")
+  (println "  lint-staged [options]")
+  (println)
+  (println "Options:")
+  (println "  --config <path>   Load configuration from EDN file")
+  (println "  --help           Show this help message")
+  (println)
+  (println "Configuration:")
+  (println "  The script uses extension-based and path-based rules to")
+  (println "  determine which linters to run on staged files.")
+  (println)
+  (println "Example config.edn:")
+  (println "  {:extension-rules")
+  (println "   {\".clj\"  [\"clj-kondo\" \"--lint\"]")
+  (println "    \".js\"   [\"eslint\"]}")
+  (println "   :path-rules")
+  (println "   {\"src/components\" [\"eslint\" \"--fix\"]}}")
+  (println))
+
+(defn parse-args
+  "Parse command line arguments."
+  [args]
+  (loop [args args
+         config-path nil]
+    (cond
+      (empty? args)
+      {:config-path config-path}
+      
+      (= "--help" (first args))
+      {:help? true}
+      
+      (= "--config" (first args))
+      (if (< (count args) 2)
+        {:error "Missing config file path after --config"}
+        (recur (drop 2 args) (second args)))
+      
+      :else
+      {:error (str "Unknown option: " (first args))})))
+
+;;; Main Entry Point
+;;; ============================================================================
+
+(defn -main [& args]
+  (let [parsed-args (parse-args args)]
+    (cond
+      (:help? parsed-args)
+      (print-help)
+      
+      (:error parsed-args)
+      (do
+        (println "❌ Error:" (:error parsed-args))
+        (println)
+        (print-help)
+        (System/exit 1))
+      
+      :else
+      (let [config (load-config (:config-path parsed-args))
+            staged-files (get-staged-files)]
+        
+        ;; Debug output
+        (println "🏠 Working directory:" (:current-directory config))
+        (println "📁 Configured path rules:" (:path-rules config))
+        (println "🔧 Extension rules:" (keys (:extension-rules config)))
+        (println)
+        
+        (if (empty? staged-files)
+          (do
+            (println "✅ No staged files to lint")
+            (System/exit 0))
+          
+          (do
+            (println "🚀 Found" (count staged-files) "staged file(s):")
+            (doseq [file staged-files]
+              (println "  " file))
+            (println)
+            
+            (let [linter-groups (group-files-by-linter staged-files config)]
+              (if (empty? linter-groups)
+                (do
+                  (println "⚠️  No linting rules matched any staged files")
+                  (System/exit 0))
+                
+                (let [results (run-all-linters linter-groups)
+                      failed? (some #(not= 0 (:exit-code %)) results)]
+                  (print-results results)
+                  (System/exit (if failed? 1 0)))))))))))
+
+;; Run the script when called with command line arguments
+(when *command-line-args*
+  (apply -main *command-line-args*))
