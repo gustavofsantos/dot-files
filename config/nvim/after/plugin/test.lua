@@ -1,3 +1,63 @@
+-- Test Plugin with Sequential Command Dispatching
+--
+-- This plugin extends the original test functionality with a sequential command
+-- dispatcher that automatically selects the best available terminal method:
+--
+-- 1. vim-tmux-runner (VtrSendCommandToRunner) - when running inside tmux
+-- 2. toggleterm plugin - when available and outside tmux
+-- 3. native neovim terminal - as final fallback
+--
+-- For non-tmux environments, the plugin maintains persistent terminal instances
+-- to allow viewing execution logs and reusing the same terminal across commands.
+--
+-- Command dispatching helpers and persistent variables
+local function in_tmux()
+  return os.getenv("TMUX") ~= nil
+end
+
+local native_term_bufnr
+
+local function can_use_toggleterm()
+  local ok = pcall(require, "toggleterm")
+  return ok
+end
+
+local function send_to_toggleterm(cmd)
+  -- Use toggleterm's command interface instead of API
+  -- This opens a terminal (or reuses existing one) and sends the command
+  vim.cmd(string.format("TermExec cmd='%s' direction=horizontal size=15", cmd:gsub("'", "'\"'\"'")))
+end
+
+local function get_native_term()
+  if native_term_bufnr == nil or not vim.api.nvim_buf_is_valid(native_term_bufnr) then
+    vim.cmd("belowright split | terminal")
+    vim.cmd("resize 15")
+    native_term_bufnr = vim.api.nvim_get_current_buf()
+  end
+  return native_term_bufnr
+end
+
+local function dispatch_command(cmd)
+  -- 1. Try vim-tmux-runner if inside tmux
+  if in_tmux() then
+    vim.cmd('VtrSendCommandToRunner ' .. cmd)
+    return
+  end
+
+  -- 2. Try toggleterm if available
+  if can_use_toggleterm() then
+    send_to_toggleterm(cmd)
+    return
+  end
+
+  -- 3. Fallback to native neovim terminal
+  local bufnr = get_native_term()
+  local job_id = vim.fn.getbufvar(bufnr, 'terminal_job_id')
+  if job_id > 0 then
+    vim.fn.chansend(job_id, cmd .. "\n")
+  end
+end
+
 local function get_buffer_info(buf)
   local bufname = vim.api.nvim_buf_get_name(buf)
   local filepath = vim.fn.fnamemodify(bufname, ':p')
@@ -18,7 +78,6 @@ end
 local function run_tests(filename)
   local buf = vim.api.nvim_get_current_buf()
   local buf_info = get_buffer_info(buf)
-  local runner = "VtrSendCommandToRunner"
 
   if vim.fn.expand('%') ~= '' then
     vim.cmd('write')
@@ -35,7 +94,7 @@ local function run_tests(filename)
     namespace = string.gsub(namespace, "_", "-")
     namespace = string.gsub(namespace, "%.clj$", "")
 
-    vim.cmd(runner .. string.format(" lein with-profile test midje %s", namespace))
+    dispatch_command(string.format("lein with-profile test midje %s", namespace))
   else
     print("No suitable test runner found for " .. filename)
   end
