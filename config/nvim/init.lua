@@ -54,7 +54,7 @@ vim.opt.winbar = ""
 vim.opt.title = true
 vim.opt.titlestring = '%t%( %M%)%( (%{expand("%:~:h")})%)%a (nvim)'
 vim.opt.colorcolumn = ""
-vim.opt.statusline = "%<%f (%{&ft}) %-4(%m%)%=%-19(%3l,%02c%03V%)"
+vim.opt.statusline = "%<%{fnamemodify(expand('%'), ':~:.')} (%{&ft}) %-3(%m%)%=%-19(%3l,%02c%03V%)"
 
 vim.opt.path:append({ "**" })
 vim.opt.wildignore:append({ "*/node_modules/*" })
