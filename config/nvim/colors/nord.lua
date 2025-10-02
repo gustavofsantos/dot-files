@@ -12,15 +12,23 @@ local blend_colors = function(base, target, ratio)
   return string.format("#%02X%02X%02X", r, g, b)
 end
 
+
 local palette = {
   nord00         = "#2E3440",
   nord01         = "#3B4252",
   nord02         = "#434C5E",
   nord03         = "#4C566A",
   nord04         = "#616E88",
-  nord05         = "#D8DEE9",
-  nord06         = "#E5E9F0",
-  nord07         = "#ECEFF4",
+  nord05         = "#D8D8D5",
+  nord06         = "#E4E4E0",
+  nord07         = "#F0EFEA",
+
+  alabaster = "#EDEAE0",
+  white_dove = "#F0EFEA",
+  swiss_coffee = "#F1ECE2",
+  creamy = "#F3EFE2",
+  shoji_white = "##EFE9DA",
+  linen_white = "#F1E9D6",
 
   gray000        = '#1A1C21',
   gray00         = '#191D24',
@@ -32,11 +40,11 @@ local palette = {
   gray3          = '#434C5E',
   gray4          = '#4C566A',
   gray5          = '#60728A',
-  gray6          = '#BBC3D4',
-  gray7          = '#C0C8D8',
-  gray8          = '#D8DEE9',
-  gray9          = '#E5E9F0',
-  gray10         = '#ECEFF4',
+  gray6          = '#D9D3C4',
+  gray7          = '#E5DECD',
+  gray8          = '#D8D8D5',
+  gray9          = '#E4E4E0',
+  gray10         = '#F0EFEA',
 
   cyan_bright    = '#9FC6C5',
   cyan           = "#8FBCBB",

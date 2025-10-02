@@ -7,6 +7,7 @@ return {
       formatters_by_ft = {
         lua = { "stylua" },
         python = { "isort", "black" },
+        clojure = { "cljstyle" },
         javascript = { "deno_fmt", "prettierd", "prettier", "eslint_d", "eslint" },
         typescript = { "deno_fmt", "prettierd", "prettier", "eslint_d", "eslint" },
         javascriptreact = { "prettierd", "prettier", "eslint_d", "eslint" },
