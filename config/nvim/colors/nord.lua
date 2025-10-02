@@ -322,7 +322,13 @@ local highlights = {
   ["@variable"] = { link = "Variable" },
   ["@constructor"] = { link = "Function" },
   ["@markup.strong"] = { fg = palette.nord07, bold = true },
-
+  ["@keyword_symbol.single"] = { link = "SpecialChar" },
+  ["@keyword_symbol.namespace"] = { link = "Type" },
+  ["@keyword_symbol.name"] = { link = "Keyword" },
+  ["@keyword_symbol"] = { link = "Type" },
+  ["@quilified_symbol.namespace"] = { link = "Type" },
+  ["@quilified_symbol.name"] = { link  = "Function" },
+  ["@quilified_symbol"] = { link = "Type" },
 
   -- JSON
   ["@property.json"] = { fg = palette.cyan },
@@ -332,9 +338,12 @@ local highlights = {
   ["@constructor.lua"] = { link = "Delimiter" },
 
   -- Clojure
-  ["@punctuation.bracket.clojure"] = { fg = palette.nord04 },
+  ["@punctuation.bracket.clojure"] = { fg = palette.nord03 },
   ["@constructor.clojure"] = { link = "Function" },
-  ["@function.macro.clojure"] = { fg = palette.magenta_bright, bold = true },
+  ["@function.macro.clojure"] = { fg = palette.magenta_bright },
+  -- ["@module.clojure"] = { fg = palette.nord05, italic = true },
+  ["@deref"] = { fg = palette.red },
+  ["@deref.name"] = { fg = palette.orange_dim },
 
   -- Markdown
   ["@markup.list.markdown"] = { fg = palette.nord04 },
