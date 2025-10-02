@@ -7,6 +7,7 @@ if [ "$#" -ne 1 ]; then
 fi
 
 file_path="$1"
+current_dir="$PWD"
 
 # Loggi's beyond test
 if [[ "$file_path" == *"/opt/loggi/py/apps/beyond/"* ]]; then
@@ -21,6 +22,13 @@ fi
 if [[ "$file_path" == *"/opt/loggi/web/"* ]]; then
     test_arg="$(echo "$file_path" | sed 's/\/opt\/loggi\/web\/loggi\///')"
     test_command="docker compose exec -e DJANGO_SETTINGS_MODULE=settings.test loggi_web_app pytest -x --disable-warnings -q $test_arg"
+    eval "$test_command"
+    exit 0
+fi
+
+if [[ "$current_dir" == *"/Workplace/seubarriga"* ]]; then
+    test_arg="$(echo "$file_path" | sed 's/^test\///' | sed 's/\.clj$//' | sed 's/\//\./g' | sed 's/_/-/g')"
+    test_command="cd $current_dir && lein with-profile test midje $test_arg"
     eval "$test_command"
     exit 0
 fi
