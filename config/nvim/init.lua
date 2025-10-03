@@ -129,8 +129,9 @@ end, { desc = 'Toggle diagnostic virtual_lines' })
 vim.keymap.set("v", "<leader>b",
   ':<C-U>!git blame <C-R>=expand("%:p") <CR> | sed -n <C-R>=line("\'<") <CR>,<C-R>=line("\'>") <CR>p <CR>')
 
-vim.keymap.set("n", "<leader>t", "<cmd>RunTests<CR>",
-  { desc = "Run tests for current file", noremap = true, silent = true })
+vim.keymap.set("n", "<leader>tf", "<cmd>RunTests<CR>", { desc = "Test current file", noremap = true, silent = true })
+vim.keymap.set("n", "<leader>tv", "<cmd>TestVisit<CR>", { desc = "Visit last test", noremap = true, silent = true })
+vim.keymap.set("n", "<leader>tl", "<cmd>TestLast<CR>", { desc = "Test last file", noremap = true, silent = true })
 
 -- Diagnostic symbols in the sign column (gutter)
 local signs = { Error = "■", Warn = "■", Hint = '■', Info = '■' }
