@@ -132,3 +132,16 @@ vim.api.nvim_create_user_command("TestVisit",
     desc = 'Jump to the last test file that was run'
   }
 )
+
+vim.api.nvim_create_user_command("TestLast",
+  function()
+    if last_test_file and last_test_file ~= '' then
+      run_tests(last_test_file)
+    else
+      print("Error: No last test found. Run tests first with :RunTests")
+    end
+  end,
+  {
+    desc = 'Re-run the last test that was executed'
+  }
+)
