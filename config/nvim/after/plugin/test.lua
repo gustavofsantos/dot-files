@@ -16,6 +16,7 @@ local function in_tmux()
 end
 
 local native_term_bufnr
+local last_test_file
 
 local function can_use_toggleterm()
   local ok = pcall(require, "toggleterm")
@@ -85,9 +86,11 @@ local function run_tests(filename)
 
   -- The file is executable; assume we should run it directly
   if vim.fn.executable(filename) == 1 then
+    last_test_file = filename
     vim.cmd('!./' .. filename)
     -- 5A Clojure projects
   elseif string.find(filename, "Workplace/seubarriga") ~= nil and vim.fn.glob('test/**/*_test.clj') ~= '' then
+    last_test_file = filename
     local relative_path = vim.fn.fnamemodify(buf_info.filepath, ':~:.')
     relative_path = string.gsub(relative_path, "^test/", "")
     local namespace = string.gsub(relative_path, "/", ".")
@@ -114,5 +117,18 @@ vim.api.nvim_create_user_command("RunTests",
     nargs = '?',     -- The command accepts 0 or 1 arguments
     complete = 'file', -- Provide file completion
     desc = 'Run tests for the specified file or current file'
+  }
+)
+
+vim.api.nvim_create_user_command("TestVisit",
+  function()
+    if last_test_file and last_test_file ~= '' then
+      vim.cmd('edit ' .. last_test_file)
+    else
+      print("Error: No last test file found. Run tests first with :RunTests")
+    end
+  end,
+  {
+    desc = 'Jump to the last test file that was run'
   }
 )
