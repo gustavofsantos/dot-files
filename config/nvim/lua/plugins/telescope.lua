@@ -176,8 +176,52 @@ return {
         end
       end
 
+      -- Custom previewer for terminal buffers
+      local function terminal_previewer()
+        local previewers = require("telescope.previewers")
+
+        return previewers.new_buffer_previewer({
+          title = "Terminal Preview",
+          define_preview = function(self, entry, status)
+            local bufnr = entry.value
+
+            -- Check if it's a terminal buffer
+            local buftype = vim.api.nvim_buf_get_option(bufnr, "buftype")
+            if buftype == "terminal" then
+              -- Get terminal buffer content
+              local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+
+              -- Process lines to remove/replace problematic characters
+              local processed_lines = {}
+              for _, line in ipairs(lines) do
+                -- Strip ANSI escape codes (basic implementation)
+                line = line:gsub("\27%[[0-9;]*[mGK]", "") -- Remove color codes
+                line = line:gsub("\27%[[0-9;]*[Hf]", "")   -- Remove cursor movement
+                line = line:gsub("\27%[[0-9;]*[A-D]", "")  -- Remove cursor positioning
+                line = line:gsub("\27%[[0-9]*J", "")       -- Remove screen clearing
+                line = line:gsub("\27%[[0-9]*K", "")       -- Remove line clearing
+                -- Replace other control characters with readable equivalents
+                line = line:gsub("\r", "↵")  -- Carriage return
+                line = line:gsub("\t", "    ")  -- Tab
+                table.insert(processed_lines, line)
+              end
+
+              -- Set the processed content in the preview buffer
+              vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, processed_lines)
+
+              -- Set filetype for better syntax highlighting
+              vim.api.nvim_buf_set_option(self.state.bufnr, "filetype", "text")
+            else
+              -- Fallback for non-terminal buffers (shouldn't happen in this picker)
+              vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, { "Not a terminal buffer" })
+            end
+          end,
+        })
+      end
+
       pickers.new({}, {
         prompt_title = "Terminal Buffers",
+        theme = theme,
         finder = finders.new_table {
           results = results,
           entry_maker = function(entry)
@@ -189,6 +233,7 @@ return {
           end,
         },
         sorter = sorters.get_generic_fuzzy_sorter(),
+        previewer = terminal_previewer(),
         attach_mappings = function(prompt_bufnr, map)
           actions.select_default:replace(function()
             actions.close(prompt_bufnr)
