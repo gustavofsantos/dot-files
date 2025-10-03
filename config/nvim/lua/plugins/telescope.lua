@@ -55,6 +55,10 @@ return {
 
     local telescope = require("telescope")
     local actions = require('telescope.actions')
+    local pickers = require("telescope.pickers")
+    local finders = require("telescope.finders")
+    local sorters = require("telescope.sorters")
+    local action_state = require("telescope.actions.state")
 
     telescope.setup({
       defaults = {
@@ -161,5 +165,41 @@ return {
         },
       },
     })
+
+    local function terminals()
+      local bufs = vim.api.nvim_list_bufs()
+      local results = {}
+      for _, buf in ipairs(bufs) do
+        local name = vim.api.nvim_buf_get_name(buf)
+        if name:match('^term://') then
+          table.insert(results, { buf = buf, name = name })
+        end
+      end
+
+      pickers.new({}, {
+        prompt_title = "Terminal Buffers",
+        finder = finders.new_table {
+          results = results,
+          entry_maker = function(entry)
+            return {
+              value = entry.buf,
+              display = entry.name,
+              ordinal = entry.name,
+            }
+          end,
+        },
+        sorter = sorters.get_generic_fuzzy_sorter(),
+        attach_mappings = function(prompt_bufnr, map)
+          actions.select_default:replace(function()
+            actions.close(prompt_bufnr)
+            local selection = action_state.get_selected_entry()
+            vim.api.nvim_set_current_buf(selection.value)
+          end)
+          return true
+        end,
+      }):find()
+    end
+
+    vim.keymap.set("n", "<leader>T", terminals, { desc = "Terminal buffers" })
   end,
 }
