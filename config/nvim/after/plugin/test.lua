@@ -39,13 +39,13 @@ end
 
 local function dispatch_command(cmd)
   -- 1. Try vim-tmux-runner if inside tmux
-  if in_tmux() then
+  if false and in_tmux() then
     vim.cmd('VtrSendCommandToRunner ' .. cmd)
     return
   end
 
   -- 2. Try toggleterm if available
-  if can_use_toggleterm() then
+  if false and can_use_toggleterm() then
     send_to_toggleterm(cmd)
     return
   end
