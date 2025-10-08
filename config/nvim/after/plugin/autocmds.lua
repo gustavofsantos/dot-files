@@ -14,6 +14,10 @@ vim.api.nvim_create_user_command("E", function()
   vim.cmd("e")
 end, { desc = "Edit file" })
 
+vim.api.nvim_create_user_command("X", function()
+  vim.cmd("x")
+end, { desc = "Write and close" })
+
 vim.api.nvim_create_user_command("W", function()
   vim.cmd("w")
 end, { desc = "Write file" })
