@@ -23,13 +23,6 @@ local palette = {
   nord06         = "#E4E4E0",
   nord07         = "#F0EFEA",
 
-  alabaster = "#EDEAE0",
-  white_dove = "#F0EFEA",
-  swiss_coffee = "#F1ECE2",
-  creamy = "#F3EFE2",
-  shoji_white = "##EFE9DA",
-  linen_white = "#F1E9D6",
-
   gray000        = '#1A1C21',
   gray00         = '#191D24',
   gray01         = '#1E222A',
@@ -88,7 +81,6 @@ local highlights = {
   -- Editor
   ColorColumn = { bg = palette.gray02 },
   Cursor = { fg = palette.nord00, bg = palette.nord05 },
-  CursorLine = { bg = "NONE" },
   Error = { fg = palette.nord05, bg = palette.red },
   iCursor = { fg = palette.nord00, bg = palette.nord05 },
   LineNr = { fg = palette.nord03 },
@@ -136,6 +128,7 @@ local highlights = {
 
   -- Gutter
   CursorColumn = { bg = palette.nord01 },
+  CursorLine = { bg = palette.gray1  },
   CursorLineNr = { fg = palette.yellow, bg = palette.gray00 },
   CursorLineSign = { bg = palette.gray00 },
   Folded = { fg = palette.nord03, bg = palette.nord01, bold = true },
@@ -276,17 +269,18 @@ local highlights = {
   TSVariableBuiltin = { link = "Keyword" },
 
   -- Telescope plugin support
-  TelescopeBorder = { fg = palette.nord03, bg = palette.nord01 },
-  TelescopePromptBorder = { fg = palette.nord03, bg = palette.nord01 },
-  TelescopePromptNormal = { fg = palette.nord05, bg = palette.nord01 },
-  TelescopePromptTitle = { fg = palette.nord01, bg = palette.sky },
-  TelescopeResultsBorder = { fg = palette.nord03, bg = palette.nord01 },
-  TelescopeResultsNormal = { fg = palette.nord05, bg = palette.nord01 },
-  TelescopeResultsTitle = { fg = palette.nord01, bg = palette.sky },
-  TelescopePreviewBorder = { fg = palette.nord03, bg = palette.nord01 },
-  TelescopePreviewNormal = { fg = palette.nord05, bg = palette.nord01 },
-  TelescopePreviewTitle = { fg = palette.nord01, bg = palette.sky },
-  TelescopeSelection = { fg = palette.sky, bg = palette.nord03, italic = false },
+  TelescopeBorder = { fg = palette.nord03, bg = palette.nord00 },
+  TelescopePromptBorder = { fg = palette.nord01, bg = palette.nord00 },
+  TelescopePromptNormal = { fg = palette.nord05, bg = palette.nord00 },
+  TelescopePromptTitle = { fg = palette.nord05, bg = palette.nord01 },
+  TelescopeResultsBorder = { fg = palette.nord01, bg = palette.nord00 },
+  TelescopeResultsNormal = { fg = palette.nord05, bg = palette.nord00 },
+  TelescopeResultsTitle = { fg = palette.nord05, bg = palette.nord01 },
+  TelescopePreviewBorder = { fg = palette.nord00, bg = palette.nord00 },
+  TelescopePreviewNormal = { fg = palette.nord05, bg = palette.nord00 },
+  TelescopePreviewTitle = { fg = palette.nord05, bg = palette.nord00 },
+  TelescopeMatching = { fg = palette.nord00, bg = palette.yellow_bright },
+  TelescopeSelection = { fg = palette.nord05, bg = palette.nord03, italic = false },
   TelescopeSelectionCaret = { fg = palette.sky, bg = palette.nord03 },
   TelescopeMultiSelection = { fg = palette.sky, bg = palette.nord03 },
 
