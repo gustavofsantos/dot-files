@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Get staged and modified files (excluding untracked files)
+staged_files=$(git diff --name-only --cached 2>/dev/null || true)
+modified_files=$(git diff --name-only 2>/dev/null || true)
+
+# Combine and deduplicate files
+all_changed_files=$(echo -e "$staged_files\n$modified_files" | sort -u | grep -v '^$')
+
+# Test file patterns (Python, JavaScript/TypeScript, Clojure, and other common patterns)
+test_patterns="^test_.*\.(py|js|ts|clj)$|.*_test\.(py|js|ts|clj)$|.*\.test\.(js|ts)$|.*\.spec\.(js|ts)$|.*test.*\.clj$"
+
+# Filter for test files
+test_files=$(echo "$all_changed_files" | grep -E "$test_patterns" || true)
+
+if [ -z "$test_files" ]; then
+    echo "No test files found in staged or modified changes."
+    exit 0
+fi
+
+echo "Found test files to run:"
+echo "$test_files"
+echo ""
+
+# Convert test files to array
+mapfile -t test_files_array <<< "$test_files"
+
+# Run testfile against each test file
+exit_code=0
+for test_file in "${test_files_array[@]}"; do
+    if [ -n "$test_file" ]; then
+        echo "Testing: $test_file"
+        if "$SCRIPT_DIR/testfile" "$test_file"; then
+            echo "PASSED: $test_file"
+        else
+            echo "FAILED: $test_file"
+            exit_code=1
+        fi
+        echo ""
+    fi
+done
+
+if [ $exit_code -eq 0 ]; then
+    echo "All tests passed!"
+else
+    echo "Some tests failed!"
+fi
+
+exit $exit_code
