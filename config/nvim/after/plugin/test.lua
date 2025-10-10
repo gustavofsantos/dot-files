@@ -38,10 +38,94 @@ local function get_native_term()
   return native_term_bufnr
 end
 
+-- Tmux pane management functions
+local function has_vtr_pane_attached()
+  -- Check if vim-tmux-runner has a pane attached
+  local result = vim.fn.system("tmux list-panes -F '#{pane_id}' 2>/dev/null")
+  if vim.v.shell_error ~= 0 then
+    return false
+  end
+  
+  -- VTR stores the pane info in a variable, check if it exists
+  local vtr_pane = vim.g.VtrRunner
+  return vtr_pane ~= nil and vtr_pane ~= ''
+end
+
+local function get_tmux_panes()
+  -- Get all panes with their status
+  local result = vim.fn.system("tmux list-panes -F '#{pane_index}:#{pane_current_command}:#{pane_active}' 2>/dev/null")
+  if vim.v.shell_error ~= 0 then
+    return {}
+  end
+  
+  local panes = {}
+  for line in result:gmatch("[^\r\n]+") do
+    local pane_index, command, is_active = line:match("([^:]+):([^:]+):([^:]+)")
+    if pane_index then
+      table.insert(panes, {
+        id = pane_index,
+        command = command,
+        is_active = is_active == "1",
+        is_idle = command == "zsh" or command == "bash" or command == "fish"
+      })
+    end
+  end
+  return panes
+end
+
+local function find_idle_pane(panes)
+  -- Find a pane that's not the current one and is idle
+  for _, pane in ipairs(panes) do
+    if not pane.is_active and pane.is_idle then
+      return pane.id
+    end
+  end
+  return nil
+end
+
+local function create_tmux_split()
+  -- Create a new tmux split below the current pane
+  local result = vim.fn.system("tmux split-window -v -c '#{pane_current_path}' -P -F '#{pane_id}' 2>/dev/null")
+  if vim.v.shell_error == 0 then
+    return result:gsub("%s+", "") -- trim whitespace
+  end
+  return nil
+end
+
+local function setup_vtr_pane()
+  -- Check if VTR already has a pane attached
+  if has_vtr_pane_attached() then
+    return true
+  end
+  
+  local panes = get_tmux_panes()
+  local target_pane = nil
+  
+  -- Try to find an idle pane first
+  target_pane = find_idle_pane(panes)
+  
+  -- If no idle pane and only one pane (current), create a new split
+  if not target_pane and #panes == 1 then
+    target_pane = create_tmux_split()
+  end
+  
+  -- Attach VTR to the target pane
+  if target_pane then
+    vim.cmd('VtrAttachToPane ' .. target_pane)
+    return true
+  end
+  
+  return false
+end
+
 local function dispatch_command(cmd)
   -- 1. Try vim-tmux-runner if inside tmux
   if in_tmux() then
-    vim.cmd('VtrSendCommandToRunner ' .. cmd)
+    if setup_vtr_pane() then
+      vim.cmd('VtrSendCommandToRunner ' .. cmd)
+    else
+      print("Error: Could not setup tmux pane for testing")
+    end
     return
   end
 
@@ -77,19 +161,27 @@ local function get_buffer_info(buf)
 end
 
 local function run_tests(filename)
-  local buf = vim.api.nvim_get_current_buf()
-  local buf_info = get_buffer_info(buf)
+  -- If filename is provided, use it directly; otherwise use current buffer
+  local target_file
+  if filename and filename ~= '' then
+    target_file = filename
+  else
+    local buf = vim.api.nvim_get_current_buf()
+    local buf_info = get_buffer_info(buf)
+    target_file = buf_info.filepath
+  end
 
+  -- Save current buffer if it's the active one
   if vim.fn.expand('%') ~= '' then
     vim.cmd('write')
   end
 
-  local relative_path = vim.fn.fnamemodify(buf_info.filepath, ':~:.')
+  local relative_path = vim.fn.fnamemodify(target_file, ':~:.')
   last_test_file = relative_path
 
   -- The file is executable; assume we should run it directly
-  if vim.fn.executable(filename) == 1 then
-    vim.cmd('!./' .. filename)
+  if vim.fn.executable(target_file) == 1 then
+    vim.cmd('!./' .. vim.fn.fnamemodify(target_file, ':t'))
   else
     dispatch_command("testfile " .. relative_path)
   end
