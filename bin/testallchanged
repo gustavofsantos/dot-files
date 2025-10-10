@@ -5,12 +5,94 @@ set -euo pipefail
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Get staged and modified files (excluding untracked files)
-staged_files=$(git diff --name-only --cached 2>/dev/null || true)
-modified_files=$(git diff --name-only 2>/dev/null || true)
+# Usage function
+usage() {
+    echo "Usage: testallchanged [MODE]"
+    echo ""
+    echo "Run testfile against changed test files in the repository."
+    echo ""
+    echo "Modes:"
+    echo "  --staged    Only run tests for staged files"
+    echo "  --working   Only run tests for working directory changes"
+    echo "  --branch    Run tests for files changed compared to main branch"
+    echo "  (default)   Run tests for both staged and working directory changes"
+    echo ""
+    echo "Examples:"
+    echo "  testallchanged           # Default: staged + working changes"
+    echo "  testallchanged --staged  # Only staged changes"
+    echo "  testallchanged --working # Only working directory changes"
+    echo "  testallchanged --branch  # Changes compared to main branch"
+}
 
-# Combine and deduplicate files
-all_changed_files=$(echo -e "$staged_files\n$modified_files" | sort -u | grep -v '^$')
+# Parse command line arguments
+MODE="default"
+if [ $# -gt 0 ]; then
+    case "$1" in
+        --staged)
+            MODE="staged"
+            ;;
+        --working)
+            MODE="working"
+            ;;
+        --branch)
+            MODE="branch"
+            ;;
+        --help|-h)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "Error: Unknown option '$1'"
+            echo ""
+            usage
+            exit 1
+            ;;
+    esac
+fi
+
+# Function to detect the main branch (main or master)
+get_main_branch() {
+    # First check if 'main' exists
+    if git show-ref --verify --quiet refs/heads/main; then
+        echo "main"
+    # Then check if 'master' exists
+    elif git show-ref --verify --quiet refs/heads/master; then
+        echo "master"
+    # Fall back to checking remote branches
+    elif git show-ref --verify --quiet refs/remotes/origin/main; then
+        echo "origin/main"
+    elif git show-ref --verify --quiet refs/remotes/origin/master; then
+        echo "origin/master"
+    else
+        echo "main"  # Default fallback
+    fi
+}
+
+# Get changed files based on the selected mode
+case "$MODE" in
+    "staged")
+        echo "Getting staged files..."
+        all_changed_files=$(git diff --name-only --cached 2>/dev/null || true)
+        ;;
+    "working")
+        echo "Getting working directory changes..."
+        all_changed_files=$(git diff --name-only 2>/dev/null || true)
+        ;;
+    "branch")
+        main_branch=$(get_main_branch)
+        echo "Getting files changed compared to $main_branch..."
+        all_changed_files=$(git diff --name-only "$main_branch"...HEAD 2>/dev/null || true)
+        ;;
+    "default")
+        echo "Getting staged and working directory changes..."
+        staged_files=$(git diff --name-only --cached 2>/dev/null || true)
+        modified_files=$(git diff --name-only 2>/dev/null || true)
+        all_changed_files=$(echo -e "$staged_files\n$modified_files" | sort -u | grep -v '^$')
+        ;;
+esac
+
+# Remove empty lines
+all_changed_files=$(echo "$all_changed_files" | grep -v '^$' || true)
 
 # Test file patterns (Python, JavaScript/TypeScript, Clojure, and other common patterns)
 test_patterns="^test_.*\.(py|js|ts|clj)$|.*_test\.(py|js|ts|clj)$|.*\.test\.(js|ts)$|.*\.spec\.(js|ts)$|.*test.*\.clj$"

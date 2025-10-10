@@ -28,9 +28,9 @@ fi
 
 if [[ "$current_dir" == *"/Workplace/seubarriga"* ]]; then
     test_arg="$(echo "$file_path" | sed 's/^test\///' | sed 's/\.clj$//' | sed 's/\//\./g' | sed 's/_/-/g')"
-    test_command="cd $current_dir && lein with-profile test midje $test_arg"
+    test_command="lein with-profile test midje $test_arg"
     eval "$test_command"
-    exit 0
+    exit $?
 fi
 
 exit 1
