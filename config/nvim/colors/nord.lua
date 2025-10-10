@@ -80,9 +80,9 @@ local highlights = {
 
   -- Editor
   ColorColumn = { bg = palette.gray02 },
-  Cursor = { fg = palette.nord00, bg = palette.nord05 },
+  Cursor = { fg = palette.gray000, bg = palette.nord05 },
   Error = { fg = palette.nord05, bg = palette.red },
-  iCursor = { fg = palette.nord00, bg = palette.nord05 },
+  iCursor = { fg = palette.gray000, bg = palette.nord05 },
   LineNr = { fg = palette.nord03 },
   MatchParen = { fg = palette.sky, bg = palette.nord03 },
   NonText = { fg = palette.nord02 },

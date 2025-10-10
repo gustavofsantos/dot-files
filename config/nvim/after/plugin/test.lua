@@ -40,13 +40,13 @@ end
 
 local function dispatch_command(cmd)
   -- 1. Try vim-tmux-runner if inside tmux
-  if false and in_tmux() then
+  if in_tmux() then
     vim.cmd('VtrSendCommandToRunner ' .. cmd)
     return
   end
 
   -- 2. Try toggleterm if available
-  if false and can_use_toggleterm() then
+  if can_use_toggleterm() then
     send_to_toggleterm(cmd)
     return
   end
@@ -84,22 +84,14 @@ local function run_tests(filename)
     vim.cmd('write')
   end
 
+  local relative_path = vim.fn.fnamemodify(buf_info.filepath, ':~:.')
+  last_test_file = relative_path
+
   -- The file is executable; assume we should run it directly
   if vim.fn.executable(filename) == 1 then
-    last_test_file = filename
     vim.cmd('!./' .. filename)
-    -- 5A Clojure projects
-  elseif string.find(filename, "Workplace/seubarriga") ~= nil and vim.fn.glob('test/**/*_test.clj') ~= '' then
-    last_test_file = filename
-    local relative_path = vim.fn.fnamemodify(buf_info.filepath, ':~:.')
-    relative_path = string.gsub(relative_path, "^test/", "")
-    local namespace = string.gsub(relative_path, "/", ".")
-    namespace = string.gsub(namespace, "_", "-")
-    namespace = string.gsub(namespace, "%.clj$", "")
-
-    dispatch_command(string.format("lein with-profile test midje %s", namespace))
   else
-    print("No suitable test runner found for " .. filename)
+    dispatch_command("testfile " .. relative_path)
   end
 end
 
