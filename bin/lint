@@ -1,0 +1,28 @@
+#!/bin/bash
+
+if [ "$#" -ne 1 ]; then
+    echo "Usage:"
+    echo "lint <relative_path>"
+    exit 1
+fi
+
+lint_path="$1"
+current_dir="$PWD"
+
+# Check if current directory matches the seubarriga workspace pattern
+if [[ "$current_dir" == *"/Workplace/seubarriga"* ]]; then
+    # Check if the file is a clojure file
+    if [[ "$lint_path" =~ \.(clj|cljs|cljc)$ ]]; then
+        echo "Running clj-kondo linter on Clojure file '$lint_path' in: $current_dir"
+        lint_command="clj-kondo --fail-level error  --lint $lint_path"
+        eval "$lint_command"
+        exit $?
+    else
+        # Not a Clojure file, exit with code 0 (success)
+        echo "Skipping non-Clojure file: $lint_path"
+        exit 0
+    fi
+fi
+
+echo "No linter configured for current directory: $current_dir"
+exit 1
