@@ -15,8 +15,8 @@ adjust-cell-height = 4
 # font-style-bold = Medium
 # font-style-italic = Italic
 # font-style-bold-italic = Medium Italic
-font-feature = -liga,-dlig,+calt
-# font-size = 16
+# font-feature = -liga,-dlig,+calt
+# font-size = 14
 
 # Operator Mono
 # font-family = OperatorMono Nerd Font
