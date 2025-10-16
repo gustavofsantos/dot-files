@@ -94,13 +94,18 @@ augroup END]])
 
 vim.api.nvim_create_user_command(
   'YankPath',
-  function()
-    vim.fn.setreg('+', vim.fn.expand('%:.:p'))
-    print('Current buffer relative path yanked!')
+  function(opts)
+    local path = vim.fn.expand('%:.:p')
+    if opts.range > 0 then
+      path = path .. ':' .. opts.line1 .. ':' .. opts.line2
+    end
+    vim.fn.setreg('+', path)
+    print('Path yanked: ' .. path)
   end,
   {
-    desc = 'Yank the relative path of the current buffer',
-    force = true, -- Overwrite if command already exists
+    desc = 'Yank the relative path of the current buffer (with line range in visual mode)',
+    force = true,
+    range = true,
   }
 )
 
