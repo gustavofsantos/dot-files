@@ -111,7 +111,7 @@ local function setup_vtr_pane()
   
   -- Attach VTR to the target pane
   if target_pane then
-    vim.cmd('VtrAttachToPane ' .. target_pane)
+    vim.cmd('silent VtrAttachToPane ' .. target_pane)
     return true
   end
   
@@ -122,7 +122,7 @@ local function dispatch_command(cmd)
   -- 1. Try vim-tmux-runner if inside tmux
   if in_tmux() then
     if setup_vtr_pane() then
-      vim.cmd('VtrSendCommandToRunner ' .. cmd)
+      vim.cmd('silent VtrSendCommandToRunner ' .. cmd)
     else
       print("Error: Could not setup tmux pane for testing")
     end
@@ -173,7 +173,7 @@ local function run_tests(filename)
 
   -- Save current buffer if it's the active one
   if vim.fn.expand('%') ~= '' then
-    vim.cmd('write')
+    vim.cmd('silent! write')
   end
 
   local relative_path = vim.fn.fnamemodify(target_file, ':~:.')
@@ -181,7 +181,7 @@ local function run_tests(filename)
 
   -- The file is executable; assume we should run it directly
   if vim.fn.executable(target_file) == 1 then
-    vim.cmd('!./' .. vim.fn.fnamemodify(target_file, ':t'))
+    dispatch_command("./" .. vim.fn.fnamemodify(target_file, ':t'))
   else
     dispatch_command("testfile " .. relative_path)
   end
