@@ -17,6 +17,7 @@ palette = 15=#E5E9F0
 palette = 16=#D08770
 palette = 17=#B74E58
 palette = 18=#4C566A
+palette = 19=#514c42
 
 background = 1E222A
 foreground = C0C8D8

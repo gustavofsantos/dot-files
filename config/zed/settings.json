@@ -144,7 +144,29 @@
       "enabled": false
     }
   },
-  "context_servers": { },
+  "context_servers": {
+        "sequential-thinking": {
+            "source": "custom",
+            "enabled": true,
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-sequential-thinking"
+            ]
+        },
+        "memory": {
+            "source": "custom",
+            "enabled": true,
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-memory"
+            ],
+            "env": {
+                "MEMORY_FILE_PATH": "/Users/gustavo.fsantos/Documents/Obsidian/Notes/memory.json"
+            }
+        }
+    },
   "features": {
     "edit_prediction_provider": "zed"
   },
@@ -153,7 +175,6 @@
       "provider": "zed.dev",
       "model": "claude-3-7-sonnet-latest"
     },
-    "version": "2",
     "enable_experimental_live_diffs": true
   }
 }
