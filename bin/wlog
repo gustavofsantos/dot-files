@@ -1,0 +1,217 @@
+#!/bin/bash
+#
+# A simple CLI for managing a worklog diary. (v2 - Refactored with functions)
+#
+
+# --- Configuration ---
+# Exit immediately if a variable is unset.
+set -u
+# Check for WORKLOG_DIR environment variable.
+if [[ -z "${WORKLOG_DIR:-}" ]]; then
+  echo "Error: The WORKLOG_DIR environment variable is not set." >&2
+  echo "Please set it to the directory where you want to store your logs." >&2
+  exit 1
+fi
+# Use EDITOR variable, with a fallback to nvim.
+: "${EDITOR:=nvim}"
+# Ensure the worklog directory exists.
+mkdir -p "$WORKLOG_DIR"
+
+# Check if fzf is installed
+if ! command -v fzf &> /dev/null; then
+  echo "Error: fzf is not installed. Please install it to use find/search features." >&2
+  exit 1
+fi
+
+# --- Helper Functions ---
+# Gets the file path for a given date string (YYYY-MM-DD). Defaults to today.
+get_log_file_path() {
+  local date_str="${1:-$(date +'%Y-%m-%d')}"
+  echo "$WORKLOG_DIR/$date_str.md"
+}
+
+# --- Commands as Functions ---
+
+cmd_add() {
+  local message
+  # Check for editor flag
+  if [[ "${1:-}" == "--editor" || "${1:-}" == "-e" ]]; then
+    local temp_file
+    temp_file=$(mktemp)
+    # SET THE TRAP *AFTER* THE VARIABLE IS CREATED
+    # This ensures the cleanup command is tied to the function's scope
+    trap 'rm -f "$temp_file"' EXIT
+
+    "$EDITOR" "$temp_file"
+    message=$(cat "$temp_file")
+
+    # Disable the trap since we are about to exit the function cleanly
+    # and don't want it firing unnecessarily later.
+    trap - EXIT
+
+    if [[ -z "$message" ]]; then
+      echo "Aborted: Message is empty."
+      # The initial trap will still clean up the empty file on exit.
+      exit 0
+    fi
+  else
+    # Handle message from arguments
+    if [[ $# -eq 0 ]]; then
+      echo "Usage: wlog add <message> | --editor | -e" >&2
+      exit 1
+    fi
+    message="$*"
+  fi
+
+  local log_file
+  log_file=$(get_log_file_path)
+  local timestamp
+  timestamp=$(date +'%H:%M:%S')
+
+  if [[ ! -f "$log_file" ]]; then
+    echo "# Worklog for $(date +'%Y-%m-%d')" > "$log_file"
+    echo "" >> "$log_file"
+  fi
+
+  echo "- **$timestamp**:" >> "$log_file"
+  echo "$message" | sed 's/^/  /' >> "$log_file"
+  echo "" >> "$log_file"
+  echo "Entry added to $log_file"
+}
+
+cmd_find() {
+  # Find markdown files, reverse sort to show newest first, then pipe to fzf.
+  local file
+  file=$(find "$WORKLOG_DIR" -name "*.md" | sort -r | fzf)
+
+  # If fzf was exited (esc/ctrl-c), file will be empty.
+  if [[ -n "$file" ]]; then
+    "$EDITOR" "$file"
+  fi
+}
+
+cmd_list() {
+  ls -lt "$WORKLOG_DIR"/*.md 2>/dev/null || echo "No log files found."
+}
+
+cmd_search() {
+  # Use grep to get all lines with file and line number, then pipe to fzf.
+  # -H prints filename, -n prints line number, -r for recursive.
+  # --color=never prevents ANSI codes from breaking the parsing.
+  local selection
+  selection=$(grep -Hnr . "$WORKLOG_DIR" | fzf)
+
+  # If fzf was exited, selection will be empty.
+  if [[ -n "$selection" ]]; then
+    # Parse the selection (format: path/to/file.md:line_number:line_content)
+    local file_path
+    file_path=$(echo "$selection" | cut -d':' -f1)
+    local line_number
+    line_number=$(echo "$selection" | cut -d':' -f2)
+
+    # Open the editor and jump to the specific line.
+    "$EDITOR" "+$line_number" "$file_path"
+  fi
+}
+
+cmd_edit() {
+  local log_file
+  log_file=$(get_log_file_path "$1")
+  if [[ ! -f "$log_file" ]]; then
+    local date_header="${1:-$(date +'%Y-%m-%d')}"
+    echo "# Worklog for $date_header" > "$log_file"
+    echo "" >> "$log_file"
+  fi
+  "$EDITOR" "$log_file"
+}
+
+cmd_today() {
+  local log_file
+  log_file=$(get_log_file_path)
+  if [[ ! -f "$log_file" ]]; then
+    echo "# Worklog for $(date +'%Y-%m-%d')" > "$log_file"
+    echo "" >> "$log_file"
+  fi
+  "$EDITOR" "$log_file"
+}
+
+cmd_agent() {
+cat <<'EOF'
+# AI Agent Instructions for the `wlog` Script
+
+You are an AI assistant with access to a shell. You can use the `wlog` command-line tool to manage my worklog diary.
+
+## Primary Goal
+Your main purpose is to **record technical findings, decisions, and progress updates** into my daily worklog using the `wlog add` command. Your most important task is to **associate every entry with relevant tags**.
+
+## Core Commands
+
+### 1. Adding a Log Entry: `wlog add`
+This is your most-used command. Use it to add timestamped entries to today's log file.
+
+**Syntax:**
+`wlog add "<message with tags>"`
+
+**Guidelines for the Message:**
+- **Be Descriptive:** The message should be a clear and concise summary of the work done, a problem encountered, or a solution found.
+- **Always Use Tags:** This is critical. Use hashtags (`#tag-name`) for categorization.
+    - **Task IDs:** `#JIRA-1234`, `#TICKET-567`, `#GH-88`
+    - **Projects/Initiatives:** `#PROJECT-PHOENIX`, `#API-REFACTOR`
+    - **Technical Concepts:** `#authentication`, `#database-migration`, `#caching`
+- **Multi-line Entries:** For longer notes, use `wlog add -e`. However, for programmatic use, passing a single quoted string to `wlog add` is preferred.
+
+**Example Scenarios:**
+
+* **Scenario:** I ask you to find a solution for a database connection issue.
+    * **Correct Action:** `wlog add "Discovered the root cause of connection pool exhaustion. The default timeout was too high in the config. Lowered it to 30s. #JIRA-451 #database #performance"`
+
+* **Scenario:** You have just generated a complex configuration file for me.
+    * **Correct Action:** `wlog add "Generated the initial Nginx config for the #PROJECT-GATEWAY service. The config includes SSL termination and rate limiting. #nginx #devops"`
+
+### 2. Searching the Log: `wlog search`
+Use this to find past information to provide context for a current task.
+
+**Syntax:**
+`wlog search "<pattern_or_tag>"`
+
+**Example Scenarios:**
+
+* **Scenario:** I ask, "What was the last thing we did for JIRA-451?"
+    * **Correct Action:** `wlog search "#JIRA-451"`
+
+* **Scenario:** I ask, "Remind me about the performance issue we saw last week."
+    * **Correct Action:** `wlog search "#performance"`
+
+## Summary of Your Role
+1.  **Listen** for technical tasks, discoveries, or decisions.
+2.  **Formulate** a concise log message summarizing the event.
+3.  **Tag** the message with relevant identifiers (e.g., `#JIRA-123`).
+4.  **Execute** `wlog add "<message>"` to save the entry.
+EOF
+}
+
+cmd_help() {
+  echo "Usage: wlog <command> [arguments]"
+  echo ""
+  echo "Commands:"
+  echo "  add <message>      Add a new entry to today's log."
+  echo "  add --editor|-e    Open your editor to write a new entry."
+  echo "  find               Interactively find a log file to edit."
+  echo "  search             Interactively search content across all logs."
+  echo "  edit [YYYY-MM-DD]  Edit a log file directly. Defaults to today."
+  echo "  today              Display today's log."
+  echo "  agent              Show instructions for AI agents."
+}
+
+# --- Main Dispatch Logic ---
+COMMAND="${1:-help}" # Default to 'help' if no command is given
+shift || true # Shift arguments, ignore error if no arguments
+
+case "$COMMAND" in
+  add|find|search|edit|today|agent)
+    "cmd_$COMMAND" "$@"
+    ;;
+  *)
+    cmd_help
+    ;;
+esac
