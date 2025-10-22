@@ -162,7 +162,7 @@ vim.opt.rtp:prepend(lazypath)
 require("lazy").setup({
   spec = {
     "christoomey/vim-tmux-runner",
-    "svermeulen/vim-easyclip",
+    -- "svermeulen/vim-easyclip",
     "tpope/vim-fugitive",
     "tpope/vim-rhubarb",
     "tpope/vim-sleuth",
