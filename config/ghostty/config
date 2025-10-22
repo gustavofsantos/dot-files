@@ -1,9 +1,9 @@
 # Commit Mono
-font-family = CommitMono
+# font-family = CommitMono
 
 # Berkeley Mono
-# font-family = BerkeleyMono Nerd Font
-# font-feature = -calt, +liga, -dlig.
+font-family = BerkeleyMono Nerd Font
+font-feature = -calt, +liga, -dlig.
 
 # Mono Lisa
 # font-family = MonoLisa Nerd Font
