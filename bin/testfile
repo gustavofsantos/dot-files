@@ -1,36 +1,84 @@
 #!/bin/bash
 
-if [ "$#" -ne 1 ]; then
+current_dir="$PWD"
+
+# Collect file paths from arguments or stdin
+file_paths=()
+
+if [ "$#" -eq 0 ]; then
+    # Read from stdin if no arguments provided
+    while IFS= read -r line; do
+        [ -n "$line" ] && file_paths+=("$line")
+    done
+else
+    # Use command line arguments
+    file_paths=("$@")
+fi
+
+# Check if we have any files to test
+if [ ${#file_paths[@]} -eq 0 ]; then
     echo "Usage:"
-    echo "testfile <file_path>"
+    echo "  testfile <file_path> [<file_path2> ...]"
+    echo "  listchangedtests | testfile"
     exit 1
 fi
 
-file_path="$1"
-current_dir="$PWD"
+# Group files by project
+beyond_tests=()
+web_tests=()
+seubarriga_tests=()
 
-# Loggi's beyond test
-if [[ "$file_path" == *"/opt/loggi/py/apps/beyond/"* ]]; then
-    envs="UNLEASH_URL=http://localhost:4242/api APP_DB_HOST=localhost POSTGRES_HOST=localhost POSTGRES_DB=dev_db POSTGRES_PASSWORD=postgres POSTGRES_HOST=localhost POSTGRES_PORT=5432"
-    test_arg="$(echo "$file_path" | sed 's/\/opt\/loggi\/py\/apps\/beyond\///')"
-    test_command="$envs poetry run pytest -x --disable-warnings -q --ds beyond_app.settings.test $test_arg"
-    eval "$test_command"
-    exit 0
+for file_path in "${file_paths[@]}"; do
+    if [[ "$file_path" == *"/opt/loggi/py/apps/beyond/"* ]]; then
+        beyond_tests+=("$file_path")
+    elif [[ "$file_path" == *"/opt/loggi/web/"* ]]; then
+        web_tests+=("$file_path")
+    elif [[ "$current_dir" == *"/Workplace/seubarriga"* ]]; then
+        seubarriga_tests+=("$file_path")
+    else
+        echo "Error: Unknown project for file: $file_path"
+        exit 1
+    fi
+done
+
+exit_code=0
+
+# Run seubarriga tests in batch
+if [ ${#seubarriga_tests[@]} -gt 0 ]; then
+    test_namespaces=()
+    for test_file in "${seubarriga_tests[@]}"; do
+        namespace=$(echo "$test_file" | sed 's/^test\///' | sed 's/\.clj$//' | sed 's/\//\./g' | sed 's/_/-/g')
+        test_namespaces+=("$namespace")
+    done
+    
+    test_command="lein with-profile test midje ${test_namespaces[*]}"
+    if ! eval "$test_command"; then
+        exit_code=1
+    fi
 fi
 
-# Loggi's web test
-if [[ "$file_path" == *"/opt/loggi/web/"* ]]; then
-    test_arg="$(echo "$file_path" | sed 's/\/opt\/loggi\/web\/loggi\///')"
-    test_command="docker compose exec -e DJANGO_SETTINGS_MODULE=settings.test loggi_web_app pytest -x --disable-warnings -q $test_arg"
-    eval "$test_command"
-    exit 0
+# Run beyond tests individually
+if [ ${#beyond_tests[@]} -gt 0 ]; then
+    envs="UNLEASH_URL=http://localhost:4242/api APP_DB_HOST=localhost POSTGRES_HOST=localhost POSTGRES_DB=dev_db POSTGRES_PASSWORD=[REDACTED:password] POSTGRES_HOST=localhost POSTGRES_PORT=5432"
+    
+    for file_path in "${beyond_tests[@]}"; do
+        test_arg="$(echo "$file_path" | sed 's/\/opt\/loggi\/py\/apps\/beyond\///')"
+        test_command="$envs poetry run pytest -x --disable-warnings -q --ds beyond_app.settings.test $test_arg"
+        if ! eval "$test_command"; then
+            exit_code=1
+        fi
+    done
 fi
 
-if [[ "$current_dir" == *"/Workplace/seubarriga"* ]]; then
-    test_arg="$(echo "$file_path" | sed 's/^test\///' | sed 's/\.clj$//' | sed 's/\//\./g' | sed 's/_/-/g')"
-    test_command="lein with-profile test midje $test_arg"
-    eval "$test_command"
-    exit $?
+# Run web tests individually
+if [ ${#web_tests[@]} -gt 0 ]; then
+    for file_path in "${web_tests[@]}"; do
+        test_arg="$(echo "$file_path" | sed 's/\/opt\/loggi\/web\/loggi\///')"
+        test_command="docker compose exec -e DJANGO_SETTINGS_MODULE=settings.test loggi_web_app pytest -x --disable-warnings -q $test_arg"
+        if ! eval "$test_command"; then
+            exit_code=1
+        fi
+    done
 fi
 
-exit 1
+exit $exit_code
