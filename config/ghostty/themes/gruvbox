@@ -16,6 +16,12 @@ palette = 14 = #8ec07c
 palette = 15 = #ebdbb2
 palette = 16 = #d65d0e
 palette = 17 = #f38019
+palette = 232 = #282828
+palette = 233 = #3c3836
+palette = 234 = #504945
+palette = 235 = #665654
+palette = 236 = #7c6f64
+palette = 237 = #928374
 
 background = #282828
 foreground = #ebdbb2
