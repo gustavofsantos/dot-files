@@ -37,4 +37,19 @@ function M.get_current_visual_selection()
   return selected_text
 end
 
+
+function M.blend_colors(base, target, ratio)
+  local r1, g1, b1 = base:match("#(%x%x)(%x%x)(%x%x)")
+  local r2, g2, b2 = target:match("#(%x%x)(%x%x)(%x%x)")
+
+  r1, g1, b1 = tonumber(r1, 16), tonumber(g1, 16), tonumber(b1, 16)
+  r2, g2, b2 = tonumber(r2, 16), tonumber(g2, 16), tonumber(b2, 16)
+
+  local r = math.floor(r1 * (1 - ratio) + r2 * ratio)
+  local g = math.floor(g1 * (1 - ratio) + g2 * ratio)
+  local b = math.floor(b1 * (1 - ratio) + b2 * ratio)
+
+  return string.format("#%02X%02X%02X", r, g, b)
+end
+
 return M

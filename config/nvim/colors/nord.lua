@@ -77,7 +77,6 @@ local highlights = {
   Italic = { italic = true },
   Underline = { underline = true },
 
-
   -- Editor
   ColorColumn = { bg = palette.gray02 },
   Cursor = { fg = palette.gray000, bg = palette.nord05 },

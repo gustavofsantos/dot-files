@@ -2,16 +2,16 @@ vim.g.mapleader = " "
 vim.g.maplocalleader = ","
 
 vim.opt.background = "dark"
-vim.cmd.colorscheme("nord")
+vim.cmd.colorscheme("cream")
 vim.opt.inccommand = "split"
 -- vim.opt.winwidth = 100
+vim.o.cursorline = true
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
 vim.opt.number = false
 vim.opt.relativenumber = false
 -- vim.opt.hidden = true
 vim.opt.encoding = "utf-8"
--- vim.opt.hidden = true
 vim.opt.hlsearch = true
 -- vim.opt.infercase = true
 -- vim.opt.showcmd = true
@@ -53,8 +53,8 @@ vim.opt.showtabline = 1
 -- vim.opt.winbar = ""
 vim.opt.title = true
 vim.opt.titlestring = '%t%( %M%)%( (%{expand("%:~:h")})%)%a (nvim)'
-vim.opt.colorcolumn = ""
-vim.opt.statusline = "%<%{fnamemodify(expand('%'), ':~:.')} (%{&ft}) %-3(%m%)%=%-19(%3l,%02c%03V%)"
+-- vim.opt.colorcolumn = ""
+vim.opt.statusline = " %<%{fnamemodify(expand('%'), ':~:.')} (%{&ft}) %-3(%m%)%=%-19(%3l,%02c%03V%)"
 
 vim.opt.path:append({ "**" })
 -- vim.opt.wildignore:append({ "*/node_modules/*" })

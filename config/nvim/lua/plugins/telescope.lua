@@ -6,7 +6,7 @@ return {
     { "<leader>o", "<cmd>Telescope find_files<CR>",                desc = "Find files" },
     { "<leader>b", "<cmd>Telescope buffers<CR>",                   desc = "Find buffer" },
     { "<leader>e", "<cmd>Telescope oldfiles only_cwd=true<CR>",    desc = "Recent files" },
-    { "<leader>f", "<cmd>Telescope current_buffer_fuzzy_find<CR>", desc = "Fuzzy find current buffer" },
+    { "gs", "<cmd>Telescope current_buffer_fuzzy_find<CR>", desc = "Fuzzy find current buffer" },
     { "<leader>l", "<cmd>Telescope live_grep<CR>",                 desc = "Fuzzy find" },
     { "<leader>h", "<cmd>Telescope help_tags<CR>",                 desc = "Help" },
     { "<F3>",      "<cmd>Telescope grep_string<cr>",               desc = "Find Word" },
@@ -196,13 +196,13 @@ return {
               for _, line in ipairs(lines) do
                 -- Strip ANSI escape codes (basic implementation)
                 line = line:gsub("\27%[[0-9;]*[mGK]", "") -- Remove color codes
-                line = line:gsub("\27%[[0-9;]*[Hf]", "")   -- Remove cursor movement
-                line = line:gsub("\27%[[0-9;]*[A-D]", "")  -- Remove cursor positioning
-                line = line:gsub("\27%[[0-9]*J", "")       -- Remove screen clearing
-                line = line:gsub("\27%[[0-9]*K", "")       -- Remove line clearing
+                line = line:gsub("\27%[[0-9;]*[Hf]", "") -- Remove cursor movement
+                line = line:gsub("\27%[[0-9;]*[A-D]", "") -- Remove cursor positioning
+                line = line:gsub("\27%[[0-9]*J", "") -- Remove screen clearing
+                line = line:gsub("\27%[[0-9]*K", "") -- Remove line clearing
                 -- Replace other control characters with readable equivalents
-                line = line:gsub("\r", "↵")  -- Carriage return
-                line = line:gsub("\t", "    ")  -- Tab
+                line = line:gsub("\r", "↵") -- Carriage return
+                line = line:gsub("\t", "    ") -- Tab
                 table.insert(processed_lines, line)
               end
 
