@@ -19,12 +19,21 @@ end, { desc = 'Toggle diagnostic virtual_lines' })
 vim.keymap.set("v", "<leader>b",
   ':<C-U>!git blame <C-R>=expand("%:p") <CR> | sed -n <C-R>=line("\'<") <CR>,<C-R>=line("\'>") <CR>p <CR>')
 
+vim.keymap.set("n", '[d', function() vim.diagnostic.jump { count = -1 } end, { desc = 'Previous diagnostic' })
+vim.keymap.set("n", ']d', function() vim.diagnostic.jump { count = 1 } end, {desc =  'Next diagnostic' })
+vim.keymap.set("n", '[e', function() vim.diagnostic.jump { count = -1, severity = vim.diagnostic.severity.ERROR } end,
+{desc = 'Previous error'})
+vim.keymap.set("n", ']e', function() vim.diagnostic.jump { count = 1, severity = vim.diagnostic.severity.ERROR } end,
+{ desc = 'Next error' })
+
 vim.keymap.set("n", "<leader>tf", "<cmd>RunTests<CR>", { desc = "Test current file", noremap = true, silent = true })
 vim.keymap.set("n", "<leader>tv", "<cmd>TestVisit<CR>", { desc = "Visit last test", noremap = true, silent = true })
 vim.keymap.set("n", "<leader>tl", "<cmd>TestLast<CR>", { desc = "Test last file", noremap = true, silent = true })
 vim.keymap.set("n", "<leader>u", "<cmd>UndotreeToggle<cr>", { desc = "Undo tree", noremap = true, silent = true })
 
-vim.keymap.set("n", "<leader>;a", "<cmd>BookmarkAdd<CR>", { desc = "Bookmark current file", noremap = true, silent = true })
-vim.keymap.set("n", "<leader>;o", "<cmd>BookmarkSearch<CR>", { desc = "Search project bookmarks", noremap = true, silent = true })
-vim.keymap.set("n", "<leader>;O", "<cmd>BookmarkSearchAll<CR>", { desc = "Search bookmarks accross all projects", noremap = true, silent = true })
-
+vim.keymap.set("n", "<leader>;a", "<cmd>BookmarkAdd<CR>",
+  { desc = "Bookmark current file", noremap = true, silent = true })
+vim.keymap.set("n", "<leader>;o", "<cmd>BookmarkSearch<CR>",
+  { desc = "Search project bookmarks", noremap = true, silent = true })
+vim.keymap.set("n", "<leader>;O", "<cmd>BookmarkSearchAll<CR>",
+  { desc = "Search bookmarks accross all projects", noremap = true, silent = true })
