@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+set -u
+set -o pipefail
+
+MODEL="gemma3:1b"
+
+if [ -z "$1" ]; then
+  echo "Usage: asknotes \"Your question here\""
+  exit 1
+fi
+
+QUESTION="$1"
+
+cat "$WORKLOG_DIR"/*.md | ollama run $MODEL "Based on the text provided, answer the following question: $QUESTION"
