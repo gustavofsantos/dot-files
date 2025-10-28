@@ -20,11 +20,11 @@ vim.keymap.set("v", "<leader>b",
   ':<C-U>!git blame <C-R>=expand("%:p") <CR> | sed -n <C-R>=line("\'<") <CR>,<C-R>=line("\'>") <CR>p <CR>')
 
 vim.keymap.set("n", '[d', function() vim.diagnostic.jump { count = -1 } end, { desc = 'Previous diagnostic' })
-vim.keymap.set("n", ']d', function() vim.diagnostic.jump { count = 1 } end, {desc =  'Next diagnostic' })
+vim.keymap.set("n", ']d', function() vim.diagnostic.jump { count = 1 } end, { desc = 'Next diagnostic' })
 vim.keymap.set("n", '[e', function() vim.diagnostic.jump { count = -1, severity = vim.diagnostic.severity.ERROR } end,
-{desc = 'Previous error'})
+  { desc = 'Previous error' })
 vim.keymap.set("n", ']e', function() vim.diagnostic.jump { count = 1, severity = vim.diagnostic.severity.ERROR } end,
-{ desc = 'Next error' })
+  { desc = 'Next error' })
 
 vim.keymap.set("n", "<leader>tf", "<cmd>RunTests<CR>", { desc = "Test current file", noremap = true, silent = true })
 vim.keymap.set("n", "<leader>tv", "<cmd>TestVisit<CR>", { desc = "Visit last test", noremap = true, silent = true })
