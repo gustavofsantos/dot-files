@@ -42,21 +42,15 @@ end, { desc = "Write all" })
 vim.api.nvim_create_user_command(
   "Journal",
   function ()
-    local journals_dir = os.getenv("JOURNALS_HOME")
+    local journals_dir = os.getenv("WORKLOG_DIR")
     local file = journals_dir .. "/" .. os.date("%Y-%m-%d") .. ".md"
     vim.cmd("edit " .. file)
   end,
   { desc = "Open daily journal file", bang = true, nargs = 0 }
 )
 
-vim.api.nvim_create_user_command(
-  "Worklog",
-  ":vsp | :e ~/notes/worklog.md",
-  { desc = "Open worklog file", bang = true, nargs = 0 }
-)
-
 vim.api.nvim_create_user_command("TaskNotes", function()
-  local notes_dir = os.getenv("NOTES_HOME")
+  local notes_dir = os.getenv("WORKLOG_DIR")
   -- Get the current git branch name
   local branch_name = vim.fn.system("git branch --show-current 2> /dev/null | tr -d '\n'")
 
@@ -109,11 +103,3 @@ vim.api.nvim_create_user_command(
   }
 )
 
--- Custom Telescope live_grep variants
--- vim.api.nvim_create_user_command("LiveGrepTests", function()
---   require("config.init").navigation.live_grep_tests()
--- end, { desc = "Telescope live_grep limited to test files" })
---
--- vim.api.nvim_create_user_command("LiveGrepNonTests", function()
---   require("config.init").navigation.live_grep_non_tests()
--- end, { desc = "Telescope live_grep limited to non-test files" })
