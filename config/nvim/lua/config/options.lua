@@ -9,7 +9,7 @@ vim.opt.inccommand = "split"
 vim.o.cursorline = true
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
-vim.opt.number = false
+vim.opt.number = true
 vim.opt.relativenumber = false
 -- vim.opt.hidden = true
 vim.opt.encoding = "utf-8"
@@ -39,10 +39,12 @@ vim.opt.foldenable = true
 vim.opt.foldmethod = "indent"
 vim.opt.wildmenu = true
 -- vim.opt.wildmode = "longest,list"
--- vim.opt.completeopt = "menu,noinsert,preview"
+vim.opt.wildoptions:append { 'fuzzy' }
+vim.opt.completeopt = "menu,menuone,fuzzy,noinsert,preview"
 vim.opt.pumheight = 12
 vim.opt.pumwidth = 50
 -- vim.opt.updatetime = 100
+vim.opt.grepprg = "rg --vimgrep --no-messages --smart-case"
 vim.opt.splitright = true
 vim.opt.splitbelow = true
 vim.opt.signcolumn = "yes"
@@ -55,7 +57,7 @@ vim.opt.showtabline = 1
 vim.opt.title = true
 vim.opt.titlestring = '%t%( %M%)%( (%{expand("%:~:h")})%)%a (nvim)'
 -- vim.opt.colorcolumn = ""
-vim.opt.statusline = " %<%{fnamemodify(expand('%'), ':~:.')} (%{&ft}) %-3(%m%)%=%-19(%3l,%02c%03V%)"
+vim.opt.statusline = " %<%{fnamemodify(expand('%'), ':~:.')} (%{&ft}) %-3(%m%)%=%-19(%3l,%02c%03V%) %P"
 
 vim.opt.path:append({ "**" })
 -- vim.opt.wildignore:append({ "*/node_modules/*" })
