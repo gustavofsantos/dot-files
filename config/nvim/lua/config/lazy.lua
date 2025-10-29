@@ -23,7 +23,7 @@ require("lazy").setup({
     { import = "plugins" }
   },
   install = {
-    colorscheme = { "default" },
+    colorscheme = { "alabaster" },
   },
   checker = {
     notify = false,

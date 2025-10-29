@@ -2,11 +2,12 @@ vim.g.mapleader = " "
 vim.g.maplocalleader = ","
 
 vim.opt.background = "dark"
-vim.cmd.colorscheme("default")
+vim.cmd.colorscheme("alabaster")
 
 vim.opt.inccommand = "split"
 -- vim.opt.winwidth = 100
 vim.o.cursorline = true
+vim.o.winborder = 'rounded'
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
 vim.opt.number = true

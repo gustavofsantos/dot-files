@@ -8,6 +8,7 @@ return {
         lua = { "stylua" },
         python = { "isort", "black" },
         clojure = { "cljstyle" },
+        sql = { "sqlfmt" },
         javascript = { "deno_fmt", "prettierd", "prettier", "eslint_d", "eslint" },
         typescript = { "deno_fmt", "prettierd", "prettier", "eslint_d", "eslint" },
         javascriptreact = { "prettierd", "prettier", "eslint_d", "eslint" },
