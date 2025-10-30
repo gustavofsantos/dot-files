@@ -6,32 +6,35 @@ paths=(
     "$HOME/.config/ghostty"
 )
 
+sessions_only=false
+if [[ "$1" == "--sessions-only" || "$1" == "-s" ]]; then
+    sessions_only=true
+    shift
+fi
+
 if [[ $# -eq 1 ]]; then
     selected=$1
 else
-    selected=$( (
-        tmux ls -F "#{session_name}"
-        for path in "${paths[@]}"; do
-            echo "$path"
-        done
-        find ~/Workplace -mindepth 1 -maxdepth 1 -type d
-        find ~/Workplace/seubarriga-worktrees -mindepth 1 -maxdepth 1 -type d
-    ) | fzf --height 100% --prompt='⚡ ' --header='Choose a session' --select-1 --exit-0 \
-          --preview-window 'right:50%' \
-          --preview 'if tmux has-session -t {} 2>/dev/null; then
-                       echo "📺 Session: {}"
-                       echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                       tmux list-windows -t {} -F "#{window_index}: #{window_name} #{window_flags}"
-                       echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                       echo "Current pane content:"
-                       tmux capture-pane -t {} -p
-                     elif [[ -d {} ]]; then
-                       echo "📁 Directory: {}"
-                       echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                       ls -la {}
-                     else
-                       echo "No preview available"
-                     fi')
+    if [[ "$sessions_only" == true ]]; then
+        selected=$(tmux ls -F "#{session_name}" 2>/dev/null | fzf --height 100% --prompt='→ ' --select-1 --exit-0 \
+              --preview-window 'right:40%' \
+              --preview 'tmux list-windows -t {} -F "#{window_index} #{window_name}" 2>/dev/null')
+    else
+        selected=$( (
+            tmux ls -F "#{session_name}"
+            for path in "${paths[@]}"; do
+                echo "$path"
+            done
+            find ~/Workplace -mindepth 1 -maxdepth 1 -type d
+            find ~/Workplace/seubarriga-worktrees -mindepth 1 -maxdepth 1 -type d
+        ) | fzf --height 100% --prompt='→ ' --select-1 --exit-0 \
+              --preview-window 'right:40%' \
+              --preview 'if tmux has-session -t {} 2>/dev/null; then
+                           tmux list-windows -t {} -F "#{window_index} #{window_name}"
+                         elif [[ -d {} ]]; then
+                           ls -1 {} | head -20
+                         fi')
+    fi
 fi
 
 if [[ -z $selected ]]; then
