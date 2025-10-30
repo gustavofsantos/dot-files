@@ -103,3 +103,10 @@ vim.api.nvim_create_user_command(
   }
 )
 
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "sql", "mysql", "plsql" },
+  callback = function()
+    local cmp = require("cmp")
+    cmp.setup.buffer({ sources = { { name = "vim-dadbod-completion" }, { name = "buffer" } } })
+  end,
+})

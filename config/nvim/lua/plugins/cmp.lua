@@ -58,10 +58,11 @@ return {
       },
       sources = {
         { name = "nvim_lsp" },
-        { name = "luasnip",  keyword_length = 2, max_item_count = 2 },
-        { name = "buffer",   keyword_length = 3, max_item_count = 5 },
-        { name = "nvim_lua", keyword_length = 3, max_item_count = 5 },
-        { name = "path",     keyword_length = 5, max_item_count = 5 },
+        { name = 'vim-dadbod-completion' },
+        { name = "luasnip",              keyword_length = 2, max_item_count = 2 },
+        { name = "buffer",               keyword_length = 3, max_item_count = 5 },
+        { name = "nvim_lua",             keyword_length = 3, max_item_count = 5 },
+        { name = "path",                 keyword_length = 5, max_item_count = 5 },
       },
     })
 
