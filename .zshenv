@@ -14,6 +14,7 @@ export MEMORY_FILE_PATH="$HOME/.llm_memory.txt"
 export OLLAMA_API_BASE="http://127.0.0.1:11434"
 export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_ENV_HINTS=1
+export AMP_TOOLBOX="$HOME/.bin"
 
 export PATH="$PNPM_HOME:$PATH"
 export PATH=$PATH:"$HOME"/.local/bin
