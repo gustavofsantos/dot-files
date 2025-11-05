@@ -3,4 +3,11 @@ set -e
 set -u
 set -o pipefail
 
-echo -n "$(date '+%Y-%m-%d')"
+action="${TOOLBOX_ACTION:-}"
+
+if [[ "$action" == "describe" ]]; then
+  echo "name: today"
+  echo "description: Prints the current date in YYYY-MM-DD format."
+elif [[ "$action" == "execute" ]] || [[ -z "$action" ]]; then
+  echo -n "$(date '+%Y-%m-%d')"
+fi

@@ -51,20 +51,16 @@ get_main_branch() {
 # Get changed files based on the selected mode
 case "$MODE" in
     "staged")
-        echo "Getting staged files..."
         all_changed_files=$(git diff --name-only --cached 2>/dev/null || true)
         ;;
     "working")
-        echo "Getting working directory changes..."
         all_changed_files=$(git diff --name-only 2>/dev/null || true)
         ;;
     "branch")
         main_branch=$(get_main_branch)
-        echo "Getting files changed compared to $main_branch..."
         all_changed_files=$(git diff --name-only "$main_branch"...HEAD 2>/dev/null || true)
         ;;
     "default")
-        echo "Getting staged and working directory changes..."
         staged_files=$(git diff --name-only --cached 2>/dev/null || true)
         modified_files=$(git diff --name-only 2>/dev/null || true)
         all_changed_files=$(echo -e "$staged_files\n$modified_files" | sort -u | grep -v '^$')
@@ -74,41 +70,27 @@ esac
 # Remove empty lines
 all_changed_files=$(echo "$all_changed_files" | grep -v '^$' || true)
 
-
-# Filter for test files
-test_files=$(echo "$all_changed_files" | grep -E "$test_patterns" || true)
-
 if [ -z "$all_changed_files" ]; then
-    echo "No test files found in staged or modified changes."
     exit 0
 fi
-
-echo "Found test files to run:"
-echo "$all_changed_files"
-echo ""
 
 # Convert test files to array
 mapfile -t files_array <<< "$all_changed_files"
 
-# Run testfile against each test file
+# Run lint against each file
 exit_code=0
 for file_item in "${files_array[@]}"; do
     if [ -n "$file_item" ]; then
-        echo "Linting: $file_item"
-        if "$SCRIPT_DIR/lint" "$file_item"; then
-            echo "PASSED: $file_item"
-        else
-            echo "FAILED: $file_item"
-            exit 1
+        # Capture lint output
+        lint_output=$("$SCRIPT_DIR/lint" "$file_item" 2>&1)
+        lint_result=$?
+        
+        if [ $lint_result -ne 0 ]; then
+            # Only print if there's an error
+            echo "$lint_output"
+            exit_code=1
         fi
-        echo ""
     fi
 done
-
-if [ $exit_code -eq 0 ]; then
-    echo "Passed!"
-else
-    echo "Failed!"
-fi
 
 exit $exit_code

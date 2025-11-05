@@ -3,4 +3,11 @@ set -e
 set -u
 set -o pipefail
 
-echo -n "$(date +%V)"
+action="${TOOLBOX_ACTION:-}"
+
+if [[ "$action" == "describe" ]]; then
+  echo "name: week"
+  echo "description: Prints the current week number."
+elif [[ "$action" == "execute" ]] || [[ -z "$action" ]]; then
+  echo -n "$(date +%V)"
+fi

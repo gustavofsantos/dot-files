@@ -14,7 +14,7 @@ if [[ "$current_dir" == *"/Workplace/seubarriga"* ]]; then
     # Check if the file is a clojure file
     if [[ "$lint_path" =~ \.(clj|cljs|cljc)$ ]]; then
         echo "Running clj-kondo linter on Clojure file '$lint_path' in: $current_dir"
-        lint_command="clj-kondo --fail-level error  --lint $lint_path"
+        lint_command="clj-kondo --fail-level error --config ./.clj-kondo/config.edn --lint $lint_path"
         eval "$lint_command"
         exit $?
     else

@@ -128,11 +128,20 @@ cmd_edit() {
 cmd_today() {
   local log_file
   log_file=$(get_log_file_path)
+  local date_header=$(date +'%Y-%m-%d')
+
+  # Ensure the file exists with a header if it's new
   if [[ ! -f "$log_file" ]]; then
-    echo "# Worklog for $(date +'%Y-%m-%d')" > "$log_file"
+    echo "# Worklog for $date_header" > "$log_file"
     echo "" >> "$log_file"
   fi
-  "$EDITOR" "$log_file"
+
+  # Check for edit flag
+  if [[ "${1:-}" == "--edit" || "${1:-}" == "-e" ]]; then
+    "$EDITOR" "$log_file"
+  else
+    cat "$log_file"
+  fi
 }
 
 cmd_agent() {
@@ -199,19 +208,27 @@ cmd_help() {
   echo "  find               Interactively find a log file to edit."
   echo "  search             Interactively search content across all logs."
   echo "  edit [YYYY-MM-DD]  Edit a log file directly. Defaults to today."
-  echo "  today              Display today's log."
+  echo "  today              Display today's log content.
+  today --edit|-e    Edit today's log file."
   echo "  agent              Show instructions for AI agents."
 }
 
 # --- Main Dispatch Logic ---
-COMMAND="${1:-help}" # Default to 'help' if no command is given
-shift || true # Shift arguments, ignore error if no arguments
+action="${TOOLBOX_ACTION:-}"
 
-case "$COMMAND" in
-  add|find|search|edit|today|agent)
-    "cmd_$COMMAND" "$@"
-    ;;
-  *)
-    cmd_help
-    ;;
-esac
+if [[ "$action" == "describe" ]]; then
+  echo "name: wlog"
+  echo "description: A simple CLI for managing a worklog diary. It uses the WORKLOG_DIR environment variable to store the logs."
+elif [[ "$action" == "execute" ]] || [[ -z "$action" ]]; then
+  COMMAND="${1:-help}" # Default to 'help' if no command is given
+  shift || true # Shift arguments, ignore error if no arguments
+
+  case "$COMMAND" in
+    add|find|search|edit|today|agent)
+      "cmd_$COMMAND" "$@"
+      ;;
+    *)
+      cmd_help
+      ;;
+  esac
+fi
