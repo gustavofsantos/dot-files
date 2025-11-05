@@ -16,6 +16,7 @@ return {
     "hrsh7th/nvim-cmp",
     "b0o/schemastore.nvim",
     "nvim-telescope/telescope.nvim",
+    { 'dnlhc/glance.nvim', cmd = 'Glance' }
   },
   config = function()
     local mason = require("mason")
@@ -44,7 +45,8 @@ return {
       callback = function(ev)
         vim.keymap.set("n", "K", function() vim.lsp.buf.hover({ max_width = 60 }) end,
           { buffer = ev.buf, desc = "Hover" })
-        vim.keymap.set("n", "grd", vim.lsp.buf.definition, { buffer = ev.buf, desc = "Go to definition" })
+        vim.keymap.set("n", "grd", "<cmd>Glance definitions<cr>", { buffer = ev.buf, desc = "Go to definition" })
+        vim.keymap.set("n", "grr", "<cmd>Glance references<cr>", { buffer = ev.buf, desc = "Show references " })
         vim.keymap.set("n", "gf", "<cmd>Format<cr>", { buffer = ev.buf, desc = "Format async" })
 
         local id = vim.tbl_get(ev, 'data', 'client_id')
