@@ -16,7 +16,21 @@ return {
     "hrsh7th/nvim-cmp",
     "b0o/schemastore.nvim",
     "nvim-telescope/telescope.nvim",
-    { 'dnlhc/glance.nvim', cmd = 'Glance' }
+    {
+      'dnlhc/glance.nvim',
+      cmd = 'Glance',
+      opts = {
+        hooks = {
+          before_open = function(results, open, jump, _)
+            if #results == 1 then
+              jump(results[1])
+            else
+              open(results)
+            end
+          end,
+        }
+      }
+    }
   },
   config = function()
     local mason = require("mason")
