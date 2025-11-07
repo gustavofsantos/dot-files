@@ -130,7 +130,7 @@ local highlights = {
 
   -- Gutter
   CursorColumn = { bg = palette.nord01 },
-  CursorLine = { bg = palette.gray1  },
+  CursorLine = { bg = palette.gray1 },
   CursorLineNr = { fg = palette.yellow, bg = palette.gray00 },
   CursorLineSign = { bg = palette.gray00 },
   Folded = { fg = palette.nord03, bg = palette.nord01, bold = true },
@@ -176,45 +176,63 @@ local highlights = {
   QuickFixLineNr = { link = "LineNr" },
   QuickFixFilename = { link = "File" },
 
-  -- Language Base Groups
-  Boolean = { fg = palette.blue_bright },
-  Builtin = { fg = palette.blue },
-  Character = { fg = palette.green },
+  -------------------------------------------------------------------
+  -- Language Base Groups -------------------------------------------
+  -------------------------------------------------------------------
+  -- Tier 1 (Noise / Structure)
   Comment = { fg = palette.nord04, italic = true },
   Conceal = { bg = "NONE" },
-  Conditional = { fg = palette.blue_bright },
-  Constant = { fg = palette.magenta_bright },
-  Decorator = { fg = palette.orange },
-  Define = { fg = palette.blue_bright },
   Delimiter = { fg = palette.nord04 },
-  Exception = { fg = palette.blue_bright },
-  Float = { fg = palette.magenta },
-  Field = { fg = palette.cyan },
-  Function = { fg = palette.sky },
-  Identifier = { fg = palette.nord05 },
-  Include = { fg = palette.blue_bright },
-  Keyword = { fg = palette.orange },
-  Label = { fg = palette.blue_bright },
-  Number = { link = "Constant" },
-  Namespace = { fg = palette.yellow_dim },
-  Operator = { fg = palette.gray6 },
-  PreProc = { fg = palette.blue_bright },
-  Repeat = { fg = palette.blue_bright },
-  Special = { fg = palette.cyan_bright },
+  Operator = { fg = palette.nord04 },
   SpecialChar = { fg = palette.yellow },
   SpecialComment = { fg = palette.sky, italic = true },
-  Statement = { fg = palette.blue_bright },
-  StorageClass = { fg = palette.blue_bright },
-  String = { fg = palette.green },
-  Structure = { fg = palette.blue_bright },
+
+  -- Tier 2 (Body / Variables)
+  Field = { fg = palette.cyan },
+  Identifier = { fg = palette.nord05 },
   Tag = { fg = palette.nord05 },
+  Variable = { link = "Identifier" },
+
+  -- Tier 3 (Data / Literals)
+  Boolean = { fg = palette.orange_dim },
+  Character = { fg = palette.green },
+  Constant = { fg = palette.magenta_bright },
+  Float = { link = "Constant" },
+  Number = { link = "Constant" },
+  String = { fg = palette.green },
+
+  -- Tier 4 (Logic / Emphasis)
+  -- T4 Group 1: Control Flow (if, for, try)
+  Conditional = { fg = palette.blue_bright, bold = true },
+  Exception = { fg = palette.blue_bright, bold = true },
+  Repeat = { fg = palette.blue_bright, bold = true },
+  Statement = { link = "Conditional" },
+
+  -- T4 Group 2: Keywords & Directives (const, import)
+  Decorator = { fg = palette.orange },
+  Define = { fg = palette.orange },
+  Include = { fg = palette.orange },
+  Keyword = { fg = palette.orange },
+  PreProc = { fg = palette.orange },
+  StorageClass = { fg = palette.orange },
+  Label = { fg = palette.orange },
+
+  -- T4 Group 3: Definitions (function, class)
+  Function = { fg = palette.sky, bold = true },
+  Builtin = { fg = palette.blue },
+
+  -- T4 Group 4: Types (Type, struct)
+  Structure = { fg = palette.yellow_dim },
+  Type = { fg = palette.yellow_dim },
+  Typedef = { fg = palette.yellow_dim },
+  Namespace = { fg = palette.yellow_dim },
+
+  -- Fallbacks
+  Special = { fg = palette.cyan_bright },
   Todo = { fg = palette.yellow, bg = "NONE" },
-  Type = { fg = palette.blue_bright },
-  Typedef = { fg = palette.blue_bright },
   Annotation = { link = "Decorator" },
   Macro = { link = "Define" },
   PreCondit = { link = "PreProc" },
-  Variable = { link = "Identifier" },
 
   -- Diff highlighting
   DiffAdd = { fg = blend_colors(palette.green, palette.gray10, 0.25), bg = blend_colors(palette.green, palette.gray0, 0.95) },
@@ -319,12 +337,12 @@ local highlights = {
   ["@constructor"] = { link = "Function" },
   ["@markup.strong"] = { fg = palette.nord07, bold = true },
   ["@keyword_symbol.single"] = { link = "SpecialChar" },
-  ["@keyword_symbol.namespace"] = { link = "Type" },
-  ["@keyword_symbol.name"] = { link = "Keyword" },
+  ["@keyword_symbol.namespace"] = { fg = palette.magenta_dim, italic = true },
+  ["@keyword_symbol.name"] = { fg = palette.magenta_bright, italic = true },
   ["@keyword_symbol"] = { link = "Type" },
-  ["@quilified_symbol.namespace"] = { link = "Type" },
-  ["@quilified_symbol.name"] = { link  = "Function" },
-  ["@quilified_symbol"] = { link = "Type" },
+  ["@qualified_symbol.namespace"] = { fg = palette.blue },
+  ["@qualified_symbol.name"] = { link = "Function" },
+  ["@qualified_symbol"] = { link = "Function" },
 
   -- JSON
   ["@property.json"] = { fg = palette.cyan },
@@ -336,7 +354,10 @@ local highlights = {
   -- Clojure
   ["@punctuation.bracket.clojure"] = { fg = palette.nord03 },
   ["@constructor.clojure"] = { link = "Function" },
-  ["@function.macro.clojure"] = { fg = palette.magenta_bright },
+  ["@function.macro.clojure"] = { link = "Keyword" },
+  ["@kw.clojure"] = { fg = palette.magenta },
+  ["@keyword.function.clojure"] = { link = "Keyword" },
+  ["@required.clojure"] = { link = "Comment" },
   -- ["@module.clojure"] = { fg = palette.nord05, italic = true },
   ["@deref"] = { fg = palette.red },
   ["@deref.name"] = { fg = palette.orange_dim },
