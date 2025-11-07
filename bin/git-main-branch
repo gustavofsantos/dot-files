@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -e
+set -u
+set -o pipefail
+
+action="${TOOLBOX_ACTION:-}"
+
+if [[ "$action" == "describe" ]]; then
+  echo "name: git-main-branch"
+  echo "description: Determine the main branch of the repository."
+elif [[ "$action" == "execute" ]] || [[ -z "$action" ]]; then
+  main_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+  
+  if [[ -z "$main_branch" ]]; then
+    for branch in main master develop trunk; do
+      if git show-ref --verify --quiet "refs/heads/$branch"; then
+        main_branch="$branch"
+        break
+      fi
+    done
+  fi
+  
+  if [[ -z "$main_branch" ]]; then
+    echo "Error: Could not determine main branch" >&2
+    exit 1
+  fi
+  
+  echo "$main_branch"
+fi

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -e
+set -u
+set -o pipefail
+
+action="${TOOLBOX_ACTION:-}"
+
+if [[ "$action" == "describe" ]]; then
+  echo "name: git-branch-log"
+  echo "description: Display log of commits only in the current branch."
+elif [[ "$action" == "execute" ]] || [[ -z "$action" ]]; then
+  main_branch=$(git-main-branch)
+
+  git l "${main_branch}..HEAD"
+fi
