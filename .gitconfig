@@ -18,6 +18,7 @@
   lg            = log --color --graph --abbrev-commit --branches --date=relative --pretty=format:'%C(red)%h%C(reset) -%C(yellow)%d%C(reset) %s %C(green)(%cr) %C(bold blue)<%an>%C(reset)'
   ll		= log --pretty=deploy
   lz		= log --graph --oneline
+  lc		= !git-branch-log
   rh            = reset --hard
   dft           = difftool
   undo          = reset --soft HEAD~1
