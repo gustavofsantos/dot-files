@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+MODE="default"
+if [ $# -gt 0 ]; then
+    case "$1" in
+        --staged)
+            MODE="staged"
+            ;;
+        --working)
+            MODE="working"
+            ;;
+        --branch)
+            MODE="branch"
+            ;;
+        --help|-h)
+            cat <<EOF
+Usage: git-changed-files [MODE]
+
+Modes:
+  --staged   List staged files (git diff --cached)
+  --working  List modified working files (git diff)
+  --branch   List files changed in current branch compared to main branch
+  (default)  List both staged and modified files
+
+Options:
+  -h, --help  Show this help message
+EOF
+            exit 0
+            ;;
+        *)
+            echo "Error: Unknown option '$1'"
+            echo ""
+            exec "$0" --help
+            ;;
+    esac
+fi
+
+# Get changed files based on the selected mode
+case "$MODE" in
+    "staged")
+        all_changed_files=$(git diff --name-only --cached 2>/dev/null || true)
+        ;;
+    "working")
+        all_changed_files=$(git diff --name-only 2>/dev/null || true)
+        ;;
+    "branch")
+        main_branch=$("$SCRIPT_DIR/git-main-branch")
+        all_changed_files=$(git diff --name-only "$main_branch"...HEAD 2>/dev/null || true)
+        ;;
+    "default")
+        staged_files=$(git diff --name-only --cached 2>/dev/null || true)
+        modified_files=$(git diff --name-only 2>/dev/null || true)
+        all_changed_files=$(echo -e "$staged_files\n$modified_files" | sort -u | grep -v '^$')
+        ;;
+esac
+
+# Remove empty lines
+all_changed_files=$(echo "$all_changed_files" | grep -v '^$' || true)
+
+# Output the files
+echo "$all_changed_files"
