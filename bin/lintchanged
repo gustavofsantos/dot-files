@@ -5,70 +5,28 @@ set -euo pipefail
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-MODE="default"
 if [ $# -gt 0 ]; then
     case "$1" in
-        --staged)
-            MODE="staged"
-            ;;
-        --working)
-            MODE="working"
-            ;;
-        --branch)
-            MODE="branch"
-            ;;
         --help|-h)
-            usage
+            cat <<EOF
+Usage: lintchanged [MODE]
+
+Modes:
+  --staged   Lint staged files
+  --working  Lint modified working files
+  --branch   Lint files changed in current branch compared to main branch
+  (default)  Lint both staged and modified files
+
+Options:
+  -h, --help  Show this help message
+EOF
             exit 0
-            ;;
-        *)
-            echo "Error: Unknown option '$1'"
-            echo ""
-            usage
-            exit 1
             ;;
     esac
 fi
 
-# Function to detect the main branch (main or master)
-get_main_branch() {
-    # First check if 'main' exists
-    if git show-ref --verify --quiet refs/heads/main; then
-        echo "main"
-    # Then check if 'master' exists
-    elif git show-ref --verify --quiet refs/heads/master; then
-        echo "master"
-    # Fall back to checking remote branches
-    elif git show-ref --verify --quiet refs/remotes/origin/main; then
-        echo "origin/main"
-    elif git show-ref --verify --quiet refs/remotes/origin/master; then
-        echo "origin/master"
-    else
-        echo "main"  # Default fallback
-    fi
-}
-
-# Get changed files based on the selected mode
-case "$MODE" in
-    "staged")
-        all_changed_files=$(git diff --name-only --cached 2>/dev/null || true)
-        ;;
-    "working")
-        all_changed_files=$(git diff --name-only 2>/dev/null || true)
-        ;;
-    "branch")
-        main_branch=$(get_main_branch)
-        all_changed_files=$(git diff --name-only "$main_branch"...HEAD 2>/dev/null || true)
-        ;;
-    "default")
-        staged_files=$(git diff --name-only --cached 2>/dev/null || true)
-        modified_files=$(git diff --name-only 2>/dev/null || true)
-        all_changed_files=$(echo -e "$staged_files\n$modified_files" | sort -u | grep -v '^$')
-        ;;
-esac
-
-# Remove empty lines
-all_changed_files=$(echo "$all_changed_files" | grep -v '^$' || true)
+# Get changed files
+all_changed_files=$("$SCRIPT_DIR/git-changed-files" "$@")
 
 if [ -z "$all_changed_files" ]; then
     exit 0
