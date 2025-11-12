@@ -8,6 +8,7 @@
   c             = commit
   co            = checkout
   cb	       	= "!. ~/.githelpers && checkout_git_branch"
+  changed       = "!git-changed-files"
   st            = status
   s             = status --short
   d             = diff
