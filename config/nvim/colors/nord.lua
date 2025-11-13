@@ -344,6 +344,10 @@ local highlights = {
   ["@qualified_symbol.name"] = { link = "Function" },
   ["@qualified_symbol"] = { link = "Function" },
 
+  -- LSP
+  ["@lsp.type.macro"] = { link = "PreProc" },
+  ["@lsp.type.keyword"] = { link = "@keyword_symbol.name"},
+
   -- JSON
   ["@property.json"] = { fg = palette.cyan },
 
