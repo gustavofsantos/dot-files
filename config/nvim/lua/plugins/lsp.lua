@@ -13,6 +13,12 @@ return {
         }
       }
     },
+    {
+      "j-hui/fidget.nvim",
+      opts = {
+        -- options
+      },
+    },
     "hrsh7th/nvim-cmp",
     "b0o/schemastore.nvim",
     "nvim-telescope/telescope.nvim",
@@ -63,12 +69,12 @@ return {
         vim.keymap.set("n", "grr", "<cmd>Glance references<cr>", { buffer = ev.buf, desc = "Show references " })
         vim.keymap.set("n", "gf", "<cmd>Format<cr>", { buffer = ev.buf, desc = "Format async" })
 
-        local id = vim.tbl_get(ev, 'data', 'client_id')
-        local client = id and vim.lsp.get_client_by_id(id)
-        if client == nil then
-          return
-        end
-        client.server_capabilities.semanticTokensProvider = nil
+        -- local id = vim.tbl_get(ev, 'data', 'client_id')
+        -- local client = id and vim.lsp.get_client_by_id(id)
+        -- if client == nil then
+        --   return
+        -- end
+        -- client.server_capabilities.semanticTokensProvider = nil
       end,
     })
   end,

@@ -6,20 +6,29 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 MODE="default"
-if [ $# -gt 0 ]; then
+INCLUDE_UNTRACKED=false
+
+while [[ $# -gt 0 ]]; do
     case "$1" in
         --staged)
             MODE="staged"
+            shift
             ;;
         --working)
             MODE="working"
+            shift
             ;;
         --branch)
             MODE="branch"
+            shift
+            ;;
+        --with-untracked)
+            INCLUDE_UNTRACKED=true
+            shift
             ;;
         --help|-h)
             cat <<EOF
-Usage: git-changed-files [MODE]
+Usage: git-changed-files [MODE] [OPTIONS]
 
 Modes:
   --staged   List staged files (git diff --cached)
@@ -28,7 +37,8 @@ Modes:
   (default)  List both staged and modified files
 
 Options:
-  -h, --help  Show this help message
+  --with-untracked  Include untracked files
+  -h, --help        Show this help message
 EOF
             exit 0
             ;;
@@ -38,7 +48,7 @@ EOF
             exec "$0" --help
             ;;
     esac
-fi
+done
 
 # Get changed files based on the selected mode
 case "$MODE" in
@@ -59,8 +69,12 @@ case "$MODE" in
         ;;
 esac
 
-# Remove empty lines
-all_changed_files=$(echo "$all_changed_files" | grep -v '^$' || true)
+untracked_files=""
+if [ "$INCLUDE_UNTRACKED" = true ]; then
+    untracked_files=$(git ls-files --others --exclude-standard 2>/dev/null || true)
+fi
+
+all_changed_files=$(echo -e "$all_changed_files\n$untracked_files" | sort -u | grep -v '^$' || true)
 
 # Output the files
 echo "$all_changed_files"
