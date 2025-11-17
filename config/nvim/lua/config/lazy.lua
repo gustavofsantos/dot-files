@@ -13,9 +13,9 @@ vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({
   spec = {
+    "nvim-lua/plenary.nvim",
+    "nvim-tree/nvim-web-devicons",
     "christoomey/vim-tmux-runner",
-    "tpope/vim-fugitive",
-    "tpope/vim-rhubarb",
     "tpope/vim-sleuth",
     "tpope/vim-surround",
     "tpope/vim-repeat",
