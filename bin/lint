@@ -9,7 +9,7 @@ if [ -t 0 ]; then
         echo "Usage:"
         echo "lint <relative_path>"
         echo "or"
-        echo "git-changed-files [MODE] | lint"
+        echo "git changed [MODE] | lint"
         exit 1
     fi
     
@@ -34,18 +34,18 @@ else
     # Read from stdin
     if [[ "$current_dir" == *"/Workplace/seubarriga"* ]]; then
         exit_code=0
-        
+
         while IFS= read -r lint_path; do
             if [ -z "$lint_path" ]; then
                 continue
             fi
-            
+
             # Check if the file is a clojure file
             if [[ "$lint_path" =~ \.(clj|cljs|cljc)$ ]]; then
                 echo "Running clj-kondo linter on Clojure file '$lint_path' in: $current_dir"
                 lint_command="clj-kondo --fail-level error --config ./.clj-kondo/config.edn --lint $lint_path"
                 eval "$lint_command"
-                
+
                 if [ $? -ne 0 ]; then
                     exit_code=1
                 fi
@@ -54,7 +54,7 @@ else
                 echo "Skipping non-Clojure file: $lint_path"
             fi
         done
-        
+
         exit $exit_code
     else
         echo "No linter configured for current directory: $current_dir"
