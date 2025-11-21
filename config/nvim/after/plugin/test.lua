@@ -73,6 +73,22 @@ local function get_tmux_panes()
   return panes
 end
 
+local function find_marked_pane()
+  -- Check if there's a marked pane in the current session
+  local result = vim.fn.system("tmux list-panes -F '#{pane_index}:#{pane_marked}' 2>/dev/null")
+  if vim.v.shell_error ~= 0 then
+    return nil
+  end
+  
+  for line in result:gmatch("[^\r\n]+") do
+    local pane_index, is_marked = line:match("([^:]+):([^:]+)")
+    if pane_index and is_marked == "1" then
+      return pane_index
+    end
+  end
+  return nil
+end
+
 local function find_idle_pane(panes)
   -- Find a pane that's not the current one and is idle
   for _, pane in ipairs(panes) do
@@ -98,15 +114,20 @@ local function setup_vtr_pane()
     return true
   end
   
-  local panes = get_tmux_panes()
   local target_pane = nil
   
-  -- Try to find an idle pane first
-  target_pane = find_idle_pane(panes)
+  -- First priority: check for a marked pane
+  target_pane = find_marked_pane()
   
-  -- If no idle pane and only one pane (current), create a new split
-  if not target_pane and #panes == 1 then
-    target_pane = create_tmux_split()
+  -- Second priority: find an idle pane
+  if not target_pane then
+    local panes = get_tmux_panes()
+    target_pane = find_idle_pane(panes)
+    
+    -- If no idle pane and only one pane (current), create a new split
+    if not target_pane and #panes == 1 then
+      target_pane = create_tmux_split()
+    end
   end
   
   -- Attach VTR to the target pane
