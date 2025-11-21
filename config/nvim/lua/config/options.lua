@@ -2,7 +2,7 @@ vim.g.mapleader = " "
 vim.g.maplocalleader = ","
 
 vim.opt.background = "dark"
--- vim.cmd.colorscheme("monokai-pro")
+vim.cmd.colorscheme("nord")
 
 vim.opt.inccommand = "split"
 -- vim.opt.winwidth = 100
