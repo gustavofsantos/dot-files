@@ -1,0 +1,62 @@
+#!/bin/bash
+
+current_dir="$PWD"
+
+# Check if input is coming from stdin or as an argument
+if [ -t 0 ]; then
+    # No stdin, use argument mode
+    if [ "$#" -ne 1 ]; then
+        echo "Usage:"
+        echo "format <relative_path>"
+        echo "or"
+        echo "git changed [MODE] | format"
+        exit 1
+    fi
+
+    # Check if current directory matches the seubarriga workspace pattern
+    if [[ "$current_dir" == *"/Workplace/seubarriga"* ]]; then
+        # Check if the file is a clojure file
+        if [[ "$1" =~ \.(clj|cljs|cljc)$ ]]; then
+            format_command="cljstyle fix $1"
+            eval "$format_command"
+            exit $?
+        else
+            exit 0
+        fi
+    else
+        echo "No formatter configured for current directory: $current_dir"
+        exit 1
+    fi
+else
+    # Read from stdin
+    if [[ "$current_dir" == *"/Workplace/seubarriga"* ]]; then
+        exit_code=0
+
+        while IFS= read -r format_path; do
+            if [ -z "$format_path" ]; then
+                continue
+            fi
+
+            # Check if the file is a clojure file
+            if [[ "$format_path" =~ \.(clj|cljs|cljc)$ ]]; then
+		format_command="cljstyle fix $1"
+		eval "$format_command"
+
+                if [ $? -ne 0 ]; then
+                    exit_code=1
+                fi
+            else
+                # Not a Clojure file, skip it
+                echo "Skipping non-Clojure file: $format_path"
+            fi
+        done
+
+        exit $exit_code
+    else
+        echo "No formatter configured for current directory: $current_dir"
+        exit 1
+    fi
+fi
+
+echo "No formatter configured for current directory: $current_dir"
+exit 1
