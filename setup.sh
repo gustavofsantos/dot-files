@@ -1,4 +1,4 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 
 echo "Linking home files..."
 ln -sf "$(pwd)/.gitconfig" "$HOME/.gitconfig"
@@ -12,6 +12,9 @@ ln -sf "$(pwd)/.zshenv" "$HOME/.zshenv"
 ln -sf "$(pwd)/.zshrc" "$HOME/.zshrc"
 ln -sf "$(pwd)/.todo.cfg" "$HOME/.todo.cfg"
 echo "Linking home files... OK"
+
+touch "$HOME/.gitconfig.local"
+touch "$HOME/.zshlocal"
 
 echo "Linking bin files..."
 cd bin && find . -type f -exec ln -sf "$(pwd)/{}" "$HOME/.bin/{}" \; && cd ..
