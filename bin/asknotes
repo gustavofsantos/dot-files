@@ -1,15 +1,22 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 set -u
 set -o pipefail
 
-MODEL="gemma3:1b"
+action="${TOOLBOX_ACTION:-}"
 
-if [ -z "$1" ]; then
-  echo "Usage: asknotes \"Your question here\""
-  exit 1
+if [[ "$action" == "describe" ]]; then
+  echo "name: asknotes"
+  echo "description: Asks a question to an AI model based on the content of notes."
+elif [[ "$action" == "execute" ]] || [[ -z "$action" ]]; then
+  MODEL="gemma3:1b"
+
+  if [ -z "$1" ]; then
+    echo "Usage: asknotes "Your question here""
+    exit 1
+  fi
+
+  QUESTION="$1"
+
+  cat "$WORKLOG_DIR"/*.md | ollama run $MODEL "Based on the text provided, answer the following question: $QUESTION"
 fi
-
-QUESTION="$1"
-
-cat "$WORKLOG_DIR"/*.md | ollama run $MODEL "Based on the text provided, answer the following question: $QUESTION"
