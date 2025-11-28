@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# Configuration
+# ---------------------------------------------------------
+START_DATE="2025-01-01"
+AUTHOR="@me"
+
+# Output Header
+# We added a 'Role' column for grouping in Google Sheets
+echo "Date,Role,PR Number,Title,URL,State"
+
+# ---------------------------------------------------------
+
+if ! command -v gh &> /dev/null; then
+    echo "Error: GitHub CLI (gh) is not installed." >&2
+    exit 1
+fi
+
+CURRENT_REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+
+# ---------------------------------------------------------
+# STEP 1: Get Authored PRs
+# ---------------------------------------------------------
+
+# We inject the string "Author" into the JSON output before converting to CSV
+gh pr list \
+    --author "$AUTHOR" \
+    --state all \
+    --search "created:>=$START_DATE" \
+    --limit 500 \
+    --json mergedAt,createdAt,number,title,url,state \
+    --jq '.[] | [ (.mergedAt // .createdAt | split("T")[0]), "Author", .number, .title, .url, .state ] | @csv'
+
+# ---------------------------------------------------------
+# STEP 2: Get Reviewed PRs
+# ---------------------------------------------------------
+
+# We search for PRs reviewed by you, but NOT authored by you (-author:@me) to avoid duplicates.
+# We inject the string "Reviewer" into the JSON output.
+gh pr list \
+    --search "reviewed-by:$AUTHOR -author:$AUTHOR created:>=$START_DATE" \
+    --state all \
+    --limit 500 \
+    --json mergedAt,createdAt,number,title,url,state \
+    --jq '.[] | [ (.mergedAt // .createdAt | split("T")[0]), "Reviewer", .number, .title, .url, .state ] | @csv'
+

@@ -20,6 +20,7 @@
   ll		= log --pretty=deploy
   lz		= log --graph --oneline
   lc		= !git-branch-log
+  mc		= !git-my-contributions
   rh            = reset --hard
   dft           = difftool
   undo          = reset --soft HEAD~1
