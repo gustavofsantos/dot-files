@@ -1,0 +1,3 @@
+[submodule ".tools/tracker"]
+	path = .tools/tracker
+	url = git@github.com:gustavofsantos/tracker.git
