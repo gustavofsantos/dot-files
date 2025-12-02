@@ -1,13 +1,44 @@
 return {
   {
+    "folke/which-key.nvim",
+    event = "VeryLazy",
+    config = function()
+      local wk = require("which-key")
+      wk.setup({})
+
+      wk.add({
+        { "<leader>q", group = "Query" },
+        { "<leader>t", group = "Test" },
+        { "<leader>v", group = "Version Control" }
+      })
+    end,
+  },
+  {
     'nvim-lualine/lualine.nvim',
     config = function()
+      local overseer = require("overseer")
       require('lualine').setup({
         sections = {
           lualine_a = { 'mode' },
           lualine_b = {},
           lualine_c = { { 'filename', path = 1 } },
-          lualine_x = { 'lsp_status', 'diagnostics' },
+          lualine_x = {
+            {
+              "overseer",
+              label = "",     -- Prefix for task counts
+              colored = true, -- Color the task icons and counts
+              symbols = {
+                [overseer.STATUS.FAILURE] = "F:",
+                [overseer.STATUS.CANCELED] = "C:",
+                [overseer.STATUS.SUCCESS] = "S:",
+                [overseer.STATUS.RUNNING] = "R:",
+              },
+              unique = false, -- Unique-ify non-running task count by name
+              status = nil,   -- List of task statuses to display
+              filter = nil,   -- Function to filter out tasks you don't wish to display
+            },
+            'lsp_status',
+            'diagnostics' },
           lualine_y = { 'progress' },
           lualine_z = { 'location' }
         },
@@ -15,7 +46,22 @@ return {
           lualine_a = {},
           lualine_b = {},
           lualine_c = { { 'filename', path = 1 } },
-          lualine_x = { 'location' },
+          lualine_x = {
+            {
+              "overseer",
+              label = "",     -- Prefix for task counts
+              colored = true, -- Color the task icons and counts
+              symbols = {
+                [overseer.STATUS.FAILURE] = "F:",
+                [overseer.STATUS.CANCELED] = "C:",
+                [overseer.STATUS.SUCCESS] = "S:",
+                [overseer.STATUS.RUNNING] = "R:",
+              },
+              unique = false, -- Unique-ify non-running task count by name
+              status = nil,   -- List of task statuses to display
+              filter = nil,   -- Function to filter out tasks you don't wish to display
+            },
+            'location' },
           lualine_y = {},
           lualine_z = {}
         },
@@ -45,11 +91,6 @@ return {
         },
       },
     },
-  },
-  {
-    "folke/which-key.nvim",
-    event = "VeryLazy",
-    opts = {},
   },
   {
     "echasnovski/mini.hipatterns",

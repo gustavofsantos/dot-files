@@ -31,6 +31,15 @@ return {
     -- })
   end,
   config = function()
+    -- Auto-reload namespace on save
+    vim.api.nvim_create_autocmd("BufWritePost", {
+      pattern = "*.clj",
+      callback = function()
+        vim.cmd("ConjureEvalBuf")
+      end,
+      desc = "Reload namespace after saving Clojure file"
+    })
+
     vim.api.nvim_create_user_command("ConjureReloadChanged", function()
         local base = "origin/master" -- Adjust this to your base branch if different
         local cmd = "git diff --name-only " .. base .. "..HEAD"

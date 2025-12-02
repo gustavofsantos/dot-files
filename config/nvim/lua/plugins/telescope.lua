@@ -1,6 +1,6 @@
 return {
   "nvim-telescope/telescope.nvim",
-  tag = "0.1.8",
+  tag = "v0.2.0",
   cmd = "Telescope",
   keys = {
     { "<leader>o", "<cmd>Telescope find_files<CR>",                desc = "Find files" },
@@ -37,13 +37,6 @@ return {
   dependencies = {
     "nvim-telescope/telescope-symbols.nvim",
     { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
-    {
-      "nvim-telescope/telescope-frecency.nvim",
-      version = "*",
-      config = function()
-        require("telescope").load_extension("frecency")
-      end
-    },
     {
       "prochri/telescope-all-recent.nvim",
       dependencies = { "kkharji/sqlite.lua" },
@@ -159,9 +152,6 @@ return {
           override_generic_sorter = true,
           override_file_sorter = true,
           case_mode = "smart_case",
-        },
-        frecency = {
-          db_safe_mode = false,
         },
       },
     })
