@@ -7,6 +7,7 @@ return {
       wk.setup({})
 
       wk.add({
+        { "<leader>d", group = "Diff" },
         { "<leader>q", group = "Query" },
         { "<leader>t", group = "Test" },
         { "<leader>v", group = "Version Control" }

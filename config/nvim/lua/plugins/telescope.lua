@@ -6,8 +6,8 @@ return {
     { "<leader>o", "<cmd>Telescope find_files<CR>",                desc = "Find files" },
     { "<leader>b", "<cmd>Telescope buffers<CR>",                   desc = "Find buffer" },
     { "<leader>e", "<cmd>Telescope oldfiles only_cwd=true<CR>",    desc = "Recent files" },
-    { "gs", "<cmd>Telescope current_buffer_fuzzy_find<CR>", desc = "Fuzzy find current buffer" },
-    { "<leader>l", "<cmd>Telescope live_grep<CR>",                 desc = "Fuzzy find" },
+    { "<leader>f", "<cmd>Telescope current_buffer_fuzzy_find<CR>", desc = "Fuzzy find current buffer" },
+    { "<leader>l", "<cmd>Telescope live_grep<CR>",                 desc = "Fuzzy find project" },
     { "<leader>h", "<cmd>Telescope help_tags<CR>",                 desc = "Help" },
     { "<F3>",      "<cmd>Telescope grep_string<cr>",               desc = "Find Word" },
     {
