@@ -105,9 +105,61 @@ p.orange_dark  = blend_colors(p.orange, "#000000", 0.2)
 
 
 local components = {
-  editor_bg = palette.bg_main,
-  popup_bg = palette.bg_alt,
-  border = palette.bg_dim
+  -- Base
+  bg = palette.bg_main,
+  fg = palette.fg_main,
+  bg_alt = palette.bg_alt,
+  fg_dim = palette.fg_dim,
+  
+  -- UI Elements
+  border = palette.bg_dim,
+  cursor_fg = palette.bg_main,
+  cursor_bg = palette.nord0,
+  line_nr_fg = palette.nord3,
+  line_nr_active_fg = palette.blue_dark,
+  gutter_bg = palette.bg_dim,
+  gutter_bg_active = palette.bg_active,
+  selection_bg = palette.nord4,
+  float_bg = palette.bg_alt,
+  float_border = palette.bg_alt,
+  
+  -- Status
+  error = palette.red,
+  warning = palette.yellow,
+  success = palette.green,
+  info = palette.blue,
+  
+  -- Status Text
+  error_fg = palette.red_dark,
+  warning_fg = palette.yellow_dark,
+  success_fg = palette.green_dark,
+  info_fg = palette.blue_dark,
+
+  -- Syntax
+  comment = palette.nord3,
+  string = palette.green_dark,
+  keyword = palette.blue_dark,
+  function_ = palette.blue_dark,
+  type = palette.cyan_dark,
+  variable = palette.fg_main,
+  constant = palette.magenta_dark,
+  operator = palette.nord9,
+  number = palette.magenta_dark,
+  boolean = palette.orange_dark,
+  property = palette.blue_dark,
+  parameter = palette.fg_main,
+  decorator = palette.orange_dark,
+  
+  -- Search
+  search_bg = palette.nord4,
+  inc_search_bg = palette.blue_dark,
+  inc_search_fg = palette.bg_main,
+  
+  -- Diff
+  diff_add = palette.green_dark,
+  diff_change = palette.orange_dark,
+  diff_delete = palette.red_dark,
+  diff_text = palette.blue_dark,
 }
 
 local highlights = {
@@ -117,97 +169,97 @@ local highlights = {
   Underline = { underline = true },
 
   -- Editor
-  ColorColumn = { bg = palette.bg_dim },
-  Cursor = { fg = palette.bg_main, bg = palette.nord0 },
-  Error = { fg = palette.bg_main, bg = palette.red },
-  iCursor = { fg = palette.bg_main, bg = palette.nord0 },
-  LineNr = { fg = palette.nord3 },
-  MatchParen = { fg = palette.nord10, bg = palette.nord4 },
-  NonText = { fg = palette.nord4 },
-  Normal = { fg = palette.fg_main, bg = components.editor_bg },
-  NormalNC = { fg = palette.fg_main, bg = components.editor_bg },
-  NormalSB = { fg = palette.fg_main, bg = components.editor_bg },
-  NormalFloat = { fg = palette.fg_main, bg = components.popup_bg },
+  ColorColumn = { bg = components.border },
+  Cursor = { fg = components.cursor_fg, bg = components.cursor_bg },
+  Error = { fg = components.cursor_fg, bg = components.error },
+  iCursor = { fg = components.cursor_fg, bg = components.cursor_bg },
+  LineNr = { fg = components.line_nr_fg },
+  MatchParen = { fg = components.keyword, bg = components.search_bg },
+  NonText = { fg = components.search_bg },
+  Normal = { fg = components.fg, bg = components.bg },
+  NormalNC = { fg = components.fg, bg = components.bg },
+  NormalSB = { fg = components.fg, bg = components.bg },
+  NormalFloat = { fg = components.fg, bg = components.float_bg },
   FloatBorder = { link = "NormalFloat" },
-  FloatTitle = { fg = palette.blue_dark },
+  FloatTitle = { fg = components.keyword },
   FloatFooter = { link = "NormalFloat" },
-  Pmenu = { fg = palette.fg_main, bg = palette.bg_alt },
-  PmenuSbar = { fg = palette.bg_dim, bg = palette.bg_dim },
-  PmenuSel = { fg = palette.bg_main, bg = palette.nord9 },
-  PmenuThumb = { fg = palette.nord3, bg = palette.nord3 },
-  SpecialKey = { fg = palette.nord3 },
-  SpellBad = { fg = palette.red, bg = "NONE", undercurl = true, sp = palette.red },
-  SpellCap = { fg = palette.yellow, bg = "NONE", undercurl = true, sp = palette.yellow },
-  SpellLocal = { fg = palette.nord10, bg = "NONE", undercurl = true, sp = palette.nord10 },
-  SpellRare = { fg = palette.nord7, bg = "NONE", undercurl = true, sp = palette.nord7 },
-  Visual = { bg = palette.nord4 },
-  VisualNOS = { bg = palette.nord4 },
+  Pmenu = { fg = components.fg, bg = components.bg_alt },
+  PmenuSbar = { fg = components.border, bg = components.border },
+  PmenuSel = { fg = components.bg, bg = components.operator },
+  PmenuThumb = { fg = components.line_nr_fg, bg = components.line_nr_fg },
+  SpecialKey = { fg = components.line_nr_fg },
+  SpellBad = { fg = components.error, bg = "NONE", undercurl = true, sp = components.error },
+  SpellCap = { fg = components.warning, bg = "NONE", undercurl = true, sp = components.warning },
+  SpellLocal = { fg = components.keyword, bg = "NONE", undercurl = true, sp = components.keyword },
+  SpellRare = { fg = components.type, bg = "NONE", undercurl = true, sp = components.type },
+  Visual = { bg = components.selection_bg },
+  VisualNOS = { bg = components.selection_bg },
 
   -- Neovim specific highlights
-  healthError = { fg = palette.red_dark, bg = palette.bg_alt },
-  healthSuccess = { fg = palette.green_dark, bg = palette.bg_alt },
-  healthWarning = { fg = palette.yellow_dark, bg = palette.bg_alt },
-  TermCursorNC = { bg = palette.bg_alt },
+  healthError = { fg = components.error_fg, bg = components.bg_alt },
+  healthSuccess = { fg = components.success_fg, bg = components.bg_alt },
+  healthWarning = { fg = components.warning_fg, bg = components.bg_alt },
+  TermCursorNC = { bg = components.bg_alt },
 
   -- Neovim Diagnostics API (for LSP)
-  DiagnosticWarn = { fg = palette.yellow_dark },
-  DiagnosticError = { fg = palette.red_dark },
-  DiagnosticInfo = { fg = palette.blue_dark },
-  DiagnosticHint = { fg = palette.nord10 },
-  DiagnosticUnderlineWarn = { fg = palette.yellow, undercurl = true },
-  DiagnosticUnderlineError = { fg = palette.red, undercurl = true },
-  DiagnosticUnderlineInfo = { fg = palette.sky, undercurl = true },
-  DiagnosticUnderlineHint = { fg = palette.blue, undercurl = true },
+  DiagnosticWarn = { fg = components.warning_fg },
+  DiagnosticError = { fg = components.error_fg },
+  DiagnosticInfo = { fg = components.info_fg },
+  DiagnosticHint = { fg = components.keyword },
+  DiagnosticUnderlineWarn = { fg = components.warning, undercurl = true },
+  DiagnosticUnderlineError = { fg = components.error, undercurl = true },
+  DiagnosticUnderlineInfo = { fg = components.info, undercurl = true },
+  DiagnosticUnderlineHint = { fg = components.info, undercurl = true },
 
   -- Neovim DocumentHighlight
-  LspReferenceText = { bg = palette.nord4 },
-  LspReferenceRead = { bg = palette.nord4 },
-  LspReferenceWrite = { bg = palette.nord4 },
+  LspReferenceText = { bg = components.selection_bg },
+  LspReferenceRead = { bg = components.selection_bg },
+  LspReferenceWrite = { bg = components.selection_bg },
 
   -- Neovim LspSignatureHelp
-  LspSignatureActiveParameter = { fg = palette.blue_dark, underline = true },
+  LspSignatureActiveParameter = { fg = components.info_fg, underline = true },
 
   -- Gutter
-  CursorColumn = { bg = palette.bg_dim },
-  CursorLine = { bg = palette.bg_dim },
-  CursorLineNr = { fg = palette.blue_dark, bg = palette.bg_active, bold = true },
-  CursorLineSign = { bg = palette.bg_active },
-  Folded = { fg = palette.nord3, bg = palette.bg_dim, bold = true },
-  FoldColumn = { fg = palette.nord3, bg = components.editor_bg },
-  SignColumn = { fg = palette.nord3, bg = components.editor_bg },
-  SignColumnSB = { fg = palette.nord3, bg = components.editor_bg },
+  CursorColumn = { bg = components.gutter_bg },
+  CursorLine = { bg = components.gutter_bg },
+  CursorLineNr = { fg = components.line_nr_active_fg, bg = components.gutter_bg_active, bold = true },
+  CursorLineSign = { bg = components.gutter_bg_active },
+  Folded = { fg = components.line_nr_fg, bg = components.gutter_bg, bold = true },
+  FoldColumn = { fg = components.line_nr_fg, bg = components.bg },
+  SignColumn = { fg = components.line_nr_fg, bg = components.bg },
+  SignColumnSB = { fg = components.line_nr_fg, bg = components.bg },
 
   -- Navigation
-  Directory = { fg = palette.blue_dark },
-  File = { fg = palette.fg_main },
+  Directory = { fg = components.keyword },
+  File = { fg = components.fg },
 
   -- Prompt/Status
-  EndOfBuffer = { fg = palette.bg_dim },
-  ErrorMsg = { fg = palette.bg_main, bg = palette.red },
-  ModeMsg = { fg = palette.fg_main },
-  MoreMsg = { fg = palette.blue_dark },
-  Question = { fg = palette.fg_main },
+  EndOfBuffer = { fg = components.border },
+  ErrorMsg = { fg = components.bg, bg = components.error },
+  ModeMsg = { fg = components.fg },
+  MoreMsg = { fg = components.info_fg },
+  Question = { fg = components.fg },
 
-  StatusLine = { fg = palette.fg_main, bg = palette.bg_dim },
-  StatusLineNC = { fg = palette.nord3, bg = palette.bg_alt },
-  StatusLineTerm = { fg = palette.fg_main, bg = palette.bg_dim },
-  StatusLineTermNC = { fg = palette.nord3, bg = palette.bg_alt },
+  StatusLine = { fg = components.fg, bg = components.border },
+  StatusLineNC = { fg = components.line_nr_fg, bg = components.bg_alt },
+  StatusLineTerm = { fg = components.fg, bg = components.border },
+  StatusLineTermNC = { fg = components.line_nr_fg, bg = components.bg_alt },
 
-  WarningMsg = { fg = palette.bg_main, bg = palette.yellow },
-  WildMenu = { fg = palette.blue_dark, bg = palette.bg_alt },
+  WarningMsg = { fg = components.bg, bg = components.warning },
+  WildMenu = { fg = components.keyword, bg = components.bg_alt },
 
   -- Search
-  IncSearch = { fg = palette.bg_main, bg = palette.blue_dark, underline = true },
-  Search = { fg = palette.fg_main, bg = palette.nord4 },
+  IncSearch = { fg = components.bg, bg = components.info_fg, underline = true },
+  Search = { fg = components.fg, bg = components.search_bg },
 
   -- Tabs
-  TabLine = { fg = palette.nord3, bg = palette.bg_alt },
-  TabLineFill = { fg = palette.nord3, bg = palette.bg_dim },
-  TabLineSel = { fg = palette.fg_main, bg = components.editor_bg },
+  TabLine = { fg = components.line_nr_fg, bg = components.bg_alt },
+  TabLineFill = { fg = components.line_nr_fg, bg = components.border },
+  TabLineSel = { fg = components.fg, bg = components.bg },
 
   -- Window
-  Title = { fg = palette.blue_dark },
-  VertSplit = { fg = palette.bg_dim, bg = components.editor_bg },
+  Title = { fg = components.keyword },
+  VertSplit = { fg = components.border, bg = components.bg },
   WinSeparator = { link = "VertSplit" },
 
   -- QuickFix
@@ -219,49 +271,49 @@ local highlights = {
   -- Semantic Tokens ------------------------------------------------
   -------------------------------------------------------------------
 
-  ["@comment"] = { fg = palette.nord3, italic = true },
-  ["@constant"] = { fg = palette.nord3 },
-  ["@string"] = { fg = palette.green_dark },
-  ["@string.regexp"] = { fg = palette.yellow_dark },
-  ["@number"] = { fg = palette.magenta_dark },
-  ["@keyword"] = { fg = palette.blue_dark },
-  ["@variable"] = { fg = palette.fg_main },
-  ["@variable.builtin"] = { fg = palette.nord9 },
-  ["@property"] = { fg = palette.blue_dark },
-  ["@operator"] = { fg = palette.nord9 },
-  ["@boolean"] = { fg = palette.orange_dark, bold = true },
-  ["@function"] = { fg = palette.blue_dark },
-  ["@function.builtin"] = { fg = palette.blue_dark },
-  ["@function.macro"] = { fg = palette.blue_dark },
-  ["@function.call"] = { fg = palette.blue_dark, italic = true },
-  ["@type"] = { fg = palette.cyan_dark },
-  ["@type.builtin"] = { fg = palette.cyan_dark, bold = true },
-  ["@constructor"] = { fg = palette.cyan_dark },
-  ["@decorator"] = { fg = palette.orange_dark },
-  ["@markup.strong"] = { fg = palette.fg_main, bold = true },
-  ["@punctuation"] = { fg = palette.nord3 },
-  ["@punctuation.bracket"] = { fg = palette.nord3 },
-  ["@punctuation.delimiter"] = { fg = palette.nord3 },
+  ["@comment"] = { fg = components.comment, italic = true },
+  ["@constant"] = { fg = components.constant },
+  ["@string"] = { fg = components.string },
+  ["@string.regexp"] = { fg = components.warning_fg },
+  ["@number"] = { fg = components.number },
+  ["@keyword"] = { fg = components.keyword },
+  ["@variable"] = { fg = components.variable },
+  ["@variable.builtin"] = { fg = components.operator },
+  ["@property"] = { fg = components.property },
+  ["@operator"] = { fg = components.operator },
+  ["@boolean"] = { fg = components.boolean, bold = true },
+  ["@function"] = { fg = components.function_ },
+  ["@function.builtin"] = { fg = components.function_ },
+  ["@function.macro"] = { fg = components.function_ },
+  ["@function.call"] = { fg = components.function_, italic = true },
+  ["@type"] = { fg = components.type },
+  ["@type.builtin"] = { fg = components.type, bold = true },
+  ["@constructor"] = { fg = components.type },
+  ["@decorator"] = { fg = components.decorator },
+  ["@markup.strong"] = { fg = components.fg, bold = true },
+  ["@punctuation"] = { fg = components.comment },
+  ["@punctuation.bracket"] = { fg = components.comment },
+  ["@punctuation.delimiter"] = { fg = components.comment },
 
   -- LSP
-  ["@lsp.type.macro"] = { fg = palette.orange_dark },
-  ["@lsp.type.keyword"] = { fg = palette.blue_dark },
-  ["@lsp.type.parameter"] = { fg = palette.fg_main, italic = true },
+  ["@lsp.type.macro"] = { fg = components.decorator },
+  ["@lsp.type.keyword"] = { fg = components.keyword },
+  ["@lsp.type.parameter"] = { fg = components.parameter, italic = true },
   ["@lsp.type.property"] = { link = "@property" },
   ["@lsp.type.function"] = { link = "@function" },
   ["@lsp.type.type"] = { link = "@type" },
 
   -- JSON
-  ["@property.json"] = { fg = palette.cyan_dark },
+  ["@property.json"] = { fg = components.type },
 
   -- Markdown
-  ["@markup.list.markdown"] = { fg = palette.nord3 },
-  ["@markup.heading.1.markdown"] = { fg = palette.blue_dark },
-  ["@markup.heading.2.markdown"] = { fg = palette.blue_dark },
-  ["@markup.heading.3.markdown"] = { fg = palette.blue_dark },
-  ["@markup.heading.4.markdown"] = { fg = palette.blue_dark },
-  ["@markup.heading.5.markdown"] = { fg = palette.blue_dark },
-  ["@markup.heading.6.markdown"] = { fg = palette.blue_dark },
+  ["@markup.list.markdown"] = { fg = components.comment },
+  ["@markup.heading.1.markdown"] = { fg = components.keyword },
+  ["@markup.heading.2.markdown"] = { fg = components.keyword },
+  ["@markup.heading.3.markdown"] = { fg = components.keyword },
+  ["@markup.heading.4.markdown"] = { fg = components.keyword },
+  ["@markup.heading.5.markdown"] = { fg = components.keyword },
+  ["@markup.heading.6.markdown"] = { fg = components.keyword },
 
   -------------------------------------------------------------------
   -- Language Base Groups -------------------------------------------
@@ -269,10 +321,10 @@ local highlights = {
   -- Tier 1 (Noise / Structure)
   Comment = { link = "@comment" },
   Conceal = { bg = "NONE" },
-  Delimiter = { fg = palette.nord3 },
+  Delimiter = { fg = components.comment },
   Operator = { link = "@operator" },
-  SpecialChar = { fg = palette.yellow_dark },
-  SpecialComment = { fg = palette.blue_dark, italic = true },
+  SpecialChar = { fg = components.warning_fg },
+  SpecialComment = { fg = components.info_fg, italic = true },
 
   -- Tier 2 (Body / Variables)
   Field = { link = "@property" },
@@ -282,70 +334,101 @@ local highlights = {
 
   -- Tier 3 (Data / Literals)
   Boolean = { link = "@boolean" },
-  Character = { fg = palette.green_dark },
-  Constant = { fg = palette.magenta_dark },
+  Character = { fg = components.string },
+  Constant = { fg = components.constant },
   Float = { link = "Constant" },
   Number = { link = "Constant" },
-  String = { fg = palette.green_dark },
+  String = { fg = components.string },
 
   -- Tier 4 (Logic / Emphasis)
   -- T4 Group 1: Control Flow
-  Conditional = { fg = palette.blue_dark, bold = true },
-  Exception = { fg = palette.red_dark, bold = true },
-  Repeat = { fg = palette.blue_dark, bold = true },
+  Conditional = { fg = components.keyword, bold = true },
+  Exception = { fg = components.error_fg, bold = true },
+  Repeat = { fg = components.keyword, bold = true },
   Statement = { link = "Conditional" },
 
   -- T4 Group 2: Keywords & Directives
-  Decorator = { fg = palette.orange_dark },
-  Define = { fg = palette.orange_dark },
-  Include = { fg = palette.orange_dark },
-  Keyword = { fg = palette.blue_dark },
-  PreProc = { fg = palette.orange_dark },
-  StorageClass = { fg = palette.orange_dark },
-  Label = { fg = palette.orange_dark },
+  Decorator = { fg = components.decorator },
+  Define = { fg = components.decorator },
+  Include = { fg = components.decorator },
+  Keyword = { fg = components.keyword },
+  PreProc = { fg = components.decorator },
+  StorageClass = { fg = components.decorator },
+  Label = { fg = components.decorator },
 
   -- T4 Group 3: Definitions
   Function = { link = "@function" },
   Builtin = { link = "@function.builtin" },
 
   -- T4 Group 4: Types
-  Structure = { fg = palette.blue_dark },
-  Type = { fg = palette.cyan_dark },
-  Typedef = { fg = palette.cyan_dark },
-  Namespace = { fg = palette.cyan_dark },
+  Structure = { fg = components.keyword },
+  Type = { fg = components.type },
+  Typedef = { fg = components.type },
+  Namespace = { fg = components.type },
 
   -- Fallbacks
-  Special = { fg = palette.cyan_dark },
-  Todo = { fg = palette.yellow_dark, bg = "NONE" },
+  Special = { fg = components.type },
+  Todo = { fg = components.warning_fg, bg = "NONE" },
   Annotation = { link = "Decorator" },
   Macro = { link = "Define" },
   PreCondit = { link = "PreProc" },
 
   -- Diff highlighting
-  DiffAdd = { fg = palette.green_dark },
-  DiffChange = { fg = palette.orange_dark },
-  DiffDelete = { fg = palette.red_dark },
-  DiffText = { fg = palette.blue_dark },
+  DiffAdd = { fg = components.diff_add },
+  DiffChange = { fg = components.diff_change },
+  DiffDelete = { fg = components.diff_delete },
+  DiffText = { fg = components.diff_text },
 
   -- GitSigns
-  GitSignsAdd = { fg = palette.green_dark },
-  GitSignsChange = { fg = palette.orange_dark },
-  GitSignsDelete = { fg = palette.red_dark },
+  GitSignsAdd = { fg = components.diff_add },
+  GitSignsChange = { fg = components.diff_change },
+  GitSignsDelete = { fg = components.diff_delete },
 
   -- Telescope
-  TelescopeBorder = { fg = palette.bg_dim, bg = palette.bg_alt },
-  TelescopePromptBorder = { fg = palette.bg_dim, bg = palette.bg_alt },
-  TelescopePromptNormal = { fg = palette.fg_main, bg = palette.bg_alt },
-  TelescopePromptTitle = { fg = palette.fg_main, bg = palette.nord4 },
-  TelescopeResultsBorder = { fg = palette.bg_dim, bg = palette.bg_main },
-  TelescopeResultsNormal = { fg = palette.fg_main, bg = palette.bg_main },
-  TelescopeResultsTitle = { fg = palette.fg_main, bg = palette.nord4 },
-  TelescopePreviewBorder = { fg = palette.bg_dim, bg = palette.bg_main },
-  TelescopePreviewNormal = { fg = palette.fg_main, bg = palette.bg_main },
-  TelescopePreviewTitle = { fg = palette.fg_main, bg = palette.nord4 },
-  TelescopeMatching = { fg = palette.nord0, bg = palette.yellow },
-  TelescopeSelection = { fg = palette.fg_main, bg = palette.nord4, italic = false },
-  TelescopeSelectionCaret = { fg = palette.blue_dark, bg = palette.nord4 },
+  TelescopeBorder = { fg = components.border, bg = components.bg_alt },
+  TelescopePromptBorder = { fg = components.border, bg = components.bg_alt },
+  TelescopePromptNormal = { fg = components.fg, bg = components.bg_alt },
+  TelescopePromptTitle = { fg = components.fg, bg = components.search_bg },
+  TelescopeResultsBorder = { fg = components.border, bg = components.bg },
+  TelescopeResultsNormal = { fg = components.fg, bg = components.bg },
+  TelescopeResultsTitle = { fg = components.fg, bg = components.search_bg },
+  TelescopePreviewBorder = { fg = components.border, bg = components.bg },
+  TelescopePreviewNormal = { fg = components.fg, bg = components.bg },
+  TelescopePreviewTitle = { fg = components.fg, bg = components.search_bg },
+  TelescopeMatching = { fg = components.cursor_bg, bg = components.warning },
+  TelescopeSelection = { fg = components.fg, bg = components.search_bg, italic = false },
+  TelescopeSelectionCaret = { fg = components.keyword, bg = components.search_bg },
+
+  -- Flash
+  FlashMatch = { bg = components.selection_bg },
+  FlashCurrent = { fg = components.bg, bg = palette.orange_dim },
+  FlashLabel = { fg = components.bg, bg = components.warning },
+  FlashPrompt = { link = "MsgArea" },
+  FlashPromptIcon = { link = "Special" },
+  FlashCursor = { link = "Cursor" },
+
+  -- Oil
+  OilFile = { fg = components.fg },
+  OilDir = { fg = components.keyword, bold = true },
+  OilLink = { fg = components.type, italic = true },
+  OilSocket = { fg = components.warning },
+
+  -- Conjure
+  ConjureLogHeader = { fg = components.comment, bold = true },
+  ConjureLogHue0 = { fg = components.error_fg },
+  ConjureLogHue1 = { fg = components.warning_fg },
+  ConjureLogHue2 = { fg = components.success_fg },
+  ConjureLogHue3 = { fg = components.info_fg },
+
+  -- ToggleTerm
+  ToggleTerm1 = { bg = components.bg_alt },
+  ToggleTerm2 = { bg = components.bg_alt },
+  ToggleTermFloatBorder = { link = "FloatBorder" },
+
+  -- Dadbod UI
+  dbui_tables = { fg = components.fg },
+  dbui_header = { fg = components.keyword },
+  dbui_connection_source = { fg = components.comment, italic = true },
 }
 
 for group, opts in pairs(highlights) do
@@ -353,21 +436,21 @@ for group, opts in pairs(highlights) do
 end
 
 -- Terminal
-vim.g.terminal_color_0 = palette.fg_main
-vim.g.terminal_color_1 = palette.red_dark
-vim.g.terminal_color_2 = palette.green_dark
-vim.g.terminal_color_3 = palette.yellow_dark
-vim.g.terminal_color_4 = palette.blue_dark
-vim.g.terminal_color_5 = palette.magenta_dark
-vim.g.terminal_color_6 = palette.cyan_dark
-vim.g.terminal_color_7 = palette.bg_dim
-vim.g.terminal_color_8 = palette.fg_dim
-vim.g.terminal_color_9 = palette.red_dark
-vim.g.terminal_color_10 = palette.green_dark
-vim.g.terminal_color_11 = palette.yellow_dark
-vim.g.terminal_color_12 = palette.blue_dark
-vim.g.terminal_color_13 = palette.magenta_dark
-vim.g.terminal_color_14 = palette.cyan_dark
-vim.g.terminal_color_15 = palette.fg_main -- White is dark in light theme
+vim.g.terminal_color_0 = components.fg
+vim.g.terminal_color_1 = components.error_fg
+vim.g.terminal_color_2 = components.success_fg
+vim.g.terminal_color_3 = components.warning_fg
+vim.g.terminal_color_4 = components.info_fg
+vim.g.terminal_color_5 = components.constant
+vim.g.terminal_color_6 = components.type
+vim.g.terminal_color_7 = components.border
+vim.g.terminal_color_8 = components.fg_dim
+vim.g.terminal_color_9 = components.error_fg
+vim.g.terminal_color_10 = components.success_fg
+vim.g.terminal_color_11 = components.warning_fg
+vim.g.terminal_color_12 = components.info_fg
+vim.g.terminal_color_13 = components.constant
+vim.g.terminal_color_14 = components.type
+vim.g.terminal_color_15 = components.fg
 
 vim.g.colors_name = "nord_light"

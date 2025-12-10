@@ -168,6 +168,7 @@ local highlights = {
     TelescopeSelectionCaret            = { fg = palette.orange },
     TelescopeMultiSelection            = { fg = palette.yellow },
 
+    -- Semantic Tokens
     Comment                            = { fg = color(palette.base01, palette.base1), italic = true },
 
     Constant                           = { fg = palette.cyan },
