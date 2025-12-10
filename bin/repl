@@ -5,6 +5,6 @@ set -o pipefail
 
 current_dir="$PWD"
 
-lein update-in :plugins conj '[cider/cider-nrepl,"0.57.0"]' -- update-in :repl-options assoc :init '(do (require (quote [portal.api :as p])) (def portal (p/open)) (add-tap (var p/submit)) (println "Portal started!"))' -- with-profile +test repl
+lein update-in :plugins conj '[cider/cider-nrepl,"0.57.0"]' -- update-in :repl-options assoc :init '(do)' -- with-profile +test repl
 
 

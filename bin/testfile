@@ -33,11 +33,8 @@ for file_path in "${file_paths[@]}"; do
         beyond_tests+=("$file_path")
     elif [[ "$file_path" == *"/opt/loggi/web/"* ]]; then
         web_tests+=("$file_path")
-    elif [[ "$current_dir" == *"/Workplace/seubarriga"* ]]; then
+    elif [[ "$current_dir" == *"/Workplace/seubarriga"* ]] && [[ "$file_path" == test/* ]] && [[ "$file_path" == *.clj ]]; then
         seubarriga_tests+=("$file_path")
-    else
-        echo "Error: Unknown project for file: $file_path"
-        exit 1
     fi
 done
 
