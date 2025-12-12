@@ -95,13 +95,13 @@ local palette = {
 
 -- Darker Variants for Light Theme Accessibility
 local p = palette
-p.red_dark     = blend_colors(p.red, "#000000", 0.3)
-p.green_dark   = blend_colors(p.green, "#000000", 0.4) -- More darkening needed for green
-p.yellow_dark  = blend_colors(p.yellow, "#000000", 0.4)
-p.blue_dark    = blend_colors(p.blue, "#000000", 0.2)
-p.magenta_dark = blend_colors(p.magenta, "#000000", 0.3)
-p.cyan_dark    = blend_colors(p.cyan, "#000000", 0.4)
-p.orange_dark  = blend_colors(p.orange, "#000000", 0.2)
+p.red_dark     = blend_colors(p.red, "#000000", 0.4)
+p.green_dark   = blend_colors(p.green, "#000000", 0.6) -- More darkening needed for green
+p.yellow_dark  = blend_colors(p.yellow, "#000000", 0.65)
+p.blue_dark    = blend_colors(p.blue, "#000000", 0.4)
+p.magenta_dark = blend_colors(p.magenta, "#000000", 0.5)
+p.cyan_dark    = blend_colors(p.cyan, "#000000", 0.6)
+p.orange_dark  = blend_colors(p.orange, "#000000", 0.4)
 
 
 local components = {
