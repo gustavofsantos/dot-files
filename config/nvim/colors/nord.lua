@@ -152,117 +152,34 @@ local colors = {
 
 
 local palette = {
-  -- Default nord colors
-  -------------------------
-
-  -- The origin color or the Polar Night palette.
-  -- For dark ambiance designs, it is used for background and area coloring while it's not used for syntax highlighting at all because otherwise it would collide with the same background color.
-  --
-  -- For bright ambiance designs, it is used for base elements like plain text, the text editor caret and reserved syntax characters like curly- and square brackets.
-  -- It is rarely used for passive UI elements like borders, but might be possible to achieve a higher contrast and better visual distinction (harder/not flat) between larger components.
-  nord0  = "#2e3440",
-
-  -- A brighter shade color based on nord0.
-  --
-  -- For dark ambiance designs it is used for elevated, more prominent or focused UI elements like
-  --
-  -- status bars and text editor gutters
-  -- panels, modals and floating popups like notifications or auto completion
-  -- user interaction/form components like buttons, text/select fields or checkboxes
-  -- It also works fine for more inconspicuous and passive elements like borders or as dropshadow between different components.
-  -- There's currently no official port project that makes use of it for syntax highlighting.
-  --
-  -- For bright ambiance designs, it is used for more subtle/inconspicuous UI text elements that do not need so much visual attention.
-  -- Other use cases are also state animations like a more brighter text color when a button is hovered, active or focused.
-  nord1  = "#3b4252",
-
-  -- An even more brighter shade color of nord0.
-  --
-  -- For dark ambiance designs, it is used to colorize the currently active text editor line as well as selection- and text highlighting color.
-  -- For both bright & dark ambiance designs it can also be used as an brighter variant for the same target elements like nord1.
-  nord2  = "#434c5e",
-
-  -- The brightest shade color based on nord0.
-  --
-  -- For dark ambiance designs, it is used for UI elements like indent- and wrap guide marker.
-  -- In the context of code syntax highlighting it is used for comments and invisible/non-printable characters.
-  --
-  -- For bright ambiance designs, it is, next to nord1 and nord2 as darker variants, also used for the most subtle/inconspicuous UI text elements that do not need so much visual attention.
-  nord3  = "#4c566a",
-
-  -- The origin color or the Snow Storm palette.
-  --
-  -- For dark ambiance designs, it is used for UI elements like the text editor caret.
-  -- In the context of syntax highlighting it is used as text color for variables, constants, attributes and fields.
-  --
-  -- For bright ambiance designs, it is used for elevated, more prominent or focused UI elements like
-  --
-  -- status bars and text editor gutters
-  -- panels, modals and floating popups like notifications or auto completion
-  -- user interaction/form components like buttons, text/select fields or checkboxes
-  -- It also works fine for more inconspicuous and passive elements like borders or as dropshadow between different components.
-  -- In the context of syntax highlighting it's not used at all.
-  nord4  = "#d8dee9",
-
-  -- A brighter shade color of nord4.
-  --
-  -- For dark ambiance designs, it is used for more subtle/inconspicuous UI text elements that do not need so much visual attention.
-  -- Other use cases are also state animations like a more brighter text color when a button is hovered, active or focused.
-  -- For bright ambiance designs, it is used to colorize the currently active text editor line as well as selection- and text highlighting color.
-  nord5  = "#e5e9f0",
-
-  -- The brightest shade color based on nord4.
-  --
-  -- For dark ambiance designs, it is used for elevated UI text elements that require more visual attention.
-  -- In the context of syntax highlighting it is used as text color for plain text as well as reserved and structuring syntax characters like curly- and square brackets.
-  --
-  -- For bright ambiance designs, it is used as background and area coloring while it's not used for syntax highlighting at all because otherwise it would collide with the same background color.
-  nord6  = "#eceff4",
-
-  -- A calm and highly contrasted color reminiscent of frozen polar water.
-  -- Used for UI elements that should, next to the primary accent color nord8, stand out and get more visual attention.
-  -- In the context of syntax highlighting it is used for classes, types and primitives.
-  nord7  = "#8fbcbb",
-  -- The bright and shiny primary accent color reminiscent of pure and clear ice.
-  -- Used for primary UI elements with main usage purposes that require the most visual attention.
-  -- In the context of syntax highlighting it is used for declarations, calls and execution statements of functions, methods and routines.
-  nord8  = "#88c0d0",
-
-  -- A more darkened and less saturated color reminiscent of arctic waters.
-  -- Used for secondary UI elements that also require more visual attention than other elements.
-  -- In the context of syntax highlighting it is used for language specific, syntactic and reserved keywords as well as
-  nord9  = "#81a1c1",
-
-  -- A dark and intensive color reminiscent of the deep arctic ocean.
-  -- Used for tertiary UI elements that require more visual attention than default elements.
-  -- In the context of syntax highlighting it is used for pragmas, comment keywords and pre-processor statements.
-  nord10 = "#5e81ac",
-
-  -- Used for UI elements that are rendering error states like linter markers and the highlighting of Git diff deletions.
-  -- In the context of syntax highlighting it is used to override the highlighting of syntax elements that are detected as errors.
-  nord11 = "#bf616a",
-
-  -- Rarely used for UI elements, but it may indicate a more advanced or dangerous functionality.
-  -- In the context of syntax highlighting it is used for special syntax elements like annotations and decorators.
-  nord12 = "#d08770",
-
-  -- Used for UI elements that are rendering warning states like linter markers and the highlighting of Git diff modifications.
-  -- In the context of syntax highlighting it is used to override the highlighting of syntax elements that are detected as warnings as well as escape characters and within regular expressions.
-  nord13 = "#ebcb8b",
+  nord0          = "#2e3440",
+  nord1          = "#3b4252",
+  nord2          = "#434c5e",
+  nord3          = "#4c566a",
+  nord4          = "#d8dee9",
+  nord5          = "#e5e9f0",
+  nord6          = "#eceff4",
+  nord7          = "#8fbcbb",
+  nord8          = "#88c0d0",
+  nord9          = "#81a1c1",
+  nord10         = "#5e81ac",
+  nord11         = "#bf616a",
+  nord12         = "#d08770",
+  nord13         = "#ebcb8b",
 
   -- Used for UI elements that are rendering success states and visualizations and the highlighting of Git diff additions.
   -- In the context of syntax highlighting it is used as main color for strings of any type like double/single quoted or interpolated.
-  nord14 = "#a3be8c",
+  nord14         = "#a3be8c",
 
   -- Rarely used for UI elements, but it may indicate a more uncommon functionality.
   -- In the context of syntax highlighting it is used as main color for numbers of any type like integers and floating point numbers.
-  nord15 = "#b48ead",
+  nord15         = "#b48ead",
 
-  cream1 = '#D9D3C4',
-  cream2 = '#E5DECD',
-  cream3 = '#EDE8DC',
-  cream4 = '#F6F3ED',
-  cream5 = '#F0EFEA',
+  cream1         = '#D9D3C4',
+  cream2         = '#E5DECD',
+  cream3         = '#EDE8DC',
+  cream4         = '#F6F3ED',
+  cream5         = '#F0EFEA',
 
   nord00         = "#2E3440",
   nord01         = "#3B4252",
@@ -320,8 +237,114 @@ local palette = {
 
 local components = {
   editor_bg = palette.gray0,
+  editor_fg = palette.cream3,
+  editor_fg_alt = palette.cream1,
+
   popup_bg = palette.gray01,
-  border = palette.gray00
+  popup_fg = palette.cream3,
+
+  border = palette.gray00,
+  border_alt = palette.gray01,
+
+  text_normal = palette.cream3,
+  text_muted = palette.gray5,
+  text_subtle = palette.nord03,
+
+  bg_hover = palette.gray02,
+  bg_active = palette.nord02,
+  bg_visual = palette.nord02,
+
+  cursor = palette.nord05,
+  cursor_bg = palette.gray000,
+
+  ui_accent = palette.cyan,
+  ui_accent_bright = palette.cyan_bright,
+  ui_accent_dim = palette.cyan_dim,
+
+  ui_highlight = palette.sky,
+  ui_highlight_bright = palette.sky_bright,
+
+  control_flow_base = palette.blue,
+  control_flow_bright = palette.blue_bright,
+  control_flow_muted = palette.blue_muted,
+
+  error_base = palette.red,
+  error_bright = palette.red_bright,
+  error_dim = palette.red_dim,
+  error_muted = palette.red_muted,
+
+  keyword_base = palette.orange,
+  keyword_bright = palette.orange_bright,
+  keyword_dim = palette.orange_dim,
+
+  warning_base = palette.yellow,
+  warning_bright = palette.yellow_bright,
+  warning_muted = palette.yellow_muted,
+  warning_dim = palette.yellow_dim,
+
+  string_base = palette.green,
+  string_bright = palette.green_bright,
+
+  constant_base = palette.magenta,
+  constant_bright = palette.magenta_bright,
+  constant_dim = palette.magenta_dim,
+
+  error = palette.red,
+  error_bg = palette.gray0,
+  warning = palette.yellow,
+  success = palette.green,
+  info = palette.blue,
+
+  diff_add = palette.nord14,
+  diff_change = palette.nord12,
+  diff_delete = palette.nord11,
+  diff_text = palette.nord9,
+
+  menu_bg = palette.nord1,
+  menu_fg = palette.nord4,
+  menu_sel_bg = palette.nord13,
+  menu_sel_fg = palette.nord0,
+
+  line_nr = palette.nord03,
+  fold_column = palette.nord03,
+
+  search_bg = palette.sky,
+  search_fg = palette.nord01,
+  search_match_bg = palette.yellow_bright,
+  search_match_fg = palette.gray00,
+
+  tab_bg = palette.gray01,
+  tab_fg = palette.nord05,
+  tab_sel_bg = palette.gray0,
+  tab_sel_fg = palette.gray6,
+
+  mode_normal = palette.nord8,
+  mode_insert = palette.nord12,
+  mode_visual = palette.nord15,
+  mode_replace = palette.nord11,
+  mode_command = palette.nord9,
+  mode_other = palette.nord10,
+
+  whitespace = palette.nord02,
+  indent_guide = palette.gray4,
+
+  comment = palette.nord3,
+  string = palette.green,
+  number = palette.nord15,
+  constant = palette.magenta_bright,
+  variable = palette.cream3,
+  variable_builtin = palette.cream2,
+  keyword = palette.orange,
+  operator = palette.nord10,
+  function_name = palette.nord8,
+  type = palette.yellow_dim,
+  boolean = palette.orange_dim,
+
+  git_add = palette.nord14,
+  git_change = palette.nord12,
+  git_delete = palette.nord11,
+
+  special = palette.cyan_bright,
 }
 
 local highlights = {
@@ -331,47 +354,47 @@ local highlights = {
   Underline = { underline = true },
 
   -- Editor
-  ColorColumn = { bg = palette.gray02 },
-  Cursor = { fg = palette.gray000, bg = palette.nord05 },
-  Error = { fg = palette.nord05, bg = palette.red },
-  iCursor = { fg = palette.gray000, bg = palette.nord05 },
-  LineNr = { fg = palette.nord03 },
+  ColorColumn = { bg = components.bg_hover },
+  Cursor = { fg = components.cursor_bg, bg = components.cursor },
+  Error = { fg = components.cursor, bg = components.error },
+  iCursor = { fg = components.cursor_bg, bg = components.cursor },
+  LineNr = { fg = components.line_nr },
   MatchParen = { fg = palette.nord9 },
   NonText = { fg = palette.nord02 },
-  Normal = { fg = palette.cream3, bg = palette.gray0 },
-  NormalNC = { fg = palette.cream1, bg = palette.gray02 },
-  NormalSB = { fg = palette.cream3, bg = palette.gray0 },
-  NormalFloat = { fg = palette.cream3, bg = palette.gray01 },
+  Normal = { fg = components.editor_fg, bg = components.editor_bg },
+  NormalNC = { fg = components.editor_fg_alt, bg = components.bg_hover },
+  NormalSB = { fg = components.editor_fg, bg = components.editor_bg },
+  NormalFloat = { fg = components.popup_fg, bg = components.popup_bg },
   FloatBorder = { link = "NormalFloat" },
   FloatTitle = { fg = palette.nord6 },
   FloatFooter = { link = "NormalFloat" },
-  Pmenu = { fg = palette.nord4, bg = palette.nord1 },
-  PmenuSbar = { fg = palette.gray6, bg = palette.gray02 },
-  PmenuSel = { fg = palette.nord0, bg = palette.nord13 },
-  PmenuThumb = { fg = palette.gray02, bg = palette.gray02 },
-  SpecialKey = { fg = palette.nord03 },
-  SpellBad = { fg = palette.red, bg = palette.nord00, undercurl = true, sp = palette.red },
-  SpellCap = { fg = palette.yellow, bg = palette.nord00, undercurl = true, sp = palette.yellow },
+  Pmenu = { fg = components.menu_fg, bg = components.menu_bg },
+  PmenuSbar = { fg = palette.gray6, bg = components.bg_hover },
+  PmenuSel = { fg = components.menu_sel_fg, bg = components.menu_sel_bg },
+  PmenuThumb = { fg = components.bg_hover, bg = components.bg_hover },
+  SpecialKey = { fg = components.text_subtle },
+  SpellBad = { fg = components.error, bg = palette.nord00, undercurl = true, sp = components.error },
+  SpellCap = { fg = components.warning, bg = palette.nord00, undercurl = true, sp = components.warning },
   SpellLocal = { fg = palette.nord06, bg = palette.nord00, undercurl = true, sp = palette.nord06 },
   SpellRare = { fg = palette.nord07, bg = palette.nord00, undercurl = true, sp = palette.nord07 },
-  Visual = { bg = palette.nord02 },
-  VisualNOS = { bg = palette.nord02 },
+  Visual = { bg = components.bg_visual },
+  VisualNOS = { bg = components.bg_visual },
 
   -- Neovim specific highlights
-  healthError = { fg = palette.red, bg = palette.nord01 },
-  healthSuccess = { fg = palette.green, bg = palette.nord01 },
-  healthWarning = { fg = palette.yellow, bg = palette.nord01 },
+  healthError = { fg = components.error, bg = palette.nord01 },
+  healthSuccess = { fg = components.success, bg = palette.nord01 },
+  healthWarning = { fg = components.warning, bg = palette.nord01 },
   TermCursorNC = { bg = palette.nord01 },
 
   -- Neovim Diagnostics API (for LSP)
-  DiagnosticWarn = { fg = palette.yellow_muted },
-  DiagnosticError = { fg = palette.red_muted, bg = blend_colors(palette.red_muted, palette.gray0, 0.95) },
-  DiagnosticInfo = { fg = palette.blue_muted },
-  DiagnosticHint = { fg = palette.blue },
-  DiagnosticUnderlineWarn = { fg = palette.yellow, undercurl = true },
-  DiagnosticUnderlineError = { fg = palette.red, undercurl = true },
-  DiagnosticUnderlineInfo = { fg = palette.sky, undercurl = true },
-  DiagnosticUnderlineHint = { fg = palette.blue, undercurl = true },
+  DiagnosticWarn = { fg = components.warning_muted },
+  DiagnosticError = { fg = components.error_muted, bg = blend_colors(components.error_muted, components.editor_bg, 0.95) },
+  DiagnosticInfo = { fg = components.control_flow_muted },
+  DiagnosticHint = { fg = components.control_flow_base },
+  DiagnosticUnderlineWarn = { fg = components.warning, undercurl = true },
+  DiagnosticUnderlineError = { fg = components.error, undercurl = true },
+  DiagnosticUnderlineInfo = { fg = components.ui_highlight, undercurl = true },
+  DiagnosticUnderlineHint = { fg = components.control_flow_base, undercurl = true },
 
   -- Neovim DocumentHighlight
   LspReferenceText = { bg = palette.nord03 },
@@ -379,15 +402,15 @@ local highlights = {
   LspReferenceWrite = { bg = palette.nord03 },
 
   -- Neovim LspSignatureHelp
-  LspSignatureActiveParameter = { fg = palette.sky, underline = true },
+  LspSignatureActiveParameter = { fg = components.ui_highlight, underline = true },
 
   -- Gutter
   CursorColumn = { bg = palette.nord01 },
   CursorLine = { bg = palette.gray1 },
-  CursorLineNr = { fg = palette.yellow, bg = palette.gray00 },
+  CursorLineNr = { fg = components.warning_base, bg = palette.gray00 },
   CursorLineSign = { bg = palette.gray00 },
-  Folded = { fg = palette.nord03, bg = palette.nord01, bold = true },
-  FoldColumn = { fg = palette.nord03, bg = palette.nord00 },
+  Folded = { fg = components.fold_column, bg = palette.nord01, bold = true },
+  FoldColumn = { fg = components.fold_column, bg = palette.nord00 },
   SignColumn = { fg = palette.nord01, bg = components.editor_bg },
   SignColumnSB = { fg = palette.nord01, bg = components.editor_bg },
 
@@ -397,9 +420,9 @@ local highlights = {
 
   -- Prompt/Status
   EndOfBuffer = { fg = palette.nord01 },
-  ErrorMsg = { fg = palette.nord05, bg = palette.red },
+  ErrorMsg = { fg = palette.nord05, bg = components.error },
   ModeMsg = { fg = palette.nord05 },
-  MoreMsg = { fg = palette.sky },
+  MoreMsg = { fg = components.ui_highlight },
   Question = { fg = palette.nord05 },
 
   StatusLine = { fg = palette.nord05, bg = palette.nord01 },
@@ -407,21 +430,21 @@ local highlights = {
   StatusLineTerm = { fg = palette.nord05, bg = palette.nord01 },
   StatusLineTermNC = { fg = palette.nord04, bg = palette.nord00 },
 
-  WarningMsg = { fg = palette.nord00, bg = palette.yellow },
-  WildMenu = { fg = palette.sky, bg = palette.nord01 },
+  WarningMsg = { fg = palette.nord00, bg = components.warning },
+  WildMenu = { fg = components.ui_highlight, bg = palette.nord01 },
 
   -- Search
-  IncSearch = { fg = palette.nord07, bg = palette.blue, underline = true },
-  Search = { fg = palette.nord01, bg = palette.sky },
+  IncSearch = { fg = components.search_match_fg, bg = components.control_flow_base, underline = true },
+  Search = { fg = components.search_fg, bg = components.search_bg },
 
   -- Tabs
-  TabLine = { fg = palette.nord05, bg = palette.gray01 },
-  TabLineFill = { fg = palette.nord05, bg = palette.gray00 },
-  TabLineSel = { fg = palette.gray6, bg = components.editor_bg },
+  TabLine = { fg = components.tab_fg, bg = components.tab_bg },
+  TabLineFill = { fg = components.tab_fg, bg = palette.gray00 },
+  TabLineSel = { fg = components.tab_sel_fg, bg = components.tab_sel_bg },
 
   -- Window
   Title = { fg = palette.nord05 },
-  VertSplit = { fg = palette.gray00, bg = components.editor_bg },
+  VertSplit = { fg = components.border, bg = components.editor_bg },
   WinSeparator = { link = "VertSplit" },
 
   -- QuickFix
@@ -434,24 +457,24 @@ local highlights = {
   -- Semantic Tokens ------------------------------------------------
   -------------------------------------------------------------------
 
-  ["@comment"] = { fg = palette.nord3, italic = true },
+  ["@comment"] = { fg = components.comment, italic = true },
   ["@constant"] = { fg = palette.nord4 },
-  ["@string"] = { fg = palette.nord14 },
-  ["@string.regexp"] = { fg = palette.nord13 },
-  ["@number"] = { fg = palette.nord15 },
+  ["@string"] = { fg = components.string },
+  ["@string.regexp"] = { fg = components.warning_base },
+  ["@number"] = { fg = components.number },
   ["@keyword"] = { fg = palette.nord9 },
-  ["@variable"] = { fg = palette.cream3 },
-  ["@variable.builtin"] = { fg = palette.cream2 },
-  ["@variable.member"] = { fg = palette.cream3 },
+  ["@variable"] = { fg = components.variable },
+  ["@variable.builtin"] = { fg = components.variable_builtin },
+  ["@variable.member"] = { fg = components.variable },
   ["@property"] = { fg = palette.nord07 },
-  ["@operator"] = { fg = palette.nord10 },
-  ["@boolean"] = { fg = palette.orange_dim, bold = true },
-  ["@function"] = { fg = palette.nord8 },
-  ["@function.builtin"] = { fg = palette.nord8 },
-  ["@function.macro"] = { fg = palette.nord8 },
-  ["@function.call"] = { fg = palette.nord8, italic = true },
-  ["@type"] = { fg = palette.nord7 },
-  ["@type.builtin"] = { fg = palette.nord7, bold = true },
+  ["@operator"] = { fg = components.operator },
+  ["@boolean"] = { fg = components.boolean, bold = true },
+  ["@function"] = { fg = components.function_name },
+  ["@function.builtin"] = { fg = components.function_name },
+  ["@function.macro"] = { fg = components.function_name },
+  ["@function.call"] = { fg = components.function_name, italic = true },
+  ["@type"] = { fg = components.type },
+  ["@type.builtin"] = { fg = components.type, bold = true },
   ["@constructor"] = { fg = palette.nord10 },
   ["@decorator"] = { fg = palette.nord12 },
   ["@markup.strong"] = { fg = palette.nord07, bold = true },
@@ -461,14 +484,14 @@ local highlights = {
 
   -- LSP
   ["@lsp.type.macro"] = { fg = palette.nord12 },
-  ["@lsp.type.keyword"] = { fg = palette.nord15 },
+  ["@lsp.type.keyword"] = { fg = components.number },
   ["@lsp.type.parameter"] = { fg = palette.nord05, italic = true },
   ["@lsp.type.property"] = { link = "@property" },
   ["@lsp.type.function"] = { link = "@function" },
   ["@lsp.type.type"] = { link = "@type" },
 
   -- JSON
-  ["@property.json"] = { fg = palette.cyan },
+  ["@property.json"] = { fg = components.ui_accent },
 
   -- Lua
   -- ["@punctuation.bracket.lua"] = { link = "Delimiter" },
@@ -476,26 +499,26 @@ local highlights = {
 
   -- Clojure
   ["@lsp.type.event.clojure"] = { link = "@lsp.type.type" },
-  ["@punctuation.bracket.clojure"] = { fg = palette.nord3 },
+  ["@punctuation.bracket.clojure"] = { fg = components.comment },
   ["@constructor.clojure"] = { link = "@function" },
-  ["@string.special.symbol.clojure"] = { fg = palette.nord15 },
+  ["@string.special.symbol.clojure"] = { fg = components.number },
   ["@function.macro.clojure"] = { link = "@decorator" },
-  ["@kw.clojure"] = { fg = palette.magenta },
+  ["@kw.clojure"] = { fg = components.constant_base },
   ["@keyword.function.clojure"] = { link = "@decorator" },
   ["@required.clojure"] = { link = "Comment" },
 
   -- ["@module.clojure"] = { fg = palette.nord05, italic = true },
-  ["@deref"] = { fg = palette.red },
-  ["@deref.name"] = { fg = palette.orange_dim },
+  ["@deref"] = { fg = components.error },
+  ["@deref.name"] = { fg = components.keyword_dim },
 
   -- Markdown
   ["@markup.list.markdown"] = { fg = palette.nord04 },
-  ["@markup.heading.1.markdown"] = { fg = palette.cyan_bright },
-  ["@markup.heading.2.markdown"] = { fg = palette.cyan },
-  ["@markup.heading.3.markdown"] = { fg = palette.cyan },
-  ["@markup.heading.4.markdown"] = { fg = palette.cyan_dim },
-  ["@markup.heading.5.markdown"] = { fg = palette.cyan_dim },
-  ["@markup.heading.6.markdown"] = { fg = palette.cyan_dim },
+  ["@markup.heading.1.markdown"] = { fg = components.ui_accent_bright },
+  ["@markup.heading.2.markdown"] = { fg = components.ui_accent },
+  ["@markup.heading.3.markdown"] = { fg = components.ui_accent },
+  ["@markup.heading.4.markdown"] = { fg = components.ui_accent_dim },
+  ["@markup.heading.5.markdown"] = { fg = components.ui_accent_dim },
+  ["@markup.heading.6.markdown"] = { fg = components.ui_accent_dim },
 
   -------------------------------------------------------------------
   -- Language Base Groups -------------------------------------------
@@ -503,10 +526,10 @@ local highlights = {
   -- Tier 1 (Noise / Structure)
   Comment = { link = "@comment" },
   Conceal = { bg = "NONE" },
-  Delimiter = { fg = palette.nord03 },
+  Delimiter = { fg = components.comment },
   Operator = { link = "@operator" },
-  SpecialChar = { fg = palette.yellow },
-  SpecialComment = { fg = palette.sky, italic = true },
+  SpecialChar = { fg = components.warning_base },
+  SpecialComment = { fg = components.ui_highlight, italic = true },
 
   -- Tier 2 (Body / Variables)
   Field = { link = "@property" },
@@ -516,50 +539,50 @@ local highlights = {
 
   -- Tier 3 (Data / Literals)
   Boolean = { link = "@boolean" },
-  Character = { fg = palette.green },
-  Constant = { fg = palette.magenta_bright },
+  Character = { fg = components.success },
+  Constant = { fg = components.constant },
   Float = { link = "Constant" },
   Number = { link = "Constant" },
-  String = { fg = palette.green },
+  String = { fg = components.string },
 
   -- Tier 4 (Logic / Emphasis)
   -- T4 Group 1: Control Flow (if, for, try)
-  Conditional = { fg = palette.blue_bright, bold = true },
-  Exception = { fg = palette.blue_bright, bold = true },
-  Repeat = { fg = palette.blue_bright, bold = true },
+  Conditional = { fg = components.control_flow_bright, bold = true },
+  Exception = { fg = components.control_flow_bright, bold = true },
+  Repeat = { fg = components.control_flow_bright, bold = true },
   Statement = { link = "Conditional" },
 
   -- T4 Group 2: Keywords & Directives (const, import)
-  Decorator = { fg = palette.orange },
-  Define = { fg = palette.orange },
-  Include = { fg = palette.orange },
-  Keyword = { fg = palette.orange },
-  PreProc = { fg = palette.orange },
-  StorageClass = { fg = palette.orange },
-  Label = { fg = palette.orange },
+  Decorator = { fg = components.keyword_base },
+  Define = { fg = components.keyword_base },
+  Include = { fg = components.keyword_base },
+  Keyword = { fg = components.keyword_base },
+  PreProc = { fg = components.keyword_base },
+  StorageClass = { fg = components.keyword_base },
+  Label = { fg = components.keyword_base },
 
   -- T4 Group 3: Definitions (function, class)
   Function = { link = "@function" },
   Builtin = { link = "@function.builtin" },
 
   -- T4 Group 4: Types (Type, struct)
-  Structure = { fg = palette.yellow_dim },
-  Type = { fg = palette.yellow_dim },
-  Typedef = { fg = palette.yellow_dim },
-  Namespace = { fg = palette.yellow_dim },
+  Structure = { fg = components.type },
+  Type = { fg = components.type },
+  Typedef = { fg = components.type },
+  Namespace = { fg = components.type },
 
   -- Fallbacks
-  Special = { fg = palette.cyan_bright },
-  Todo = { fg = palette.yellow, bg = "NONE" },
+  Special = { fg = components.special },
+  Todo = { fg = components.warning_base, bg = "NONE" },
   Annotation = { link = "Decorator" },
   Macro = { link = "Define" },
   PreCondit = { link = "PreProc" },
 
   -- Diff highlighting
-  DiffAdd = { fg = palette.nord14 },
-  DiffChange = { fg = palette.nord12 },
-  DiffDelete = { fg = palette.nord11 },
-  DiffText = { fg = palette.nord9 },
+  DiffAdd = { fg = components.diff_add },
+  DiffChange = { fg = components.diff_change },
+  DiffDelete = { fg = components.diff_delete },
+  DiffText = { fg = components.diff_text },
 
   -- Legacy diff groups
   diffAdded = { link = "DiffAdd" },
@@ -567,26 +590,26 @@ local highlights = {
   diffRemoved = { link = "DiffDelete" },
 
   -- Git related highlights
-  gitcommitDiscardedFile = { fg = palette.red },
-  gitcommitUntrackedFile = { fg = palette.red },
-  gitcommitSelectedFile = { fg = palette.green },
+  gitcommitDiscardedFile = { fg = components.error },
+  gitcommitUntrackedFile = { fg = components.error },
+  gitcommitSelectedFile = { fg = components.success },
 
   -- Plugin support - Only adding a subset for brevity
   -- DiagnosticSign highlights for LSP
-  DiagnosticSignError = { fg = palette.nord11, bg = "NONE" },
-  DiagnosticSignWarn = { fg = palette.nord13, bg = "NONE" },
-  DiagnosticSignHint = { fg = palette.nord10, bg = "NONE" },
-  DiagnosticSignInfo = { fg = palette.nord10, bg = "NONE" },
+  DiagnosticSignError = { fg = components.error, bg = "NONE" },
+  DiagnosticSignWarn = { fg = components.warning, bg = "NONE" },
+  DiagnosticSignHint = { fg = components.info, bg = "NONE" },
+  DiagnosticSignInfo = { fg = components.info, bg = "NONE" },
 
   -- GitSigns plugin support
-  GitSignsAdd = { fg = palette.nord14 },
-  GitSignsChange = { fg = palette.nord12 },
-  GitSignsDelete = { fg = palette.nord11 },
+  GitSignsAdd = { fg = components.git_add },
+  GitSignsChange = { fg = components.git_change },
+  GitSignsDelete = { fg = components.git_delete },
 
   -- Flash
   FlashMatch = { link = "Visual" },
-  FlashCurrent = { fg = palette.gray00, bg = palette.orange },
-  FlashLabel = { fg = palette.gray00, bg = palette.yellow_dim },
+  FlashCurrent = { fg = palette.gray00, bg = components.keyword_base },
+  FlashLabel = { fg = palette.gray00, bg = components.warning_dim },
   FlashPrompt = { link = "MsgArea" },
   FlashPromptIcon = { link = "Special" },
   FlashCursor = { link = "Cursor" },
@@ -595,7 +618,7 @@ local highlights = {
   OilFile = { fg = palette.nord9 },
 
   -- Telescope plugin support
-  TelescopeBorder = { fg = palette.nord03, bg = palette.nord00 },
+  TelescopeBorder = { fg = components.comment, bg = palette.nord00 },
   TelescopePromptBorder = { fg = palette.nord01, bg = palette.nord00 },
   TelescopePromptNormal = { fg = palette.nord05, bg = palette.nord00 },
   TelescopePromptTitle = { fg = palette.nord05, bg = palette.nord01 },
@@ -605,37 +628,48 @@ local highlights = {
   TelescopePreviewBorder = { fg = palette.nord00, bg = palette.nord00 },
   TelescopePreviewNormal = { fg = palette.nord05, bg = palette.nord00 },
   TelescopePreviewTitle = { fg = palette.nord05, bg = palette.nord00 },
-  TelescopeMatching = { fg = palette.nord00, bg = palette.yellow_bright },
-  TelescopeSelection = { fg = palette.nord05, bg = palette.nord03, italic = false },
-  TelescopeSelectionCaret = { fg = palette.sky, bg = palette.nord03 },
-  TelescopeMultiSelection = { fg = palette.sky, bg = palette.nord03 },
+  TelescopeMatching = { fg = palette.nord00, bg = components.warning_bright },
+  TelescopeSelection = { fg = palette.nord05, bg = components.comment, italic = false },
+  TelescopeSelectionCaret = { fg = components.ui_highlight, bg = components.comment },
+  TelescopeMultiSelection = { fg = components.ui_highlight, bg = components.comment },
 
   -- Tree view
   TreeNormal = { link = "Normal" },
   TreeNormalNC = { link = "Normal" },
   TreeRootName = { fg = palette.gray6, bold = true },
-  TreeFileIcon = { fg = palette.sky },
+  TreeFileIcon = { fg = components.ui_highlight },
   TreeFileNameOpened = { fg = palette.gray6 },
-  TreeSpecialFile = { fg = palette.magenta_bright },
-  TreeGitConflict = { fg = palette.red },
-  TreeGitModified = { fg = palette.blue_bright },
+  TreeSpecialFile = { fg = components.constant_bright },
+  TreeGitConflict = { fg = components.error },
+  TreeGitModified = { fg = components.control_flow_bright },
   TreeGitDirty = { fg = palette.gray4 },
-  TreeGitAdded = { fg = palette.green },
+  TreeGitAdded = { fg = components.success },
   TreeGitNew = { fg = palette.gray4 },
   TreeGitDeleted = { fg = palette.gray4 },
   TreeGitStaged = { fg = palette.gray4 },
-  TreeGitUntracked = { fg = palette.orange_base },
+  TreeGitUntracked = { fg = components.keyword_base },
   TreeTitleBar = { link = 'WinBar' },
   TreeFloatBorder = { link = 'FloatBorder' },
   TreeCursorLine = { bg = palette.gray2 },
   TreeCursor = { bg = "NONE", fg = "NONE" },
-  TreeFolderIcon = { fg = palette.yellow_dim },
-  TreeIndentMarker = { fg = palette.gray4 },
-  TreeSymlink = { fg = palette.sky },
-  TreeFolderName = { fg = palette.blue_bright },
+  TreeFolderIcon = { fg = components.warning_dim },
+  TreeIndentMarker = { fg = components.indent_guide },
+  TreeSymlink = { fg = components.ui_highlight },
+  TreeFolderName = { fg = components.control_flow_bright },
   TreeWinSeparator = { link = 'WinSeparator' },
 
-  fugitiveHash = { fg = palette.nord13 },
+  MiniStatuslineModeNormal = { fg = components.editor_bg, bg = components.mode_normal },
+  MiniStatuslineModeInsert = { fg = components.editor_bg, bg = components.mode_insert },
+  MiniStatuslineModeVisual = { fg = components.editor_bg, bg = components.mode_visual },
+  MiniStatuslineModeReplace = { fg = components.editor_bg, bg = components.mode_replace },
+  MiniStatuslineModeCommand = { fg = components.editor_bg, bg = components.mode_command },
+  MiniStatuslineModeOther = { fg = components.editor_bg, bg = components.mode_other },
+  MiniStatuslineDevinfo = { fg = colors.text_subtle, bg = colors.nord1 },
+  MiniStatuslineFilename = { bg = colors.nord2 },
+  MiniStatuslineFileinfo = { bg = colors.nord2 },
+  MiniStatuslineInactive = { fg = components.text_subtle, bg = colors.gray__950 },
+
+  fugitiveHash = { fg = components.warning_base },
 }
 
 for group, opts in pairs(highlights) do

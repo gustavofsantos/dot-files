@@ -12,37 +12,164 @@ local blend_colors = function(base, target, ratio)
   return string.format("#%02X%02X%02X", r, g, b)
 end
 
+local nord0        = "#2e3440"
+local nord1        = "#3b4252"
+local nord2        = "#434c5e"
+local nord3        = "#4c566a"
+local nord4        = "#d8dee9"
+local nord5        = "#e5e9f0"
+local nord6        = "#eceff4"
+local nord7        = "#8fbcbb"
+local nord8        = "#88c0d0"
+local nord9        = "#81a1c1"
+local nord10       = "#5e81ac"
+local nord11       = "#bf616a"
+local nord12       = "#d08770"
+local nord13       = "#ebcb8b"
+local nord14       = "#a3be8c"
+local nord15       = "#b48ead"
 
-local palette = {
+local gray__50     = "#f0f1f3"
+local gray__100    = "#e4e5e9"
+local gray__200    = "#c6c9d2"
+local gray__300    = "#acb0bd"
+local gray__400    = "#8f96a7"
+local gray__500    = "#787f8f"
+local gray__550    = "#4c566a"
+local gray__600    = "#434c5e"
+local gray__700    = "#3b4252"
+local gray__800    = "#2e3440"
+local gray__900    = "#23262c"
+local gray__950    = "#1a1c21"
+local fg__50       = "#ede8dc"
+local fg__100      = "#e2d9c4"
+local fg__200      = "#c8c0ad"
+local fg__300      = "#aca595"
+local fg__400      = "#918b7d"
+local fg__500      = "#767266"
+local fg__600      = "#605c52"
+local fg__700      = "#47443d"
+local fg__800      = "#302e28"
+local fg__900      = "#1d1b18"
+local fg__950      = "#12110e"
+local cyan__50     = "#e1f8f8"
+local cyan__100    = "#b7f0ef"
+local cyan__200    = "#a3d5d4"
+local cyan__300    = "#8fbcbb"
+local cyan__400    = "#79a09f"
+local cyan__500    = "#628281"
+local cyan__600    = "#4e6867"
+local cyan__700    = "#394d4c"
+local cyan__800    = "#263535"
+local cyan__900    = "#141d1d"
+local cyan__950    = "#0b1212"
+local sky__50      = "#ebf5f9"
+local sky__100     = "#d0eaf2"
+local sky__200     = "#a0d7e8"
+local sky__300     = "#88c0d0"
+local sky__400     = "#73a3b0"
+local sky__500     = "#5d8590"
+local sky__600     = "#4a6b74"
+local sky__700     = "#364f56"
+local sky__800     = "#23353b"
+local sky__900     = "#131f23"
+local sky__950     = "#091215"
+local blue__50     = "#edf1f8"
+local blue__100    = "#dee6f3"
+local blue__200    = "#b8cbe7"
+local blue__300    = "#95b3dc"
+local blue__400    = "#7099cb"
+local blue__500    = "#5e81ac"
+local blue__600    = "#496588"
+local blue__700    = "#374d68"
+local blue__800    = "#243447"
+local blue__900    = "#131e2c"
+local blue__950    = "#0a111b"
+local red__50      = "#f7efef"
+local red__100     = "#f0e2e3"
+local red__200     = "#e1c2c4"
+local red__300     = "#d5a4a8"
+local red__400     = "#ca8288"
+local red__500     = "#bf616a"
+local red__600     = "#984c53"
+local red__700     = "#75393f"
+local red__800     = "#512529"
+local red__900     = "#321517"
+local red__950     = "#1f0b0d"
+local orange__50   = "#f7efed"
+local orange__100  = "#f2e2df"
+local orange__200  = "#e6c5bd"
+local orange__300  = "#dba495"
+local orange__400  = "#d08770"
+local orange__500  = "#ad6f5c"
+local orange__600  = "#885747"
+local orange__700  = "#694235"
+local orange__800  = "#482b23"
+local orange__900  = "#2c1913"
+local orange__950  = "#1b0d09"
+local yellow__100  = "#f5e6ce"
+local yellow__200  = "#ebcb8b"
+local yellow__300  = "#ccb078"
+local yellow__400  = "#ab9364"
+local yellow__500  = "#8e7a52"
+local yellow__600  = "#726140"
+local yellow__700  = "#54472e"
+local yellow__800  = "#3b311f"
+local yellow__900  = "#211b0f"
+local yellow__950  = "#151008"
+local green__50    = "#e9f8de"
+local green__100   = "#cef0b2"
+local green__200   = "#bad8a0"
+local green__300   = "#a3be8c"
+local green__400   = "#89a075"
+local green__500   = "#718561"
+local green__600   = "#58684b"
+local green__700   = "#434f38"
+local green__800   = "#2c3525"
+local green__900   = "#191f14"
+local green__950   = "#0e120a"
+local magenta__100 = "#ece3ea"
+local magenta__200 = "#d9c7d5"
+local magenta__300 = "#c7abc1"
+local magenta__400 = "#b48ead"
+local magenta__500 = "#997392"
+local magenta__600 = "#795a73"
+local magenta__700 = "#5c4458"
+local magenta__800 = "#3f2d3c"
+local magenta__900 = "#261a24"
+local magenta__950 = "#170e15"
+
+
+local palette  = {
   -- Default nord colors
   -------------------------
 
-  nord0  = "#2e3440",
-  nord1  = "#3b4252",
-  nord2  = "#434c5e",
-  nord3  = "#4c566a",
-  nord4  = "#d8dee9",
-  nord5  = "#e5e9f0",
-  nord6  = "#eceff4",
-  nord7  = "#8fbcbb",
-  nord8  = "#88c0d0",
-  nord9  = "#81a1c1",
-  nord10 = "#5e81ac",
-  nord11 = "#bf616a",
-  nord12 = "#d08770",
-  nord13 = "#ebcb8b",
-  nord14 = "#a3be8c",
-  nord15 = "#b48ead",
+  nord0          = "#2e3440",
+  nord1          = "#3b4252",
+  nord2          = "#434c5e",
+  nord3          = "#4c566a",
+  nord4          = "#d8dee9",
+  nord5          = "#e5e9f0",
+  nord6          = "#eceff4",
+  nord7          = "#8fbcbb",
+  nord8          = "#88c0d0",
+  nord9          = "#81a1c1",
+  nord10         = "#5e81ac",
+  nord11         = "#bf616a",
+  nord12         = "#d08770",
+  nord13         = "#ebcb8b",
+  nord14         = "#a3be8c",
+  nord15         = "#b48ead",
 
-  cream1 = '#D9D3C4',
-  cream2 = '#E5DECD',
-  cream3 = '#EDE8DC',
-  cream4 = '#F6F3ED',
-  cream5 = '#F0EFEA',
+  cream1         = '#D9D3C4',
+  cream2         = '#E5DECD',
+  cream3         = '#EDE8DC',
+  cream4         = '#F6F3ED',
+  cream5         = '#F0EFEA',
 
   -- Mappings for Light Theme (inversions)
   -- Dark backgrounds become light foregrounds
-  
+
   gray000        = '#1A1C21',
   gray00         = '#191D24',
   gray0          = '#242933',
@@ -51,14 +178,14 @@ local palette = {
   gray3          = '#434C5E',
   gray4          = '#4C566A',
   gray5          = '#60728A',
-  
+
   -- Light backgrounds
   bg_main        = '#F0EFEA', -- cream5
   bg_alt         = '#F6F3ED', -- cream4
   bg_dim         = '#EDE8DC', -- cream3
   bg_active      = '#E5DECD', -- cream2
   bg_inactive    = '#D9D3C4', -- cream1
-  
+
   -- Text colors
   fg_main        = '#2E3440', -- nord0
   fg_alt         = '#3B4252', -- nord1
@@ -73,10 +200,10 @@ local palette = {
   blue           = "#5E81AC",
   blue_muted     = "#415570",
   red_bright     = "#C5727A",
-  red            = "#BF616A", 
+  red            = "#BF616A",
   red_dim        = "#B74E58",
   red_muted      = "#72454F",
-  orange_bright  = '#D79784', 
+  orange_bright  = '#D79784',
   orange         = "#D08770",
   orange_dim     = '#CB775D',
   yellow_bright  = '#EFD49F',
@@ -94,7 +221,7 @@ local palette = {
 }
 
 -- Darker Variants for Light Theme Accessibility
-local p = palette
+local p        = palette
 p.red_dark     = blend_colors(p.red, "#000000", 0.4)
 p.green_dark   = blend_colors(p.green, "#000000", 0.6) -- More darkening needed for green
 p.yellow_dark  = blend_colors(p.yellow, "#000000", 0.65)
@@ -106,60 +233,60 @@ p.orange_dark  = blend_colors(p.orange, "#000000", 0.4)
 
 local components = {
   -- Base
-  bg = palette.bg_main,
-  fg = palette.fg_main,
-  bg_alt = palette.bg_alt,
-  fg_dim = palette.fg_dim,
-  
+  bg = gray__50,
+  fg = gray__800,
+  bg_alt = gray__100,
+  fg_dim = gray__800,
+
   -- UI Elements
-  border = palette.bg_dim,
+  border = gray__300,
   cursor_fg = palette.bg_main,
   cursor_bg = palette.nord0,
-  line_nr_fg = palette.nord3,
-  line_nr_active_fg = palette.blue_dark,
-  gutter_bg = palette.bg_dim,
-  gutter_bg_active = palette.bg_active,
-  selection_bg = palette.nord4,
-  float_bg = palette.bg_alt,
-  float_border = palette.bg_alt,
-  
+  line_nr_fg = gray__300,
+  line_nr_active_fg = yellow__200,
+  gutter_bg = gray__100,
+  gutter_bg_active = gray__700,
+  selection_bg = blue__200,
+  float_bg = gray__200,
+  float_border = gray__300,
+
   -- Status
-  error = palette.red,
-  warning = palette.yellow,
-  success = palette.green,
-  info = palette.blue,
-  
+  error = red__600,
+  warning = yellow__500,
+  success = green__200,
+  info = blue__300,
+
   -- Status Text
-  error_fg = palette.red_dark,
-  warning_fg = palette.yellow_dark,
-  success_fg = palette.green_dark,
-  info_fg = palette.blue_dark,
+  error_fg = red__700,
+  warning_fg = yellow__700,
+  success_fg = green__600,
+  info_fg = blue__500,
 
   -- Syntax
-  comment = palette.nord3,
-  string = palette.green_dark,
-  keyword = palette.blue_dark,
-  function_ = palette.blue_dark,
-  type = palette.cyan_dark,
-  variable = palette.fg_main,
-  constant = palette.magenta_dark,
-  operator = palette.nord9,
-  number = palette.magenta_dark,
-  boolean = palette.orange_dark,
-  property = palette.blue_dark,
-  parameter = palette.fg_main,
-  decorator = palette.orange_dark,
-  
+  comment = gray__300,
+  string = green__500,
+  keyword = nord10,
+  function_ = sky__500,
+  type = yellow__500,
+  variable = nord2,
+  constant = nord2,
+  operator = nord9,
+  number = nord15,
+  boolean = nord12,
+  property = gray__600,
+  parameter = gray__600,
+  decorator = nord12,
+
   -- Search
   search_bg = palette.nord4,
   inc_search_bg = palette.blue_dark,
   inc_search_fg = palette.bg_main,
-  
+
   -- Diff
-  diff_add = palette.green_dark,
-  diff_change = palette.orange_dark,
-  diff_delete = palette.red_dark,
-  diff_text = palette.blue_dark,
+  diff_add = green__400,
+  diff_change = orange__400,
+  diff_delete = red__400,
+  diff_text = blue__800,
 }
 
 local highlights = {
