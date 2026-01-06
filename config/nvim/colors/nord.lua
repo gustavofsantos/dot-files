@@ -40,8 +40,8 @@ local colors = {
   gray__600    = "#434c5e",
   gray__700    = "#3b4252",
   gray__800    = "#2e3440",
-  gray__900    = "#23262c",
-  gray__950    = "#1a1c21",
+  gray__900    = "#222630",
+  gray__950    = "#1A1C21",
 
   fg__50       = "#ede8dc",
   fg__100      = "#e2d9c4",
@@ -270,8 +270,8 @@ local components = {
 
   error_base = palette.red,
   error_bright = palette.red_bright,
-  error_dim = palette.red_dim,
-  error_muted = palette.red_muted,
+  error_dim = palette.red_500,
+  error_muted = colors.red__600,
 
   keyword_base = palette.orange,
   keyword_bright = palette.orange_bright,
@@ -362,7 +362,7 @@ local highlights = {
   MatchParen = { fg = palette.nord9 },
   NonText = { fg = palette.nord02 },
   Normal = { fg = components.editor_fg, bg = components.editor_bg },
-  NormalNC = { fg = components.editor_fg_alt, bg = components.bg_hover },
+  NormalNC = { fg = components.editor_fg_alt, bg = components.editor_bg },
   NormalSB = { fg = components.editor_fg, bg = components.editor_bg },
   NormalFloat = { fg = components.popup_fg, bg = components.popup_bg },
   FloatBorder = { link = "NormalFloat" },
@@ -389,8 +389,8 @@ local highlights = {
   -- Neovim Diagnostics API (for LSP)
   DiagnosticWarn = { fg = components.warning_muted },
   DiagnosticError = { fg = components.error_muted, bg = blend_colors(components.error_muted, components.editor_bg, 0.95) },
-  DiagnosticInfo = { fg = components.control_flow_muted },
-  DiagnosticHint = { fg = components.control_flow_base },
+  DiagnosticInfo = { fg = colors.blue__700 },
+  DiagnosticHint = { fg = colors.blue__700 },
   DiagnosticUnderlineWarn = { fg = components.warning, undercurl = true },
   DiagnosticUnderlineError = { fg = components.error, undercurl = true },
   DiagnosticUnderlineInfo = { fg = components.ui_highlight, undercurl = true },
@@ -425,8 +425,8 @@ local highlights = {
   MoreMsg = { fg = components.ui_highlight },
   Question = { fg = palette.nord05 },
 
-  StatusLine = { fg = palette.nord05, bg = palette.nord01 },
-  StatusLineNC = { fg = palette.nord04, bg = palette.nord00 },
+  StatusLine = { fg = palette.nord05, bg = colors.gray__800 },
+  StatusLineNC = { fg = palette.nord04, bg = colors.gray__950 },
   StatusLineTerm = { fg = palette.nord05, bg = palette.nord01 },
   StatusLineTermNC = { fg = palette.nord04, bg = palette.nord00 },
 
@@ -658,16 +658,16 @@ local highlights = {
   TreeFolderName = { fg = components.control_flow_bright },
   TreeWinSeparator = { link = 'WinSeparator' },
 
-  MiniStatuslineModeNormal = { fg = components.editor_bg, bg = components.mode_normal },
+  MiniStatuslineModeNormal = { fg = components.editor_bg, bg = colors.gray__500 },
   MiniStatuslineModeInsert = { fg = components.editor_bg, bg = components.mode_insert },
   MiniStatuslineModeVisual = { fg = components.editor_bg, bg = components.mode_visual },
   MiniStatuslineModeReplace = { fg = components.editor_bg, bg = components.mode_replace },
   MiniStatuslineModeCommand = { fg = components.editor_bg, bg = components.mode_command },
   MiniStatuslineModeOther = { fg = components.editor_bg, bg = components.mode_other },
-  MiniStatuslineDevinfo = { fg = colors.text_subtle, bg = colors.nord1 },
-  MiniStatuslineFilename = { bg = colors.nord2 },
-  MiniStatuslineFileinfo = { bg = colors.nord2 },
-  MiniStatuslineInactive = { fg = components.text_subtle, bg = colors.gray__950 },
+  MiniStatuslineDevinfo = { fg = colors.gray__500, bg = colors.gray__800 },
+  MiniStatuslineFilename = { bg = colors.gray__600 },
+  MiniStatuslineFileinfo = { bg = colors.gray__900 },
+  MiniStatuslineInactive = { fg = components.text_subtle, bg = components.border },
 
   fugitiveHash = { fg = components.warning_base },
 }
