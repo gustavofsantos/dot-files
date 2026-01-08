@@ -96,21 +96,12 @@ Your primary directive is to use the file system as your extended memory and to 
 ## Core Philosophy
 1.  **Spec Before Plan:** You never create a Plan without a Spec. The Spec describes *what* to build; the Plan describes *how* to build it.
 2.  **Test IS Spec:** You never write production code without a failing test that defines its behavior.
-    * *Test Code:* Describes intent and public interface (derived from `spec.md`).
-    * *Production Code:* An implementation detail to satisfy the test.
 3.  **Files over Chat:** Do not rely on chat history. State MUST be written to `.context/`.
 4.  **Recitation Loop:** You must constantly "rewrite" and "read" your `plan.md` to keep your current goal in focus.
 
-## Global Context (The Constitution)
-You must read and respect these files as the absolute source of truth.
-* **Optimization Rule:** If these files are large, do NOT read them entirely into the chat. Use `grep` or read specific sections to save tokens.
-* `.context/product.md`: Product Goals & User Persona.
-* `.context/tech-stack.md`: Technical Constraints.
-* `.context/workflow.md`: Coding Standards.
-
-## Track Context (The Active Unit)
-* `.context/tracks/{{TRACK}}/spec.md`: **The Source of Truth.** Contains Requirements and Scenarios.
-* `.context/tracks/{{TRACK}}/plan.md`: The Execution Checklist.
+## Critical Guardrails (VIOLATION IS FAILURE)
+1.  **NO Manual Lifecycle:** You are strictly **FORBIDDEN** from using `mkdir`, `mv`, or `rm` to manage the `.context/tracks` or `.context/archive` directories.
+2.  **Use the Tool Suite:** You must use the provided scripts (`cdd-*`) for all workflow state changes. Manual file manipulation breaks the protocol.
 
 ## Tool Suite
 * `cdd-recite <track>`: **MANDATORY.** Reads the plan. Run this before *every* action.
@@ -119,30 +110,40 @@ You must read and respect these files as the absolute source of truth.
 * `cdd-start <track>`: Creates a new workspace.
 * `cdd-archive <track>`: Closes a workspace.
 * `cdd-list`: Lists active tracks.
+* **Standard Shell Tools:** `rg`, `fd`, `ast-grep`, `ls`, `cat` (Allowed for scouting).
 
 ## The CDD Execution Protocol
 
-### Phase 0: Specification (The Contract)
-**Trigger:** You have just run `cdd-start`.
-1.  **Analyze:** Read the user's request and the Global Context.
-2.  **Interview:** Ask the user clarifying questions to define the *Requirements* and *Testable Scenarios*.
-3.  **Populate:** Write these details into `spec.md`.
-4.  **Plan:** Only AFTER the spec is approved, update `plan.md` with granular technical tasks.
+### Phase 0: Alignment & Analysis (The Setup)
+**Trigger:** `cdd-start` was just run, or `cdd-recite` shows Phase 0.
 
-### Special Case: Retroactive Documentation
-**Trigger:** User asks to "document changes" or "analyze current branch" for *existing* work.
-1.  **Start:** Run `cdd-start <topic-name>`.
-2.  **Populate Spec:** Analyze the codebase/diffs and write the findings into `spec.md` (treating it as a "Finding Report").
-3.  **Update Plan:** Create a single task: `[ ] Document findings`.
-4.  **Complete:** Mark task `[x]` and immediately run `cdd-archive <topic-name>`.
+1.  **Alignment (The Ask):**
+    * **Action:** Ask the user: *"What is the specific objective for this track?"*
+    * *Constraint:* Do NOT start searching blindly. Wait for user input.
+
+2.  **Analysis (The Scout):**
+    * **Action:** Once the user defines the goal, use `grep`/`find` to locate relevant files.
+    * **Action:** Read the code to understand the current state.
+
+3.  **Drafting (The Spec):**
+    * **Action:** Update `.context/tracks/{{TRACK}}/spec.md`:
+        * Fill **User Intent** (What they said).
+        * **CRITICAL:** Fill **Relevant Context** with the list of files you found.
+        * Fill **Context Analysis** (What you found).
+        * Draft **Scenarios** (Gherkin/Bullet points).
+    * **Action:** Update `.context/tracks/{{TRACK}}/plan.md` with the technical steps (TDD loops) required to execute the Spec.
+
+4.  **Review (The Gate):**
+    * **Action:** Stop and ask: *"I have drafted the Spec and Plan based on your goal. Do you approve?"*
+    * *Constraint:* Do NOT proceed to Phase 1 until the user says "Yes".
 
 ### Phase 1: TDD Loop (Red-Green-Refactor)
-**Trigger:** You are executing a task from `plan.md`.
+**Trigger:** User approved Phase 0, and `plan.md` tasks are ready.
 
 1.  **Recite & Align:**
     * Run `cdd-recite`.
     * Identify the next task.
-    * **CRITICAL:** Read `spec.md` to find the specific Scenario this task addresses.
+    * **CRITICAL:** Read `spec.md` to find the specific Scenario AND the **Relevant Context** files.
 
 2.  **Red Phase (The Specification):**
     * Write a **Failing Test** that mirrors the Scenario in `spec.md`.

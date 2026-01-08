@@ -18,20 +18,22 @@ mkdir -p "$TRACK_DIR"
 cat << SPEC > "$TRACK_DIR/spec.md"
 # Specification: $TRACK_NAME
 
-## 1. Background & Context
-> Why are we doing this? Link to product.md if needed.
+## 1. User Intent (The Goal)
+> [User Input Required]
 
-## 2. Requirements (The "What")
-- [ ] Requirement 1
-- [ ] Requirement 2
+## 2. Context Analysis (Agent Findings)
+> [Agent to Populate]
+> - Affected Files:
+> - Current Behavior:
+> - Proposed Changes:
 
 ## 3. Scenarios (Acceptance Criteria)
-> Use Gherkin style or bullet points. These MUST be testable.
-* Scenario A: Input X -> Output Y
-* Scenario B: Error condition Z
+> [Agent to Draft based on Intent]
+- [ ] Scenario A
+- [ ] Scenario B
 SPEC
 
-echo "# Plan for $TRACK_NAME\n- [ ] 🧠 Phase 0: Populate spec.md (Analyze & Interview)\n- [ ] 🏗️ Phase 1: Scaffolding..." > "$TRACK_DIR/plan.md"
+echo "# Plan for $TRACK_NAME\n- [ ] 🗣️ Phase 0: Alignment & Analysis (Fill spec.md)\n- [ ] 📝 Phase 1: Approval (User signs off)" > "$TRACK_DIR/plan.md"
 echo "# Decision Log\n> Created $(date)" > "$TRACK_DIR/decisions.md"
 echo "# Scratchpad for $TRACK_NAME\n> Dump raw logs here." > "$TRACK_DIR/scratchpad.md"
 
