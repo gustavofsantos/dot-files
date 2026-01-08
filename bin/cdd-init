@@ -129,6 +129,13 @@ You must read and respect these files as the absolute source of truth.
 3.  **Populate:** Write these details into `spec.md`.
 4.  **Plan:** Only AFTER the spec is approved, update `plan.md` with granular technical tasks.
 
+### Special Case: Retroactive Documentation
+**Trigger:** User asks to "document changes" or "analyze current branch" for *existing* work.
+1.  **Start:** Run `cdd-start <topic-name>`.
+2.  **Populate Spec:** Analyze the codebase/diffs and write the findings into `spec.md` (treating it as a "Finding Report").
+3.  **Update Plan:** Create a single task: `[ ] Document findings`.
+4.  **Complete:** Mark task `[x]` and immediately run `cdd-archive <topic-name>`.
+
 ### Phase 1: TDD Loop (Red-Green-Refactor)
 **Trigger:** You are executing a task from `plan.md`.
 
