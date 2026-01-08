@@ -1,0 +1,29 @@
+#!/bin/bash
+if [[ "$1" == "--help" ]]; then
+    echo "COMMAND: cdd-archive <track-name>"
+    echo "OBJECTIVE: Move completed track to history."
+    echo "CONSTRAINT: Cannot archive if there are pending tasks ([ ])."
+    exit 0
+fi
+TRACK_NAME=$1
+SRC=".context/tracks/$TRACK_NAME"
+PLAN_FILE="$SRC/plan.md"
+DEST=".context/archive/$(date +%Y%m%d)_$TRACK_NAME"
+
+if [ ! -d "$SRC" ]; then
+    echo "Error: Track '$TRACK_NAME' not found."
+    exit 1
+fi
+
+# Validation: Check for unchecked items
+if [ -f "$PLAN_FILE" ]; then
+    if grep -q "\[ \]" "$PLAN_FILE"; then
+        echo "Error: Cannot archive '$TRACK_NAME'. Pending tasks found in plan.md:"
+        grep "\[ \]" "$PLAN_FILE"
+        echo "Tip: Mark them as [x] or remove them before archiving."
+        exit 1
+    fi
+fi
+
+mv "$SRC" "$DEST"
+echo "Archived '$TRACK_NAME' to '$DEST'"

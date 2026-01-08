@@ -1,0 +1,38 @@
+#!/bin/bash
+if [[ "$1" == "--help" ]]; then
+    echo "COMMAND: cdd-start <track-name>"
+    echo "OBJECTIVE: Create an isolated workspace (Track)."
+    echo "RATIONALE: Isolates context so multiple agents/tasks don't collide."
+    exit 0
+fi
+
+TRACK_NAME=$1
+if [ -z "$TRACK_NAME" ]; then echo "Error: Missing track name."; exit 1; fi
+TRACK_DIR=".context/tracks/$TRACK_NAME"
+
+if [ -d "$TRACK_DIR" ]; then echo "Error: Track exists."; exit 1; fi
+
+mkdir -p "$TRACK_DIR"
+
+# Generate Structured Spec Template
+cat << SPEC > "$TRACK_DIR/spec.md"
+# Specification: $TRACK_NAME
+
+## 1. Background & Context
+> Why are we doing this? Link to product.md if needed.
+
+## 2. Requirements (The "What")
+- [ ] Requirement 1
+- [ ] Requirement 2
+
+## 3. Scenarios (Acceptance Criteria)
+> Use Gherkin style or bullet points. These MUST be testable.
+* Scenario A: Input X -> Output Y
+* Scenario B: Error condition Z
+SPEC
+
+echo "# Plan for $TRACK_NAME\n- [ ] 🧠 Phase 0: Populate spec.md (Analyze & Interview)\n- [ ] 🏗️ Phase 1: Scaffolding..." > "$TRACK_DIR/plan.md"
+echo "# Decision Log\n> Created $(date)" > "$TRACK_DIR/decisions.md"
+echo "# Scratchpad for $TRACK_NAME\n> Dump raw logs here." > "$TRACK_DIR/scratchpad.md"
+
+echo "Track '$TRACK_NAME' initialized."

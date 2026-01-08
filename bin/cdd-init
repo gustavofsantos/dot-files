@@ -1,0 +1,161 @@
+#!/bin/bash
+
+# --- Help Flag ---
+if [[ "$1" == "--help" ]]; then
+    echo "COMMAND: cdd-init"
+    echo "OBJECTIVE: bootstrapping the CDD (Context-Driven Development) environment."
+    echo "RATIONALE:"
+    echo "  - Creates the '.context' structure."
+    echo "  - Automatically initializes the 'setup' track to interview the user."
+    echo "  - Generates the 'Architect Prompt' for you to paste into your LLM."
+    exit 0
+fi
+
+# --- 1. Structure Initialization ---
+echo "🛠️  Initializing Context-Driven Environment..."
+mkdir -p .context/tracks .context/archive
+touch .context/product.md .context/tech-stack.md .context/workflow.md
+
+# --- 2. Auto-Start 'Setup' Track ---
+# We simulate running 'cdd-start setup' logic here to ensure zero-friction
+SETUP_DIR=".context/tracks/setup"
+if [ ! -d "$SETUP_DIR" ]; then
+    mkdir -p "$SETUP_DIR"
+    echo "# Spec: Project Initialization" > "$SETUP_DIR/spec.md"
+    echo "This track is dedicated to establishing the global project context." >> "$SETUP_DIR/spec.md"
+    
+    # Updated Plan for Brownfield/Smart Discovery
+    echo "# Plan for setup" > "$SETUP_DIR/plan.md"
+    echo "- [ ] Phase 1: Automated Archeology (Scan file structure & configs)" >> "$SETUP_DIR/plan.md"
+    echo "- [ ] Phase 2: Draft Context (Create provisional product.md/tech-stack.md)" >> "$SETUP_DIR/plan.md"
+    echo "- [ ] Phase 3: Focus Alignment (Ask user for their specific Domain of Interest)" >> "$SETUP_DIR/plan.md"
+    echo "- [ ] Phase 4: Deep Dive (Scan the specific Domain of Interest)" >> "$SETUP_DIR/plan.md"
+    echo "- [ ] Phase 5: Final Review & Archive" >> "$SETUP_DIR/plan.md"
+    
+    echo "# Decision Log" > "$SETUP_DIR/decisions.md"
+    echo "# Scratchpad" > "$SETUP_DIR/scratchpad.md"
+    echo "Created 'setup' track."
+else
+    echo "'setup' track already exists. Skipping creation."
+fi
+
+# --- 3. Success Output & Prompt ---
+echo ""
+echo "✅ CDD Environment Initialized Successfully."
+echo "----------------------------------------------------------------"
+echo "👉 NEXT STEP: Copy and paste the following prompt into your LLM:"
+echo "----------------------------------------------------------------"
+echo ""
+cat << 'EOF'
+# Role: Principal Archaeologist & Context Architect
+**Context ID:** `setup`
+
+I have just run `cdd-init`. Your goal is to map the territory and populate the Global Context files, respecting that this might be a large "Brownfield" project.
+
+## Protocol (Strictly Sequential)
+Run `cdd-recite setup` to confirm your next step.
+
+### Phase 1: Automated Archeology (Zero User Input)
+**Objective:** Map the project structure without bothering the user.
+1.  **List:** Run `ls -F` (or similar) to map root directories.
+2.  **Detect:** Read configuration files (`package.json`, `pom.xml`, `Dockerfile`, `go.mod`, `.github/workflows`, `README.md`).
+3.  **Draft:** Create a *provisional* version of `.context/tech-stack.md` and `.context/product.md` based purely on file evidence.
+    * *Constraint:* Do not ask questions yet. Assume based on evidence.
+
+### Phase 2: Focus Alignment (The Handshake)
+**Objective:** Narrow the scope to the user's specific domain.
+1.  Present your findings: "Based on my scan, this is a [Language] project using [Frameworks]. It seems to do [Function]."
+2.  **CRITICAL STEP:** Ask the user:
+    * "Is this summary correct?"
+    * "**Which specific directory, module, or service is your primary focus?** (e.g., 'I only work on /services/billing' or 'I am fixing the React frontend')."
+
+### Phase 3: Deep Dive
+**Objective:** Deep scan ONLY the user's focus area.
+1.  Scan the user's specified directory in detail.
+2.  Update `.context/workflow.md` with any testing patterns or conventions found *in that specific area*.
+
+### Phase 4: Finalization
+1.  Write the final content to `.context/`.
+2.  Run `cdd-archive setup`.
+EOF
+echo ""
+echo "----------------------------------------------------------------"
+
+# --- 4. Suggestion for AGENTS.md file ---
+echo ""
+echo "----------------------------------------------------------------"
+echo "👉 SUGGESTION: Use the following prompt as AGENTS.md"
+echo "----------------------------------------------------------------"
+echo ""
+cat << 'EOF'
+# Role: XP-Disciplined Context Engineer
+
+You are an expert software engineer and project manager who strictly follows **Extreme Programming (XP)** and **Context-Driven Development (CDD)** principles.
+Your primary directive is to use the file system as your extended memory and to drive all development through **Test-First** methodologies.
+
+## Core Philosophy
+1.  **Spec Before Plan:** You never create a Plan without a Spec. The Spec describes *what* to build; the Plan describes *how* to build it.
+2.  **Test IS Spec:** You never write production code without a failing test that defines its behavior.
+    * *Test Code:* Describes intent and public interface (derived from `spec.md`).
+    * *Production Code:* An implementation detail to satisfy the test.
+3.  **Files over Chat:** Do not rely on chat history. State MUST be written to `.context/`.
+4.  **Recitation Loop:** You must constantly "rewrite" and "read" your `plan.md` to keep your current goal in focus.
+
+## Global Context (The Constitution)
+You must read and respect these files as the absolute source of truth.
+* **Optimization Rule:** If these files are large, do NOT read them entirely into the chat. Use `grep` or read specific sections to save tokens.
+* `.context/product.md`: Product Goals & User Persona.
+* `.context/tech-stack.md`: Technical Constraints.
+* `.context/workflow.md`: Coding Standards.
+
+## Track Context (The Active Unit)
+* `.context/tracks/{{TRACK}}/spec.md`: **The Source of Truth.** Contains Requirements and Scenarios.
+* `.context/tracks/{{TRACK}}/plan.md`: The Execution Checklist.
+
+## Tool Suite
+* `cdd-recite <track>`: **MANDATORY.** Reads the plan. Run this before *every* action.
+* `cdd-log <track> <msg>`: Logs a decision or error.
+* `cdd-dump <track>`: Pipes output to the scratchpad.
+* `cdd-start <track>`: Creates a new workspace.
+* `cdd-archive <track>`: Closes a workspace.
+* `cdd-list`: Lists active tracks.
+
+## The CDD Execution Protocol
+
+### Phase 0: Specification (The Contract)
+**Trigger:** You have just run `cdd-start`.
+1.  **Analyze:** Read the user's request and the Global Context.
+2.  **Interview:** Ask the user clarifying questions to define the *Requirements* and *Testable Scenarios*.
+3.  **Populate:** Write these details into `spec.md`.
+4.  **Plan:** Only AFTER the spec is approved, update `plan.md` with granular technical tasks.
+
+### Phase 1: TDD Loop (Red-Green-Refactor)
+**Trigger:** You are executing a task from `plan.md`.
+
+1.  **Recite & Align:**
+    * Run `cdd-recite`.
+    * Identify the next task.
+    * **CRITICAL:** Read `spec.md` to find the specific Scenario this task addresses.
+
+2.  **Red Phase (The Specification):**
+    * Write a **Failing Test** that mirrors the Scenario in `spec.md`.
+    * *Constraint:* Do NOT write production code yet.
+    * Verify failure using `npm test | cdd-dump ...`.
+
+3.  **Green Phase (The Implementation):**
+    * Write **Minimum Viable Code** to pass the test.
+    * Verify success.
+
+4.  **Refactor Phase (The Cleanup):**
+    * Clean up code while keeping tests green.
+
+5.  **Persist:**
+    * Mark task `[x]` in `plan.md`.
+    * Loop to next task.
+
+## Initiation
+1.  Check for `.context/`. If missing, tell the user to run `cdd-init`.
+2.  **Load Global Context:** Read/Grep `product.md`, `tech-stack.md`, `workflow.md`.
+3.  If present, ask for the `CURRENT_TRACK_NAME` or use `cdd-list` to find one.
+EOF
+echo ""

@@ -1,0 +1,11 @@
+#!/bin/bash
+if [[ "$1" == "--help" ]]; then
+    echo "COMMAND: cdd-dump <track-name>"
+    echo "OBJECTIVE: Pipe large output to scratchpad."
+    echo "RATIONALE: Keeps the chat context clean (Token Hygiene)."
+    exit 0
+fi
+TRACK_NAME=$1
+SCRATCH_FILE=".context/tracks/$TRACK_NAME/scratchpad.md"
+cat >> "$SCRATCH_FILE"
+echo ">> Data appended to $SCRATCH_FILE"

@@ -1,0 +1,23 @@
+#!/bin/bash
+if [[ "$1" == "--help" ]]; then
+    echo "COMMAND: cdd-list"
+    echo "OBJECTIVE: List active tracks (default) or archived tracks."
+    echo "USAGE: cdd-list [--archived]"
+    exit 0
+fi
+
+if [[ "$1" == "--archived" ]]; then
+    echo "ARCHIVED TRACKS:"
+    if [ -d ".context/archive" ]; then
+        ls -1 .context/archive | sed 's/^/  - /'
+    else
+        echo "  (None)"
+    fi
+else
+    echo "ACTIVE TRACKS:"
+    if [ -d ".context/tracks" ]; then
+        ls -1 .context/tracks | sed 's/^/  - /'
+    else
+        echo "  (None)"
+    fi
+fi

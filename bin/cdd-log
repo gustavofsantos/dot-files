@@ -1,0 +1,12 @@
+#!/bin/bash
+if [[ "$1" == "--help" ]]; then
+    echo "COMMAND: cdd-log <track-name> <message>"
+    echo "OBJECTIVE: Record a permanent decision or error."
+    echo "RATIONALE: 'Mask, Don't Remove'. We must keep evidence of failures to avoid repeating them."
+    exit 0
+fi
+TRACK_NAME=$1
+MSG=$2
+LOG_FILE=".context/tracks/$TRACK_NAME/decisions.md"
+echo "[$(date "+%Y-%m-%d %H:%M:%S")] $MSG" >> "$LOG_FILE"
+echo "Logged to $LOG_FILE"

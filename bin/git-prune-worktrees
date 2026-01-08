@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Fetch latest remote state to identify merged/deleted branches
+git fetch --prune
+
+echo "Scanning for stale worktrees..."
+
+# List worktrees, excluding the main repository path
+worktrees=$(git worktree list --porcelain | grep "^worktree" | cut -d' ' -f2-)
+main_repo=$(git rev-parse --show-toplevel)
+
+for wt in $worktrees; do
+    if [ "$wt" == "$main_repo" ]; then continue; fi
+
+    branch=$(git -C "$wt" rev-parse --abbrev-ref HEAD 2>/dev/null)
+
+    # Check if the branch still exists locally or on remote
+    if ! git rev-parse --verify "$branch" >/dev/null 2>&1; then
+        reason="Branch '$branch' is missing"
+    else
+        reason="Branch '$branch' exists"
+    fi
+
+    read -p "Remove worktree at $wt? ($reason) [y/N]: " confirm
+    if [[ "$confirm" =~ ^[Yy]$ ]]; then
+        # Remove symlinks first to prevent git errors or orphaned links
+        find "$wt" -maxdepth 1 -type l -delete
+
+        git worktree remove "$wt"
+        echo "Deleted $wt"
+    fi
+done
+
+# Cleanup git metadata for any manually deleted directories
+git worktree prune

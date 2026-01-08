@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# Usage: git-checkout-worktree <branch-name>
+
+REPO_DIR=$(git rev-parse --show-toplevel)
+WORKSPACE_DIR=$(dirname "$REPO_DIR")
+PROJECT_NAME=$(basename "$REPO_DIR")
+WORKTREE_PARENT="$WORKSPACE_DIR/${PROJECT_NAME}-worktrees"
+
+mkdir -p "$WORKTREE_PARENT"
+
+BRANCH_NAME="$1"
+
+if [ -z "$BRANCH_NAME" ]; then
+    echo "Error: No branch name provided."
+    exit 1
+fi
+
+# Verify the branch exists locally
+if ! git show-ref --verify --quiet "refs/heads/$BRANCH_NAME"; then
+    echo "Error: Local branch '$BRANCH_NAME' does not exist."
+    exit 1
+fi
+
+WORKTREE_PATH="$WORKTREE_PARENT/$BRANCH_NAME"
+
+# Check if worktree path is empty or does not exist
+if [ -e "$WORKTREE_PATH" ] && [ "$(ls -A "$WORKTREE_PATH")" ]; then
+    echo "Error: Directory $WORKTREE_PATH exists and is not empty. Aborting."
+    exit 1
+fi
+
+# Add worktree using the existing branch
+git worktree add "$WORKTREE_PATH" "$BRANCH_NAME"
+
+# Symlink logic
+links=(".cursor" ".gemini" "openspec" "AGENTS.md")
+
+for item in "${links[@]}"; do
+    if [ -e "$REPO_DIR/$item" ]; then
+        if [ -e "$WORKTREE_PATH/$item" ]; then
+            echo "Info: $WORKTREE_PATH/$item already exists; skipping."
+        else
+            ln -s "$REPO_DIR/$item" "$WORKTREE_PATH/$item"
+            echo "Symlinked $item to $WORKTREE_PATH"
+        fi
+    fi
+done
+
+# Special case for CLAUDE.md symlink
+if [ -f "$REPO_DIR/AGENTS.md" ] && [ ! -e "$WORKTREE_PATH/CLAUDE.md" ]; then
+    ln -s "$REPO_DIR/AGENTS.md" "$WORKTREE_PATH/CLAUDE.md"
+    echo "Symlinked AGENTS.md to $WORKTREE_PATH/CLAUDE.md"
+fi
+
+echo "$WORKTREE_PATH"

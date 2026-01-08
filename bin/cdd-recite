@@ -1,0 +1,16 @@
+#!/bin/bash
+if [[ "$1" == "--help" ]]; then
+    echo "COMMAND: cdd-recite <track-name>"
+    echo "OBJECTIVE: Output the current Plan to the context window."
+    echo "RATIONALE: Forces the agent to 'attend' to the immediate next step, preventing drift."
+    exit 0
+fi
+TRACK_NAME=$1
+PLAN_FILE=".context/tracks/$TRACK_NAME/plan.md"
+if [ ! -f "$PLAN_FILE" ]; then echo "Error: Plan not found."; exit 1; fi
+
+echo "=== RECITATION: $TRACK_NAME ==="
+cat "$PLAN_FILE"
+echo -e "\n=== INSTRUCTION ==="
+echo "1. Identify the first unchecked item ([ ])."
+echo "2. That is your ONLY focus for the next step."

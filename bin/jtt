@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# Check if JIRA ticket ID is provided
+if [ -z "$1" ]; then
+    echo "Usage: $0 <TICKET-ID>"
+    exit 1
+fi
+
+TICKET_ID=$1
+
+# Fetch JIRA context in JSON format and process with jq
+# We extract summary, status, description (preserving some structure), links, and parent
+acli jira workitem view "$TICKET_ID" --fields "summary,status,description,issuelinks,parent" --json | jq -r '
+  def process_content:
+    if type == "array" then map(process_content) | join("")
+    elif .type == "text" then .text
+    elif .type == "paragraph" then (if .content then .content | process_content else "" end) + "\n"
+    elif .type == "heading" then "\n" + ("#" * .attrs.level) + " " + (if .content then .content | process_content else "" end) + "\n"
+    elif .type == "bulletList" then (if .content then .content | process_content else "" end) + "\n"
+    elif .type == "orderedList" then (if .content then .content | process_content else "" end) + "\n"
+    elif .type == "listItem" then "- " + (if .content then .content | process_content | sub("\n$"; "") else "" end) + "\n"
+    elif .content then .content | process_content
+    else ""
+    end;
+
+  "KEY: \(.key)",
+  "SUMMARY: \(.fields.summary)",
+  "STATUS: \(.fields.status.name)",
+  (if .fields.parent then "PARENT: \(.fields.parent.key) - \(.fields.parent.fields.summary)" else empty end),
+  "\nDESCRIPTION:",
+  (.fields.description.content | process_content),
+  "\nLINKS:",
+  (.fields.issuelinks[]? | 
+    if .inwardIssue then 
+      "- \(.type.inward): \(.inwardIssue.key) (\(.inwardIssue.fields.summary))" 
+    elif .outwardIssue then
+      "- \(.type.outward): \(.outwardIssue.key) (\(.outwardIssue.fields.summary))"
+    else empty end
+  )
+'
