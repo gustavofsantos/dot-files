@@ -21,19 +21,30 @@ cat << SPEC > "$TRACK_DIR/spec.md"
 ## 1. User Intent (The Goal)
 > [User Input Required]
 
-## 2. Context Analysis (Agent Findings)
+## 2. Relevant Context (The Files)
+> [Agent to Populate during Analysis]
+> List the specific files involved in this track.
+> This acts as the "Working Set" to reduce search tokens later.
+- `path/to/relevant/file.ext`
+
+## 3. Context Analysis (Agent Findings)
 > [Agent to Populate]
-> - Affected Files:
 > - Current Behavior:
 > - Proposed Changes:
 
-## 3. Scenarios (Acceptance Criteria)
+## 4. Scenarios (Acceptance Criteria)
 > [Agent to Draft based on Intent]
 - [ ] Scenario A
 - [ ] Scenario B
 SPEC
 
-echo "# Plan for $TRACK_NAME\n- [ ] 🗣️ Phase 0: Alignment & Analysis (Fill spec.md)\n- [ ] 📝 Phase 1: Approval (User signs off)" > "$TRACK_DIR/plan.md"
+cat << PLAN > "$TRACK_DIR/plan.md"
+# Plan for $TRACK_NAME
+
+- [ ] 🗣️ Phase 0: Alignment & Analysis (Fill spec.md)
+- [ ] 📝 Phase 1: Approval (User signs off)
+PLAN
+
 echo "# Decision Log\n> Created $(date)" > "$TRACK_DIR/decisions.md"
 echo "# Scratchpad for $TRACK_NAME\n> Dump raw logs here." > "$TRACK_DIR/scratchpad.md"
 
