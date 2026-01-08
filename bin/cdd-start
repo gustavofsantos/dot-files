@@ -25,7 +25,7 @@ cat << SPEC > "$TRACK_DIR/spec.md"
 > [Agent to Populate during Analysis]
 > List the specific files involved in this track.
 > This acts as the "Working Set" to reduce search tokens later.
-- `path/to/relevant/file.ext`
+- \`path/to/relevant/file.ext\`
 
 ## 3. Context Analysis (Agent Findings)
 > [Agent to Populate]
