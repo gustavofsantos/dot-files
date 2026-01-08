@@ -1,0 +1,72 @@
+#!/bin/bash
+if [[ "$1" == "--help" ]]; then
+    echo "COMMAND: cdd-view [track-name]"
+    echo "OBJECTIVE: Render track details using 'glow' (User Tool Only)."
+    echo "USAGE: 'cdd-view' for dashboard, 'cdd-view <track>' for details."
+    exit 0
+fi
+
+if ! command -v glow &> /dev/null; then
+    echo "Error: 'glow' is not installed. Please install it: [https://github.com/charmbracelet/glow](https://github.com/charmbracelet/glow)"
+    exit 1
+fi
+
+TRACK_NAME=$1
+
+if [ -z "$TRACK_NAME" ]; then
+    # Dashboard Mode
+    echo "# 📂 Project Dashboard" > .cdd_view_tmp.md
+    echo "" >> .cdd_view_tmp.md
+    echo "## 🌍 Global Context" >> .cdd_view_tmp.md
+    if [ -f ".context/product.md" ]; then
+        cat ".context/product.md" >> .cdd_view_tmp.md
+    else
+        echo "_No product.md found._" >> .cdd_view_tmp.md
+    fi
+    echo "" >> .cdd_view_tmp.md
+    echo "## 🟢 Active Tracks" >> .cdd_view_tmp.md
+    if [ -d ".context/tracks" ]; then
+        for t in .context/tracks/*; do
+            if [ -d "$t" ]; then
+                echo "* **$(basename "$t")**" >> .cdd_view_tmp.md
+            fi
+        done
+    else
+        echo "_No active tracks._" >> .cdd_view_tmp.md
+    fi
+    glow .cdd_view_tmp.md
+    rm .cdd_view_tmp.md
+else
+    # Track Detail Mode
+    TRACK_DIR=".context/tracks/$TRACK_NAME"
+    if [ ! -d "$TRACK_DIR" ]; then
+        echo "Error: Track '$TRACK_NAME' not found."
+        exit 1
+    fi
+    echo "# 🛤️ Track: $TRACK_NAME" > .cdd_view_tmp.md
+    echo "" >> .cdd_view_tmp.md
+    
+    echo "## 📄 Specification" >> .cdd_view_tmp.md
+    if [ -f "$TRACK_DIR/spec.md" ]; then
+        cat "$TRACK_DIR/spec.md" >> .cdd_view_tmp.md
+    else
+        echo "_Missing spec.md_" >> .cdd_view_tmp.md
+    fi
+    
+    echo "" >> .cdd_view_tmp.md
+    echo "## 📋 Plan" >> .cdd_view_tmp.md
+    if [ -f "$TRACK_DIR/plan.md" ]; then
+        cat "$TRACK_DIR/plan.md" >> .cdd_view_tmp.md
+    else
+        echo "_Missing plan.md_" >> .cdd_view_tmp.md
+    fi
+    
+    echo "" >> .cdd_view_tmp.md
+    echo "## 📜 Recent Decisions" >> .cdd_view_tmp.md
+    if [ -f "$TRACK_DIR/decisions.md" ]; then
+        tail -n 5 "$TRACK_DIR/decisions.md" >> .cdd_view_tmp.md
+    fi
+
+    glow .cdd_view_tmp.md
+    rm .cdd_view_tmp.md
+fi
