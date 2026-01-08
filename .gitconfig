@@ -37,13 +37,12 @@
   # Add new branch as worktree
   # git wta feature-branch
   wta		= "!git-add-worktree"
-  # Remove worktree (by dir name)
+  wtp           = "!git-prune-worktrees"
+  wtc           = "!git-checkout-worktree"
   # git wtr feature-branch
   wtr		= "!git-remove-worktree"
   # List all worktrees
   wtl		= "worktree list"
-  # Prune orphaned worktree
-  wtp		= "worktree prune"
   # Remove merged branches, prune worktrees
   tidy		= "!f() { git branch --merged | grep -v '\\*\\|main\\|master\\|develop\\|staging\\|forno' | xargs -r git branch -d; git worktree prune; }; f"
   # Update everything
