@@ -18,6 +18,7 @@ export HOMEBREW_NO_ENV_HINTS=1
 
 export PATH="$PNPM_HOME:$PATH"
 export PATH=$PATH:"$HOME"/.local/bin
+export PATH=$PATH:"$HOME"/.cargo/bin
 export PATH=$PATH:"$HOME"/.bin
 export PATH=$PATH:"$HOME"/bin
 export PATH=$PATH:"$HOME"/.gem/bin
