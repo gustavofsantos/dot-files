@@ -41,6 +41,7 @@ local colors = {
   gray__700    = "#3b4252",
   gray__800    = "#2e3440",
   gray__900    = "#222630",
+  gray__925    = "#1F2126",
   gray__950    = "#1A1C21",
 
   fg__50       = "#ede8dc",
@@ -236,11 +237,11 @@ local palette = {
 }
 
 local components = {
-  editor_bg = palette.gray0,
+  editor_bg = colors.gray__925,
   editor_fg = palette.cream3,
   editor_fg_alt = palette.cream1,
 
-  popup_bg = palette.gray01,
+  popup_bg = palette.gray__950,
   popup_fg = palette.cream3,
 
   border = palette.gray00,
