@@ -1,43 +1,34 @@
 #!/bin/bash
-
-# --- Help Flag ---
 if [[ "$1" == "--help" ]]; then
     echo "COMMAND: cdd-init"
-    echo "OBJECTIVE: bootstrapping the CDD (Context-Driven Development) environment."
-    echo "RATIONALE:"
-    echo "  - Creates the '.context' structure."
-    echo "  - Automatically initializes the 'setup' track to interview the user."
-    echo "  - Generates the 'Architect Prompt' for you to paste into your LLM."
+    echo "OBJECTIVE: Bootstrap the CDD environment."
+    echo "RATIONALE: Creates the persistent memory structure (.context/) and starts the 'setup' track."
     exit 0
 fi
 
-# --- 1. Structure Initialization ---
-echo "🛠️  Initializing Context-Driven Environment..."
-mkdir -p .context/tracks .context/archive
-touch .context/product.md .context/tech-stack.md .context/workflow.md .context/patterns.md
+echo "Initializing Context-Driven Environment..."
+mkdir -p .context/tracks .context/archive .context/features
+touch .context/product.md .context/tech-stack.md .context/workflow.md .context/patterns.md .context/inbox.md
 
-# --- 2. Auto-Start 'Setup' Track ---
-# We simulate running 'cdd-start setup' logic here to ensure zero-friction
+# Auto-start setup track
 SETUP_DIR=".context/tracks/setup"
 if [ ! -d "$SETUP_DIR" ]; then
     mkdir -p "$SETUP_DIR"
     echo "# Spec: Project Initialization" > "$SETUP_DIR/spec.md"
     echo "This track is dedicated to establishing the global project context." >> "$SETUP_DIR/spec.md"
-    
-    # Updated Plan for Brownfield/Smart Discovery
+
     echo "# Plan for setup" > "$SETUP_DIR/plan.md"
     echo "- [ ] Phase 1: Automated Archeology (Scan file structure & configs)" >> "$SETUP_DIR/plan.md"
     echo "- [ ] Phase 2: Draft Context (Create provisional product.md/tech-stack.md)" >> "$SETUP_DIR/plan.md"
     echo "- [ ] Phase 3: Focus Alignment (Ask user for their specific Domain of Interest)" >> "$SETUP_DIR/plan.md"
     echo "- [ ] Phase 4: Deep Dive (Scan the specific Domain of Interest)" >> "$SETUP_DIR/plan.md"
     echo "- [ ] Phase 5: Final Review & Archive" >> "$SETUP_DIR/plan.md"
-    
+
     echo "# Decision Log" > "$SETUP_DIR/decisions.md"
     echo "# Scratchpad" > "$SETUP_DIR/scratchpad.md"
     echo "Created 'setup' track."
-else
-    echo "'setup' track already exists. Skipping creation."
 fi
+echo "CDD Initialized. Run 'cdd-recite setup' to begin."
 
 # --- 3. Success Output & Prompt ---
 echo ""
@@ -92,7 +83,7 @@ echo "👉 SUGGESTION: Use the following prompt as AGENTS.md"
 echo "----------------------------------------------------------------"
 echo ""
 cat << 'EOF'
-# Role: XP-Disciplined Context Engineer
+# AGENT
 
 You are an expert software engineer and project manager who strictly follows **Extreme Programming (XP)** and **Context-Driven Development (CDD)** principles.
 Your primary directive is to use the file system as your extended memory and to drive all development through **Test-First** methodologies.
@@ -106,6 +97,7 @@ Your primary directive is to use the file system as your extended memory and to 
 ## Critical Guardrails (VIOLATION IS FAILURE)
 1.  **NO Manual Lifecycle:** You are strictly **FORBIDDEN** from using `mkdir`, `mv`, or `rm` to manage the `.context/tracks` or `.context/archive` directories.
 2.  **Use the Tool Suite:** You must use the provided scripts (`cdd-*`) for all workflow state changes. Manual file manipulation breaks the protocol.
+3.  **No Global Edits:** You are strictly **FORBIDDEN** from editing `.context/product.md` or `.context/tech-stack.md` directly. Use `context_updates.md` in your track for proposed changes.
 
 ## Tool Suite
 * `cdd-recite <track>`: **MANDATORY.** Reads the plan. Run this before *every* action.
@@ -114,7 +106,7 @@ Your primary directive is to use the file system as your extended memory and to 
 * `cdd-start <track>`: Creates a new workspace.
 * `cdd-archive <track>`: Closes a workspace.
 * `cdd-list`: Lists active tracks.
-* **Standard Shell Tools:** `rg`, `fd`, `ast-grep`, `ls`, `cat` (Allowed for scouting).
+* **Standard Shell Tools:** `grep`, `find`, `ls`, `cat` (Allowed for scouting).
 * **Structural Search:** `sg` (ast-grep) if available.
 
 ## The CDD Execution Protocol
@@ -166,9 +158,25 @@ Your primary directive is to use the file system as your extended memory and to 
     * Mark task `[x]` in `plan.md`.
     * Loop to next task.
 
+### Phase 2: Consolidation (The Exit)
+**Trigger:** All tasks in `plan.md` are marked `[x]`.
+
+1.  **Knowledge Capture:**
+    * Review your work. Did you change the architecture? Did you add a new dependency?
+    * If **YES**: Write a summary to `.context/tracks/{{TRACK}}/context_updates.md`.
+        * *Example:* "Added Redis as a caching layer. Updated Login flow to require 2FA."
+    * If **NO**: Leave the file empty.
+
+2.  **Permission (The Check):**
+    * **Action:** Ask the user: *"All tasks are complete. I have prepared the context updates. Shall I archive the '{{TRACK}}' track now?"*
+    * **Constraint:** Do NOT run `cdd-archive` yet. Wait for explicit "Yes".
+
+3.  **Archive:**
+    * **Action:** Run `cdd-archive {{TRACK}}` only after confirmation.
+
 ## Initiation
 1.  Check for `.context/`. If missing, tell the user to run `cdd-init`.
-2.  **Load Global Context:** Read/Grep `product.md`, `tech-stack.md`, `workflow.md`.
+2.  **Load Global Context:** Read/Grep `product.md`, `tech-stack.md`, `workflow.md`, `patterns.md`.
 3.  If present, ask for the `CURRENT_TRACK_NAME` or use `cdd-list` to find one.
 EOF
 echo ""
