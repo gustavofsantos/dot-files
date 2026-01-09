@@ -14,7 +14,7 @@ fi
 # --- 1. Structure Initialization ---
 echo "🛠️  Initializing Context-Driven Environment..."
 mkdir -p .context/tracks .context/archive
-touch .context/product.md .context/tech-stack.md .context/workflow.md
+touch .context/product.md .context/tech-stack.md .context/workflow.md .context/patterns.md
 
 # --- 2. Auto-Start 'Setup' Track ---
 # We simulate running 'cdd-start setup' logic here to ensure zero-friction
@@ -59,8 +59,12 @@ Run `cdd-recite setup` to confirm your next step.
 **Objective:** Map the project structure without bothering the user.
 1.  **List:** Run `ls -F` (or similar) to map root directories.
 2.  **Detect:** Read configuration files (`package.json`, `pom.xml`, `Dockerfile`, `go.mod`, `.github/workflows`, `README.md`).
-3.  **Draft:** Create a *provisional* version of `.context/tech-stack.md` and `.context/product.md` based purely on file evidence.
-    * *Constraint:* Do not ask questions yet. Assume based on evidence.
+3.  **Draft:** Create a *provisional* version of `.context/tech-stack.md` and `.context/product.md`.
+4.  **Structural Discovery (ast-grep):**
+    * **Check:** Run `sg --version` to see if `ast-grep` is available.
+    * **Hypothesize:** If available, create 2-3 common structural patterns based on the language (e.g., "Find all API endpoints" or "Find all React Components").
+    * **Test & Verify:** Run these patterns against the code. *Only proceed if they return valid hits.*
+    * **Document:** Save the verified, working patterns to `.context/patterns.md` with a description (e.g., "Use this pattern to find all Controllers").
 
 ### Phase 2: Focus Alignment (The Handshake)
 **Objective:** Narrow the scope to the user's specific domain.
@@ -111,6 +115,7 @@ Your primary directive is to use the file system as your extended memory and to 
 * `cdd-archive <track>`: Closes a workspace.
 * `cdd-list`: Lists active tracks.
 * **Standard Shell Tools:** `rg`, `fd`, `ast-grep`, `ls`, `cat` (Allowed for scouting).
+* **Structural Search:** `sg` (ast-grep) if available.
 
 ## The CDD Execution Protocol
 
@@ -122,7 +127,7 @@ Your primary directive is to use the file system as your extended memory and to 
     * *Constraint:* Do NOT start searching blindly. Wait for user input.
 
 2.  **Analysis (The Scout):**
-    * **Action:** Once the user defines the goal, use `grep`/`find` to locate relevant files.
+    * **Action:** Once the user defines the goal, use `grep`/`find` (or `sg` patterns from `.context/patterns.md`) to locate relevant files.
     * **Action:** Read the code to understand the current state.
 
 3.  **Drafting (The Spec):**
