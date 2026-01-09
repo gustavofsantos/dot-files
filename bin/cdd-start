@@ -23,8 +23,6 @@ cat << SPEC > "$TRACK_DIR/spec.md"
 
 ## 2. Relevant Context (The Files)
 > [Agent to Populate during Analysis]
-> List the specific files involved in this track.
-> This acts as the "Working Set" to reduce search tokens later.
 - \`path/to/relevant/file.ext\`
 
 ## 3. Context Analysis (Agent Findings)
@@ -33,10 +31,17 @@ cat << SPEC > "$TRACK_DIR/spec.md"
 > - Proposed Changes:
 
 ## 4. Scenarios (Acceptance Criteria)
-> [Agent to Draft based on Intent]
-- [ ] Scenario A
-- [ ] Scenario B
+> [Agent to Draft based on Intent - Gherkin Style Preferred]
+> Feature: $TRACK_NAME
+>   Scenario: Happy Path
+>     Given ...
+>     When ...
+>     Then ...
 SPEC
+
+# Context Updates Staging File
+echo "# Proposed Global Context Updates" > "$TRACK_DIR/context_updates.md"
+echo "> Add notes here if product.md or tech-stack.md needs updating." >> "$TRACK_DIR/context_updates.md"
 
 cat << PLAN > "$TRACK_DIR/plan.md"
 # Plan for $TRACK_NAME
@@ -45,7 +50,14 @@ cat << PLAN > "$TRACK_DIR/plan.md"
 - [ ] 📝 Phase 1: Approval (User signs off)
 PLAN
 
-echo "# Decision Log\n> Created $(date)" > "$TRACK_DIR/decisions.md"
-echo "# Scratchpad for $TRACK_NAME\n> Dump raw logs here." > "$TRACK_DIR/scratchpad.md"
+cat << DECISION_LOG > "$TRACK_DIR/decisions.md"
+# Decision Log
+> Created $(date)
+DECISION_LOG
+
+cat << SCRATCHPAD > "$TRACK_DIR/scratchpad.md"
+# Scratchpad for $TRACK_NAME
+# > Dump raw logs here.
+SCRATCHPAD
 
 echo "Track '$TRACK_NAME' initialized."
