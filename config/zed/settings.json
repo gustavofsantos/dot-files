@@ -140,7 +140,7 @@
   },
   "preview_tabs": {
     "enabled": false,
-    "enable_preview_from_code_navigation": true
+    "enable_keep_preview_on_code_navigation": true
   },
   "git": {
     "git_gutter": "tracked_files",
@@ -148,29 +148,7 @@
       "enabled": false
     }
   },
-  "context_servers": {
-        "sequential-thinking": {
-            "source": "custom",
-            "enabled": true,
-            "command": "npx",
-            "args": [
-                "-y",
-                "@modelcontextprotocol/server-sequential-thinking"
-            ]
-        },
-        "memory": {
-            "source": "custom",
-            "enabled": true,
-            "command": "npx",
-            "args": [
-                "-y",
-                "@modelcontextprotocol/server-memory"
-            ],
-            "env": {
-                "MEMORY_FILE_PATH": "/Users/gustavo.fsantos/Documents/Obsidian/Notes/memory.json"
-            }
-        }
-    },
+  "context_servers": {},
   "features": {
     "edit_prediction_provider": "zed"
   },
