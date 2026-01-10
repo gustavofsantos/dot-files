@@ -6,5 +6,10 @@
     "label": "testfile",
     "command": "testfile",
     "args": ["$ZED_FILE"]
+  },
+  {
+    "label": "testchanged",
+    "command": "testallchanged",
+    "args": []
   }
 ]

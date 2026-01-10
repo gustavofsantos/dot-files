@@ -17,7 +17,8 @@
   {
     "context": "EmptyPane || SharedScreen || vim_mode == normal",
     "bindings": {
-      "space t": ["task::Spawn", {"task_name": "testfile", "reveal": "no_focus"} ]
+      "space t f": ["task::Spawn", {"task_name": "testfile", "reveal": "no_focus"} ],
+      "space t c": ["task::Spawn", {"task_name": "testchanged", "reveal": "no_focus"} ]
     }
   },
   {
@@ -69,7 +70,7 @@
       "ctrl-l": "workspace::ActivatePaneRight",
       "ctrl-k": "workspace::ActivatePaneUp",
       "ctrl-j": "workspace::ActivatePaneDown",
-      "space w s": "pane::SplitLeft",
+      "space w s": "pane::SplitRight",
       "space w shift-s": "pane::SplitDown",
       "space q": "pane::CloseAllItems",
       "ctrl-w s": "pane::SplitLeft",
@@ -111,7 +112,17 @@
       "space z": "buffer_search::Deploy",
       "space space": "pane::AlternateFile",
       "0": ["vim::StartOfLine", { "display_lines": true }],
-      "$": ["vim::EndOfLine", { "display_lines": true }]
+      "$": ["vim::EndOfLine", { "display_lines": true }],
+      "ctrl-s": "workspace::Save",
+      "ctrl-q": "pane::CloseActiveItem",
+      "space w": "workspace::SaveAll",
+      "space shift-q": "workspace::Quit",
+      "] c": "editor::GoToNextDiagnostic",
+      "[ c": "editor::GoToPreviousDiagnostic",
+      "] d": "editor::GoToNextDiagnostic",
+      "[ d": "editor::GoToPreviousDiagnostic",
+      "space t f": ["task::Spawn", { "task_name": "testfile", "reveal": "no_focus"} ],
+      "space t c": ["task::Spawn", { "task_name": "testchanged", "reveal": "no_focus"} ]
     }
   },
   {
