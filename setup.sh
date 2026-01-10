@@ -21,5 +21,11 @@ cd bin && find . -type f -exec ln -sf "$(pwd)/{}" "$HOME/.bin/{}" \; && cd ..
 echo "Linking bin files... OK"
 
 echo "Linking xdg config..."
-stow config
+mkdir -p "$HOME/.config"
+for entry in config/*; do
+  [ -e "$entry" ] || continue
+  name=$(basename "$entry")
+  [ "$name" == ".stowrc" ] && continue
+  ln -sf "$(pwd)/$entry" "$HOME/.config/$name"
+done
 echo "Linking xdg config... OK"
