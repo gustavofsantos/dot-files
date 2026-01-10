@@ -2,7 +2,7 @@
 
 ## Infrastructure & OS
 - **OS:** Linux
-- **Package Manager:** Homebrew (via `Brewfile`), GNU Stow (for symlink management)
+- **Package Manager:** Homebrew (via `Brewfile`)
 
 ## Languages & Runtimes
 - **Shell:** Bash, Zsh

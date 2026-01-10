@@ -1,0 +1,12 @@
+# Plan for manual_symlinks
+- [x] 🗣️ Phase 0: Alignment & Analysis (Fill spec.md)
+- [x] 📝 Phase 1: Approval (User signs off)
+- [x] 🛠️ Phase 2: Implementation
+    - [x] Update `setup.sh` to link `config/` entries manually.
+    - [x] Delete `config/.stowrc`.
+    - [x] Update `.context/tech-stack.md` to remove `stow`.
+- [x] ✅ Phase 3: Verification
+    - [x] Run `./setup.sh` and verify symlinks in `~/.config`.
+- [x] 🏁 Phase 4: Consolidation
+    - [x] Update `context_updates.md`.
+    - [x] Archive track.
