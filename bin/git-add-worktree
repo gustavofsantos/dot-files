@@ -59,6 +59,16 @@ if [ -d "$REPO_DIR/openspec" ]; then
 fi
 
 
+if [ -d "$REPO_DIR/.context" ]; then
+    if [ -e "$WORKTREE_PATH/.context" ]; then
+        echo "Info: $WORKTREE_PATH/.context already exists; skipping symlink."
+    else
+        ln -s "$REPO_DIR/.context" "$WORKTREE_PATH/.openspec"
+        echo "Symlinked .context from $REPO_DIR to $WORKTREE_PATH"
+    fi
+fi
+
+
 # If the main repo has an AGENTS.md file, symlink it into the new worktree
 if [ -f "$REPO_DIR/AGENTS.md" ]; then
     if [ -e "$WORKTREE_PATH/AGENTS.md" ]; then
