@@ -11,7 +11,6 @@ mkdir -p "$WORKTREE_PARENT"
 
 WORKTREE_NAME="$1"
 BASE_BRANCH="${2:-HEAD}"
-
 WORKTREE_PATH="$WORKTREE_PARENT/$WORKTREE_NAME"
 
 # Check if worktree path is empty or does not exist
@@ -27,67 +26,36 @@ else
     git worktree add -b "$WORKTREE_NAME" "$WORKTREE_PATH" "$BASE_BRANCH"
 fi
 
-# If the main repo has a .cursor directory, symlink it into the new worktree
-if [ -d "$REPO_DIR/.cursor" ]; then
-    if [ -e "$WORKTREE_PATH/.cursor" ]; then
-        echo "Info: $WORKTREE_PATH/.cursor already exists; skipping symlink."
-    else
-        ln -s "$REPO_DIR/.cursor" "$WORKTREE_PATH/.cursor"
-        echo "Symlinked .cursor from $REPO_DIR to $WORKTREE_PATH"
+# Helper function to symlink a source to a target
+symlink_if_needed() {
+    local source="$1"
+    local target="$2"
+    local source_type="$3"  # "dir" or "file"
+
+    # Check if source exists
+    if [ "$source_type" = "dir" ] && [ ! -d "$source" ]; then
+        return
+    elif [ "$source_type" = "file" ] && [ ! -f "$source" ]; then
+        return
     fi
-fi
 
-
-# If the main repo has a .gemini directory, symlink it into the new worktree
-if [ -d "$REPO_DIR/.gemini" ]; then
-    if [ -e "$WORKTREE_PATH/.gemini" ]; then
-        echo "Info: $WORKTREE_PATH/.gemini already exists; skipping symlink."
-    else
-        ln -s "$REPO_DIR/.gemini" "$WORKTREE_PATH/.gemini"
-        echo "Symlinked .gemini from $REPO_DIR to $WORKTREE_PATH"
+    # If target already exists, skip
+    if [ -e "$target" ]; then
+        echo "Info: $target already exists; skipping symlink."
+        return
     fi
-fi
 
+    ln -s "$source" "$target"
+    echo "Symlinked $(basename "$source") from $REPO_DIR to $WORKTREE_PATH"
+}
 
-if [ -d "$REPO_DIR/openspec" ]; then
-    if [ -e "$WORKTREE_PATH/openspec" ]; then
-        echo "Info: $WORKTREE_PATH/openspec already exists; skipping symlink."
-    else
-        ln -s "$REPO_DIR/openspec" "$WORKTREE_PATH/openspec"
-        echo "Symlinked openspec from $REPO_DIR to $WORKTREE_PATH"
-    fi
-fi
-
-
-if [ -d "$REPO_DIR/.context" ]; then
-    if [ -e "$WORKTREE_PATH/.context" ]; then
-        echo "Info: $WORKTREE_PATH/.context already exists; skipping symlink."
-    else
-        ln -s "$REPO_DIR/.context" "$WORKTREE_PATH/.openspec"
-        echo "Symlinked .context from $REPO_DIR to $WORKTREE_PATH"
-    fi
-fi
-
-
-# If the main repo has an AGENTS.md file, symlink it into the new worktree
-if [ -f "$REPO_DIR/AGENTS.md" ]; then
-    if [ -e "$WORKTREE_PATH/AGENTS.md" ]; then
-        echo "Info: $WORKTREE_PATH/AGENTS.md already exists; skipping symlink."
-    else
-        ln -s "$REPO_DIR/AGENTS.md" "$WORKTREE_PATH/AGENTS.md"
-        echo "Symlinked AGENTS.md from $REPO_DIR to $WORKTREE_PATH"
-    fi
-fi
-
-# If the main repo has an AGENTS.md file, symlink it into the new worktree as CLAUDE.md
-if [ -f "$REPO_DIR/AGENTS.md" ]; then
-    if [ -e "$WORKTREE_PATH/CLAUDE.md" ]; then
-        echo "Info: $WORKTREE_PATH/CLAUDE.md already exists; skipping symlink."
-    else
-        ln -s "$REPO_DIR/AGENTS.md" "$WORKTREE_PATH/CLAUDE.md"
-        echo "Symlinked AGENTS.md from $REPO_DIR to $WORKTREE_PATH/CLAUDE.md"
-    fi
-fi
+# Symlink shared resources from main repo
+symlink_if_needed "$REPO_DIR/.cursor" "$WORKTREE_PATH/.cursor" "dir"
+symlink_if_needed "$REPO_DIR/.claude" "$WORKTREE_PATH/.claude" "dir"
+symlink_if_needed "$REPO_DIR/.context" "$WORKTREE_PATH/.context" "dir"
+symlink_if_needed "$REPO_DIR/.agents" "$WORKTREE_PATH/.agents" "dir"
+symlink_if_needed "$REPO_DIR/AGENTS.md" "$WORKTREE_PATH/AGENTS.md" "file"
+symlink_if_needed "$REPO_DIR/AGENTS.md" "$WORKTREE_PATH/CLAUDE.md" "file"
 
 # Output the worktree path for the parent shell to use
 echo "$WORKTREE_PATH"
