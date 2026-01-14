@@ -10,7 +10,7 @@ TICKET_ID=$1
 
 # Fetch JIRA context in JSON format and process with jq
 # We extract summary, status, description (preserving some structure), links, and parent
-acli jira workitem view "$TICKET_ID" --fields "summary,status,description,issuelinks,parent" --json | jq -r '
+acli jira workitem view "$TICKET_ID" --fields "summary,status,description,issuelinks,parent,comment" --json | jq -r '
   def process_content:
     if type == "array" then map(process_content) | join("")
     elif .type == "text" then .text
@@ -19,6 +19,12 @@ acli jira workitem view "$TICKET_ID" --fields "summary,status,description,issuel
     elif .type == "bulletList" then (if .content then .content | process_content else "" end) + "\n"
     elif .type == "orderedList" then (if .content then .content | process_content else "" end) + "\n"
     elif .type == "listItem" then "- " + (if .content then .content | process_content | sub("\n$"; "") else "" end) + "\n"
+    elif .type == "table" then "\n" + (.content | process_content)
+    elif .type == "tableRow" then "| " + (.content | process_content) + "\n"
+    elif .type == "tableHeader" then (.content | process_content | sub("\n$"; "")) + " | "
+    elif .type == "tableCell" then (.content | process_content | sub("\n$"; "")) + " | "
+    elif .type == "inlineCard" then (.attrs.url // "")
+    elif .type == "blockCard" then (.attrs.url // "")
     elif .content then .content | process_content
     else ""
     end;
@@ -36,5 +42,14 @@ acli jira workitem view "$TICKET_ID" --fields "summary,status,description,issuel
     elif .outwardIssue then
       "- \(.type.outward): \(.outwardIssue.key) (\(.outwardIssue.fields.summary))"
     else empty end
-  )
+  ),
+  (if .fields.comment.comments | length > 0 then
+    "\nCOMMENTS:",
+    (.fields.comment.comments[] | 
+      "---",
+      "Author: \(.author.displayName)",
+      "Date: \(.created)",
+      "\n\(.body.content | process_content)"
+    )
+  else empty end)
 '
