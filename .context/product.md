@@ -1,13 +1,21 @@
-# Product Context
+# Product: Personal Development Environment
 
-## Purpose
-This project is a comprehensive set of "dotfiles" and custom CLI utilities designed to create a highly efficient, context-driven development environment. It manages configurations for essential developer tools and provides a suite of custom scripts to streamline workflows.
-
-## Key Features
-- **Environment Management:** Automated setup and linking of configuration files using a custom `setup.sh` script.
-- **Context-Driven Development (CDD):** A specialized workflow (and supporting scripts) that uses the file system as an extended memory for LLM-assisted engineering.
-- **Enhanced CLI Workflow:** A collection of custom scripts in `bin/` for advanced git operations, testing, linting, and productivity (e.g., `tmux-sessionizer`, `asknotes`, `today`, `week`).
-- **Modern Editor Config:** A sophisticated Neovim setup with a focus on productivity, specialized for various languages (Clojure, Lua, etc.).
+## Vision
+A single-source-of-truth repository for personal shell, editor, and tooling configurations that can be rapidly deployed across Linux and macOS devices.
 
 ## Target Audience
-The primary user is a software engineer (gsantos) who favors XP-disciplined development, TDD, and leveraging LLMs within a structured, terminal-based environment.
+- Primary: Personal use by the author
+- Secondary: Public reference for others seeking configuration patterns and tooling inspiration
+
+## Key Value Propositions
+- **Consistency**: Replicate identical configurations across multiple machines
+- **Speed**: Bootstrap a fully configured development environment via a single setup script
+- **Portability**: Support both Linux and macOS ecosystems
+- **Transparency**: Public reference repository for configuration best practices
+
+## Core Configurations Managed
+- Shell configurations (.zshrc, .zprofile, .zshenv)
+- Editor configurations (.vimrc, .emacs, .ideavimrc)
+- Git configurations (.gitconfig, .githelpers, .gitmessage)
+- Tool configurations (.psqlrc, .yarnrc.yml, .todo.cfg)
+- System bootstrapping (Brewfile for macOS, setup.sh for universal setup)

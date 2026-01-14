@@ -1,4 +1,0 @@
-- Removed GNU Stow as a dependency.
-- Updated `setup.sh` to manually symlink configuration files from `config/` to `~/.config/`.
-- Removed `config/.stowrc`.
-- Updated `.context/tech-stack.md` and `.context/product.md` to reflect the removal of GNU Stow.
