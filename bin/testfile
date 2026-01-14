@@ -17,10 +17,14 @@ fi
 
 # Check if we have any files to test
 if [ ${#file_paths[@]} -eq 0 ]; then
-    echo "Usage:"
-    echo "  testfile <file_path> [<file_path2> ...]"
-    echo "  listchangedtests | testfile"
-    exit 1
+    # Exit silently if piped empty input; show usage only if invoked with arguments
+    if [ "$#" -gt 0 ]; then
+        echo "Usage:"
+        echo "  testfile <file_path> [<file_path2> ...]"
+        echo "  listchangedtests | testfile"
+        exit 1
+    fi
+    exit 0
 fi
 
 # Group files by project
