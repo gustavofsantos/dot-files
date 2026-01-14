@@ -1,6 +1,6 @@
 ---
 name: cdd-workflow
-description: The Orchestrator that analyzes the plan and delegates to the appropriate Agent Skill.
+description: The Context-Driven Development Orchestrator that analyzes the plan and delegates to the appropriate Agent Skill.
 metadata:
   version: 1.0.0
 ---
