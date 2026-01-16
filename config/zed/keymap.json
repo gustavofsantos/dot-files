@@ -116,10 +116,9 @@
       "ctrl-s": "workspace::Save",
       "ctrl-q": "pane::CloseActiveItem",
       "space w": "workspace::SaveAll",
-      "space shift-q": "workspace::Quit",
-      "] c": "editor::GoToNextDiagnostic",
+      "] c": "editor::GoToDiagnostic",
       "[ c": "editor::GoToPreviousDiagnostic",
-      "] d": "editor::GoToNextDiagnostic",
+      "] d": "editor::GoToDiagnostic",
       "[ d": "editor::GoToPreviousDiagnostic",
       "space t f": ["task::Spawn", { "task_name": "testfile", "reveal": "no_focus"} ],
       "space t c": ["task::Spawn", { "task_name": "testchanged", "reveal": "no_focus"} ]
