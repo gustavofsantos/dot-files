@@ -33,24 +33,35 @@ fi
 # Add worktree using the existing branch
 git worktree add "$WORKTREE_PATH" "$BRANCH_NAME"
 
-# Symlink logic
-links=(".cursor" ".gemini" "openspec" "AGENTS.md")
+# Helper function to symlink a source to a target
+symlink_if_needed() {
+    local source="$1"
+    local target="$2"
+    local source_type="$3"  # "dir" or "file"
 
-for item in "${links[@]}"; do
-    if [ -e "$REPO_DIR/$item" ]; then
-        if [ -e "$WORKTREE_PATH/$item" ]; then
-            echo "Info: $WORKTREE_PATH/$item already exists; skipping."
-        else
-            ln -s "$REPO_DIR/$item" "$WORKTREE_PATH/$item"
-            echo "Symlinked $item to $WORKTREE_PATH"
-        fi
+    # Check if source exists
+    if [ "$source_type" = "dir" ] && [ ! -d "$source" ]; then
+        return
+    elif [ "$source_type" = "file" ] && [ ! -f "$source" ]; then
+        return
     fi
-done
 
-# Special case for CLAUDE.md symlink
-if [ -f "$REPO_DIR/AGENTS.md" ] && [ ! -e "$WORKTREE_PATH/CLAUDE.md" ]; then
-    ln -s "$REPO_DIR/AGENTS.md" "$WORKTREE_PATH/CLAUDE.md"
-    echo "Symlinked AGENTS.md to $WORKTREE_PATH/CLAUDE.md"
-fi
+    # If target already exists, skip
+    if [ -e "$target" ]; then
+        echo "Info: $target already exists; skipping symlink."
+        return
+    fi
+
+    ln -s "$source" "$target"
+    echo "Symlinked $(basename "$source") from $REPO_DIR to $WORKTREE_PATH"
+}
+
+# Symlink shared resources from main repo
+symlink_if_needed "$REPO_DIR/.cursor" "$WORKTREE_PATH/.cursor" "dir"
+symlink_if_needed "$REPO_DIR/.claude" "$WORKTREE_PATH/.claude" "dir"
+symlink_if_needed "$REPO_DIR/.context" "$WORKTREE_PATH/.context" "dir"
+symlink_if_needed "$REPO_DIR/.agents" "$WORKTREE_PATH/.agents" "dir"
+symlink_if_needed "$REPO_DIR/AGENTS.md" "$WORKTREE_PATH/AGENTS.md" "file"
+symlink_if_needed "$REPO_DIR/AGENTS.md" "$WORKTREE_PATH/CLAUDE.md" "file"
 
 echo "$WORKTREE_PATH"
