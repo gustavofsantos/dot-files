@@ -244,8 +244,8 @@ local components = {
   popup_bg = palette.gray__950,
   popup_fg = palette.cream3,
 
-  border = palette.gray00,
-  border_alt = palette.gray01,
+  border = palette.gray1,
+  border_alt = palette.gray1,
 
   text_normal = palette.cream3,
   text_muted = palette.gray5,
@@ -426,7 +426,7 @@ local highlights = {
   MoreMsg = { fg = components.ui_highlight },
   Question = { fg = palette.nord05 },
 
-  StatusLine = { fg = palette.nord05, bg = colors.gray__800 },
+  StatusLine = { fg = colors.gray__500, bg = colors.gray__800 },
   StatusLineNC = { fg = palette.nord04, bg = colors.gray__950 },
   StatusLineTerm = { fg = palette.nord05, bg = palette.nord01 },
   StatusLineTermNC = { fg = palette.nord04, bg = palette.nord00 },
@@ -666,7 +666,7 @@ local highlights = {
   MiniStatuslineModeCommand = { fg = components.editor_bg, bg = components.mode_command },
   MiniStatuslineModeOther = { fg = components.editor_bg, bg = components.mode_other },
   MiniStatuslineDevinfo = { fg = colors.gray__500, bg = colors.gray__800 },
-  MiniStatuslineFilename = { bg = colors.gray__600 },
+  MiniStatuslineFilename = { fg = colors.gray__400, bg = colors.gray__800 },
   MiniStatuslineFileinfo = { bg = colors.gray__900 },
   MiniStatuslineInactive = { fg = components.text_subtle, bg = components.border },
 

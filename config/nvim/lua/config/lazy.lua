@@ -24,7 +24,7 @@ require("lazy").setup({
     { import = "plugins" }
   },
   install = {
-    colorscheme = { "alabaster" },
+    colorscheme = { "nord" },
   },
   checker = {
     notify = false,
