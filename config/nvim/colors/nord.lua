@@ -407,7 +407,7 @@ local highlights = {
 
   -- Gutter
   CursorColumn = { bg = palette.nord01 },
-  CursorLine = { bg = palette.gray1 },
+  CursorLine = { bg = palette.gray0 },
   CursorLineNr = { fg = components.warning_base, bg = palette.gray00 },
   CursorLineSign = { bg = palette.gray00 },
   Folded = { fg = components.fold_column, bg = palette.nord01, bold = true },
