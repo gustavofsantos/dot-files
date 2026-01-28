@@ -78,6 +78,23 @@ nmap <C-l> <C-w>l
 nmap <C-k> <C-w>k
 nmap <C-j> <C-w>j
 
+" Eval current form/code at point
+nmap ,ee <Action>(ClojureRepl.EvalCodeAtPoint)<CR>
+" Eval root form / defun at point
+nmap ,er <Action>(ClojureRepl.EvalDefunAtPoint)<CR>
+" Load current file/buffer into REPL
+nmap ,eb <Action>(ClojureRepl.LoadFile)<CR>
+nmap ,lf <Action>(ClojureRepl.LoadFile)<CR>
+" Clear REPL output
+nmap ,cc <Action>(ClojureRepl.ClearReplOutput)<CR>
+
+" Run test at cursor
+nmap ,tc <Action>(ClojureRepl.RunTestAtCursor)<CR>
+" Run all tests in namespace
+nmap ,tn <Action>(ClojureRepl.RunNsTests)<CR>
+" Re-run last test
+nmap ,tl <Action>(ClojureRepl.RerunLastTest)<CR>
+
 " -- Window and tab mappings
 " Close a window
 map <C-q> <Action>(CloseContent)
