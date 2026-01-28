@@ -1,3 +1,3 @@
-vim.opt.colorcolumn = ""
-vim.opt.number = false
-vim.opt.relativenumber = false
+vim.opt_local.colorcolumn = ""
+vim.opt_local.number = false
+vim.opt_local.relativenumber = false
