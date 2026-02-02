@@ -18,9 +18,25 @@ end
 local native_term_bufnr
 local last_test_file
 
+local function can_use_overseer()
+  local ok = pcall(require, "overseer")
+  return ok
+end
+
 local function can_use_toggleterm()
   local ok = pcall(require, "toggleterm")
   return ok
+end
+
+local function send_to_overseer(cmd)
+  local overseer = require("overseer")
+  local task = overseer.new_task({
+    cmd = "sh",
+    args = { "-c", cmd },
+    name = "Test",
+    components = { "default" },
+  })
+  task:start()
 end
 
 local function send_to_toggleterm(cmd)
@@ -140,7 +156,13 @@ local function setup_vtr_pane()
 end
 
 local function dispatch_command(cmd)
-  -- 1. Try vim-tmux-runner if inside tmux
+  -- 1. Try overseer (highest priority)
+  if can_use_overseer() then
+    send_to_overseer(cmd)
+    return
+  end
+
+  -- 2. Try vim-tmux-runner if inside tmux
   if in_tmux() then
     if setup_vtr_pane() then
       vim.cmd('silent VtrSendCommandToRunner ' .. cmd)
@@ -150,13 +172,13 @@ local function dispatch_command(cmd)
     return
   end
 
-  -- 2. Try toggleterm if available
+  -- 3. Try toggleterm if available
   if can_use_toggleterm() then
     send_to_toggleterm(cmd)
     return
   end
 
-  -- 3. Fallback to native neovim terminal
+  -- 4. Fallback to native neovim terminal
   local bufnr = get_native_term()
   local job_id = vim.fn.getbufvar(bufnr, 'terminal_job_id')
   if job_id > 0 then
