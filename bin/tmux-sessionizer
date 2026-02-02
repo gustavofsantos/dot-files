@@ -27,8 +27,7 @@ else
             done
             find ~/Workplace -mindepth 1 -maxdepth 1 -type d
             find ~/Workplace/seubarriga-worktrees -mindepth 1 -maxdepth 1 -type d
-            find ~/Workplace/seubarriga-worktrees/bug -mindepth 1 -maxdepth 1 -type d
-            find ~/Workplace/seubarriga-worktrees/feat -mindepth 1 -maxdepth 1 -type d
+            find ~/Workplace/backend-services/applications -mindepth 1 -maxdepth 1 -type d
         ) | fzf --height 100% --prompt='→ ' --select-1 --exit-0 \
               --preview-window 'right:40%' \
               --preview 'if tmux has-session -t {} 2>/dev/null; then
