@@ -247,7 +247,7 @@ local components = {
   border = palette.gray1,
   border_alt = palette.gray1,
 
-  text_normal = palette.cream3,
+  text_normal = blend_colors(colors.gray__925, palette.cream3, 0.80),
   text_muted = palette.gray5,
   text_subtle = palette.nord03,
 
@@ -464,10 +464,10 @@ local highlights = {
   ["@string.regexp"] = { fg = components.warning_base },
   ["@number"] = { fg = components.number },
   ["@keyword"] = { fg = palette.nord9 },
-  ["@variable"] = { fg = components.variable },
+  ["@variable"] = { fg = blend_colors(components.editor_bg, components.variable, 0.9)  },
   ["@variable.builtin"] = { fg = components.variable_builtin },
   ["@variable.member"] = { fg = components.variable },
-  ["@property"] = { fg = palette.nord07 },
+  ["@property"] = { fg = blend_colors(components.editor_bg, palette.nord07, 0.75) },
   ["@operator"] = { fg = components.operator },
   ["@boolean"] = { fg = components.boolean, bold = true },
   ["@function"] = { fg = components.function_name },
@@ -495,8 +495,8 @@ local highlights = {
   ["@property.json"] = { fg = components.ui_accent },
 
   -- Lua
-  -- ["@punctuation.bracket.lua"] = { link = "Delimiter" },
-  -- ["@constructor.lua"] = { link = "Delimiter" },
+  ["@punctuation.bracket.lua"] = { link = "Delimiter" },
+  ["@constructor.lua"] = { link = "Delimiter" },
 
   -- Clojure
   ["@lsp.type.event.clojure"] = { link = "@lsp.type.type" },

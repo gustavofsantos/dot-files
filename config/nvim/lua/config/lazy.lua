@@ -16,6 +16,10 @@ require("lazy").setup({
     "nvim-lua/plenary.nvim",
     "nvim-tree/nvim-web-devicons",
     "christoomey/vim-tmux-runner",
+    {
+      "e-q/okcolors.nvim",
+      name = "okcolors",
+    },
     "tpope/vim-sleuth",
     "tpope/vim-surround",
     "tpope/vim-repeat",
