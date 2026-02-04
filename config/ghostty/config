@@ -2,12 +2,12 @@
 # font-family = CommitMono
 
 # Berkeley Mono
-font-family = BerkeleyMono Nerd Font
-font-feature = -calt, +liga, -dlig.
+# font-family = BerkeleyMono Nerd Font
+# font-feature = -calt, +liga, -dlig.
 
 # Mono Lisa
-# font-family = MonoLisa Nerd Font
-# font-feature = -liga,-dlig,+calt
+font-family = MonoLisa Nerd Font
+font-feature = +liga,+dlig,+calt
 
 # Operator Mono
 # font-family = OperatorMono Nerd Font
