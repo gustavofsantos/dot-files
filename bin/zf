@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+# Define usage function
+usage() {
+    cat <<EOF
+Usage: zf [--help]
+
+Search through note contents in \$NOTES_HOME using fzf.
+Selected notes open in \$EDITOR.
+
+Flags:
+  --help     Display this help message.
+
+Environment:
+  NOTES_HOME  The directory where notes are stored.
+  EDITOR      The editor used to open the selected note (defaults to vi).
+EOF
+}
+
+# Handle help flag
+if [[ "$1" == "--help" ]]; then
+    usage
+    exit 0
+fi
+
+# Validation
+if [[ -z "$NOTES_HOME" ]]; then
+    echo "Error: \$NOTES_HOME is not set." >&2
+    exit 1
+fi
+
+if [[ ! -d "$NOTES_HOME" ]]; then
+    echo "Error: Directory \$NOTES_HOME ($NOTES_HOME) does not exist." >&2
+    exit 1
+fi
+
+# Set default editor if not defined
+EDITOR_CMD=${EDITOR:-vi}
+
+# Search logic:
+# 1. Use ripgrep to find matches in content
+# 2. Use fzf to select the file
+# 3. Open the file with the editor
+selected_file=$(rg --files-with-matches --no-messages . "$NOTES_HOME" | \
+    fzf --preview "rg --pretty --context 5 . {}" \
+        --preview-window="70%:wrap" \
+        --header "Search Note Contents")
+
+if [[ -n "$selected_file" ]]; then
+    $EDITOR_CMD "$selected_file"
+fi

@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+usage() {
+    cat <<EOF
+Usage: zn [TEXT]
+       [COMMAND] | zn
+
+Create a new Zettelkasten note in \$NOTES_HOME.
+If TEXT or stdin is provided, it saves the content and exits.
+If no input is provided, it opens the new note in \$EDITOR.
+
+Flags:
+  --help     Display this help message.
+
+Environment:
+  NOTES_HOME  The directory where notes are stored.
+  EDITOR      The editor used to open the new note (defaults to vi).
+EOF
+}
+
+if [[ "$1" == "--help" ]]; then
+    usage
+    exit 0
+fi
+
+if [[ -z "$NOTES_HOME" ]]; then
+    echo "Error: \$NOTES_HOME is not set." >&2
+    exit 1
+fi
+
+mkdir -p "$NOTES_HOME"
+
+# Use Neovim-friendly timestamp ID
+ID=$(date +%Y%m%d%H%M%S)
+FILENAME="$NOTES_HOME/$ID.md"
+EDITOR_CMD=${EDITOR:-vi}
+
+# Logic for input handling
+if [[ $# -gt 0 ]]; then
+    # Case 1: Text provided as arguments
+    echo "$*" > "$FILENAME"
+    echo "Created: $FILENAME"
+elif [[ ! -t 0 ]]; then
+    # Case 2: Piped input (stdin is not a terminal)
+    cat > "$FILENAME"
+    echo "Created: $FILENAME"
+else
+    # Case 3: No input and interactive terminal
+    # Create empty file with a title placeholder and open editor
+    echo "# $ID" > "$FILENAME"
+    $EDITOR_CMD "$FILENAME"
+fi
