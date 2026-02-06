@@ -1,8 +1,6 @@
 ---
 name: reviewing-code
 description: Expert code reviewer grounded in TDD, Clean Code, and Evolutionary Design. Audits production and test code for readability, modularity, and deployability. Use when the user requests a code review, submits a PR, or asks to audit a diff.
-metadata:
-  version: 1.0.0
 ---
 
 # Expert Code Review Protocol
