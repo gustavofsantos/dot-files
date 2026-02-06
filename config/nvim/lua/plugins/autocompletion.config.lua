@@ -16,8 +16,8 @@ return {
       local cmp = require("cmp")
       local lspkind = require('lspkind')
       local cmp_mappings = {
-        ["<C-d>"] = cmp.mapping.scroll_docs(-4),
-        ["<C-u>"] = cmp.mapping.scroll_docs(4),
+        ["<C-u>"] = cmp.mapping.scroll_docs(-4),
+        ["<C-d>"] = cmp.mapping.scroll_docs(4),
         ["<C-c>"] = cmp.mapping.close(),
         ["<C-space>"] = cmp.mapping.complete(),
         ["<C-y>"] = cmp.mapping.confirm({ select = true }),
@@ -41,12 +41,23 @@ return {
           end,
         },
         formatting = {
-          format = lspkind.cmp_format({
-            mode = "symbol",
-          }),
+          fields = { "icon", "abbr", "menu", "kind" },
+          format = function(entry, vim_item)
+            local kind = lspkind.cmp_format({ mode = "symbol_text", maxwidth = 50 })(entry, vim_item)
+            kind.icon = " " .. (kind.icon or "") .. "  "
+            kind.kind = "   (" .. (kind.kind or "") .. ")"
+
+            return kind
+          end,
         },
         window = {
+          completion = cmp.config.window.bordered({
+            -- border = '',
+            winhighlight = 'Normal:Pmenu,FloatBorder:Pmenu,CursorLine:PmenuSel,Search:None',
+          }),
           documentation = cmp.config.window.bordered({
+            -- border = '',
+            winhighlight = 'Normal:Pmenu',
             scrolloff = 2,
             side_padding = 2,
             max_height = 10,

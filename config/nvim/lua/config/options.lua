@@ -1,8 +1,8 @@
 vim.g.mapleader = " "
 vim.g.maplocalleader = ","
 
-vim.opt.background = "dark"
-vim.cmd.colorscheme("nord")
+vim.opt.background = "light"
+vim.cmd.colorscheme("earlgray")
 
 vim.opt.inccommand = "split"
 -- vim.opt.winwidth = 100
@@ -10,8 +10,8 @@ vim.o.cursorline = true
 vim.o.winborder = 'rounded'
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
-vim.opt.number = true
-vim.opt.relativenumber = true
+vim.opt.number = false
+vim.opt.relativenumber = false
 -- vim.opt.hidden = true
 vim.opt.encoding = "utf-8"
 vim.opt.hlsearch = true
