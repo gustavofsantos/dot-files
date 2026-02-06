@@ -1,0 +1,49 @@
+# Earl Grey theme for Ghostty
+# A gentle color scheme for code
+# https://earl-grey.halt.wtf/
+
+# Background colors
+background = #f5f3ee
+foreground = #5a5550
+
+# Alternative background (for UI panels)
+# background-alt = #ececea
+
+# Cursor and selection
+cursor-color = #6b5b7b
+selection-background = #d4d2cd
+selection-foreground = #5a5550
+split-divider-color = #d4d2cd
+
+# ANSI Color palette (0-15) - mapped to Earl Grey colors
+# Black shades
+palette = 0=#5a5550
+palette = 8=#8b8680
+
+# Red (for errors)
+palette = 1=#b85452
+palette = 9=#d97e7e
+
+# Green (for strings)
+palette = 2=#5fa75f
+palette = 10=#7fbf7f
+
+# Yellow/Orange (for warnings)
+palette = 3=#ae8b5f
+palette = 11=#d4a574
+
+# Blue (for variables)
+palette = 4=#5880a9
+palette = 12=#7ba5c9
+
+# Magenta/Purple (for keywords)
+palette = 5=#6b5b7b
+palette = 13=#8b7b9b
+
+# Cyan/Teal (for constants)
+palette = 6=#5b8f8f
+palette = 14=#7bafaf
+
+# White shades
+palette = 7=#ececea
+palette = 15=#f5f3ee
