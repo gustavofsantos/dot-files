@@ -11,6 +11,10 @@ vim.keymap.set("n", "<leader>ws", "<cmd>vsplit<cr>", { desc = "split window", no
 vim.keymap.set("n", "<leader>wS", "<cmd>split<cr>", { desc = "split window down", noremap = true })
 vim.keymap.set("n", "<leader>Q", "<cmd>qa!<cr>", { desc = "Quit!" })
 vim.keymap.set("n", "<leader>W", "<cmd>wa!<cr>", { desc = "Save all" })
+vim.keymap.set("n", "gD", function()
+  vim.diagnostic.setloclist()
+  vim.cmd('lopen')
+end, { desc = 'Toggle diagnostics'})
 vim.keymap.set('n', 'gK', function()
   local new_config = not vim.diagnostic.config().virtual_lines
   vim.diagnostic.config({ virtual_lines = new_config })
@@ -18,7 +22,6 @@ end, { desc = 'Toggle diagnostic virtual_lines' })
 
 vim.keymap.set("v", "<leader>b",
   ':<C-U>!git blame <C-R>=expand("%:p") <CR> | sed -n <C-R>=line("\'<") <CR>,<C-R>=line("\'>") <CR>p <CR>')
-
 vim.keymap.set("n", '[d', function() vim.diagnostic.jump { count = -1 } end, { desc = 'Previous diagnostic' })
 vim.keymap.set("n", ']d', function() vim.diagnostic.jump { count = 1 } end, { desc = 'Next diagnostic' })
 vim.keymap.set("n", '[e', function() vim.diagnostic.jump { count = -1, severity = vim.diagnostic.severity.ERROR } end,

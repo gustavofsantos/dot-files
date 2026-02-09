@@ -8,6 +8,7 @@ return {
       "hrsh7th/cmp-buffer",
       "hrsh7th/cmp-path",
       "hrsh7th/cmp-cmdline",
+      "hrsh7th/cmp-emoji",
       "onsails/lspkind.nvim",
       "L3MON4D3/LuaSnip",
       "saadparwaiz1/cmp_luasnip"
@@ -69,12 +70,12 @@ return {
           max_view_entries = 25,
         },
         sources = {
+          { name = "luasnip",  keyword_length = 2, max_item_count = 2 },
+          { name = "buffer",   keyword_length = 3, max_item_count = 5 },
           { name = "nvim_lsp" },
-          { name = 'vim-dadbod-completion' },
-          { name = "luasnip",              keyword_length = 2, max_item_count = 2 },
-          { name = "buffer",               keyword_length = 3, max_item_count = 5 },
-          { name = "nvim_lua",             keyword_length = 3, max_item_count = 5 },
-          { name = "path",                 keyword_length = 5, max_item_count = 5 },
+          { name = 'emoji' },
+          { name = "nvim_lua", keyword_length = 3, max_item_count = 5 },
+          { name = "path",     keyword_length = 5, max_item_count = 5 },
         },
       })
 
