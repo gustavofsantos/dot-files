@@ -50,10 +50,7 @@ return {
       callback = function(ev)
         vim.keymap.set("n", "K", function() vim.lsp.buf.hover({ max_width = 60 }) end,
           { buffer = ev.buf, desc = "Hover" })
-        vim.keymap.set("n", "ga", vim.lsp.buf.code_action, { buffer = ev.buf, desc = "Code action" })
-        vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = ev.buf, desc = "Go to definition" })
-        vim.keymap.set("n", "gr", vim.lsp.buf.references, { buffer = ev.buf, desc = "Show references " })
-        vim.keymap.set("n", "gf", "<cmd>Format<cr>", { buffer = ev.buf, desc = "Format async" })
+        vim.keymap.set("n", "grd", vim.lsp.buf.definition, { buffer = ev.buf, desc = "Go to definition" })
       end,
     })
   end,

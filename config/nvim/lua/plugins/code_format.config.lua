@@ -23,6 +23,8 @@ return {
       end,
     })
 
+    vim.keymap.set("n", "gf", "<cmd>Format<cr>", { desc = "Format async" })
+
     vim.api.nvim_create_user_command("Format", function(args)
       local range = nil
       if args.count ~= -1 then

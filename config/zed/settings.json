@@ -4,161 +4,46 @@
 // documentation: https://zed.dev/docs/configuring-zed
 //
 // To see all of Zed's default settings without changing your
-// custom settings, run the `open default settings` command
-// from the command palette or from `Zed` application menu.
+// custom settings, run `zed: open default settings` from the
+// command palette (cmd-shift-p / ctrl-shift-p)
 {
-  "icon_theme": {
-    "mode": "system",
-    "light": "Zed (Default)",
-    "dark": "Zed (Default)"
-  },
-  "edit_predictions": {
-    "disabled_globs": [
-      "**/node_modules/**",
-      "**/.git/**",
-      "**/.vscode/**",
-      "**/.idea/**",
-      "**/.env*",
-      "**/*.pem",
-      "**/*.key",
-      "**/*.cert",
-      "**/*.crt",
-      "**/secrets.yml"
-    ],
-    "mode": "subtle"
-  },
-  "vim_mode": true,
-  "autosave": "on_focus_change",
-  "ui_font_family": "Helvetica Neue",
   "ui_font_size": 16,
-  "buffer_font_family": "BerkeleyMono Nerd Font",
-  "buffer_font_size": 14.0,
-  "buffer_line_height": { "custom": 1.5 },
-  "wrap_guides": [80, 120],
-  "ui_font_features": {
-    "calt": true
-  },
-  "scrollbar": {
-    "show": "never"
-  },
-  "buffer_font_features": {
-    "calt": false,
-    "liga": true
-  },
-  "soft_wrap": "none",
-  "cursor_blink": false,
-  "current_line_highlight": "none",
-  "show_edit_predictions": true,
-  "show_completions_on_input": true,
-  "inlay_hints": { "enabled": false },
-  "format_on_save": "off",
-  "use_on_type_format": false,
+  "buffer_font_size": 15,
+  "theme": "One Dark",
+  "buffer_font_family": "Berkeley Mono",
+  "vim_mode": true,
   "relative_line_numbers": "enabled",
   "gutter": {
-    "line_numbers": true,
-    "folds": false,
-    "runnables": false,
-    "code_actions": false
+    "line_numbers": false,
+    "min_line_number_digits": 2,
   },
-  "lsp": {
-    "deno": {
-      "settings": {
-        "deno": {
-          "enable": true
-        }
-      }
-    }
+  "tab_bar": {
+    "show_nav_history_buttons": false,
+    "show_tab_bar_buttons": false,
   },
-  "languages": {
-    "TypeScript": {
-      "language_servers": [
-        "deno",
-        "!typescript-language-server",
-        "!vtsls",
-        "!eslint"
-      ],
-      "formatter": "language_server",
-      "code_actions_on_format": {
-        "source.fixAll.eslint": true
-      }
-    },
-    "TSX": {
-      "language_servers": [
-        "deno",
-        "!typescript-language-server",
-        "!vtsls",
-        "!eslint"
-      ],
-      "formatter": "language_server"
-    },
-    "pyright": {
-      "settings": {
-        "python.analysis": {
-          "typeCheckingMode": "basic"
-        },
-        "python": {
-          "pythonPath": "venv/bin/python"
-        }
-      }
-    },
-    "Markdown": {
-      "preferred_line_length": 80
-    },
-    "JSON": {
-      "prettier": {
-        "allowed": true,
-        "parser": "json"
-      }
-    },
-    "Ruby": {
-      "language_servers": ["ruby-lsp", "!solargraph", "!rubocop"]
-    }
-  },
-  "collaboration_panel": { "button": false },
-  "tab_bar": { "show": true },
-  "project_panel": {
-    "show_diagnostics": "all",
-    "scrollbar": {
-      "show": "never"
-    }
-  },
-  "terminal": {
-    "dock": "bottom",
-    "font_size": 16,
-    "font_family": "BerkeleyMono Nerd Font",
-    "env": {
-      "GIT_EDITOR": "zed --wait"
-    }
-  },
-  "theme": {
-    "mode": "system",
-    "light": "Nord",
-    "dark": "Gruvbox Dark"
+  "toolbar": {
+    "breadcrumbs": false,
+    "quick_actions": false,
+    "selections_menu": false,
+    "agent_review": false,
+    "code_actions": false,
   },
   "indent_guides": {
-    "enabled": false
-  },
-  "preview_tabs": {
     "enabled": false,
-    "enable_keep_preview_on_code_navigation": true
+  },
+  "edit_predictions": {
+    "disabled_globs": ["*"],
+  },
+  "show_edit_predictions": false,
+  "collaboration_panel": {
+    "button": false,
+  },
+  "outline_panel": {
+    "button": false,
   },
   "git": {
-    "git_gutter": "tracked_files",
     "inline_blame": {
-      "enabled": false
-    }
-  },
-  "context_servers": {},
-  "features": {
-    "edit_prediction_provider": "zed"
-  },
-  "agent": {
-    "play_sound_when_agent_done": true,
-    "always_allow_tool_actions": true,
-    "default_model": {
-      "provider": "zed.dev",
-      "model": "claude-3-7-sonnet-latest"
+      "enabled": false,
     },
-    "enable_experimental_live_diffs": true
-  }
+  },
 }
