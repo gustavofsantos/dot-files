@@ -33,9 +33,9 @@ if command -v "mise" &> /dev/null; then
   eval "$(mise activate zsh)"
 fi
 
-if command -v "brew" &> /dev/null; then
-  eval "$(/opt/homebrew/bin/brew shellenv)"
-fi
+# if command -v "brew" &> /dev/null; then
+#   eval "$(/opt/homebrew/bin/brew shellenv)"
+# fi
 
 if command -v "fnm" &> /dev/null; then
   eval "$(fnm env --use-on-cd --shell zsh)"
@@ -49,3 +49,11 @@ if [ -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then . "$HOME/.nix-profile/
 if [ -e "$HOME/.sdkman/bin/sdkman-init.sh" ]; then source "$HOME/.sdkman/bin/sdkman-init.sh"; fi
 if [ -s "$NVM_DIR/nvm.sh" ]; then source "$NVM_DIR/nvm.sh"; fi
 if [ -s "$NVM_DIR/bash_completion" ]; then source "$NVM_DIR/bash_completion"; fi
+
+# pnpm
+export PNPM_HOME="$HOME/.local/share/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+# pnpm end
