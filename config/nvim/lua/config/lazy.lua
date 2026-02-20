@@ -24,6 +24,8 @@ require("lazy").setup({
     "tpope/vim-surround",
     "tpope/vim-repeat",
     "tpope/vim-dotenv",
+    "tpope/vim-fugitive",
+    "tpope/vim-rhubarb",
     "mbbill/undotree",
     { import = "plugins" }
   },
