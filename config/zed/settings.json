@@ -7,15 +7,14 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "disable_ai": true,
   "git_panel": {
-    "tree_view": true
+    "tree_view": true,
   },
-  "agent_servers": {
-    
-  },
+  "agent_servers": {},
   "ui_font_size": 16,
   "buffer_font_size": 15,
-  "theme": "One Dark",
+  "theme": "Ayu Dark",
   "buffer_font_family": "Berkeley Mono",
   "vim_mode": true,
   "relative_line_numbers": "enabled",
@@ -51,5 +50,10 @@
     "inline_blame": {
       "enabled": false,
     },
+  },
+  "command_aliases": {
+    "W": "w",
+    "Wq": "wq",
+    "Q": "q",
   },
 }

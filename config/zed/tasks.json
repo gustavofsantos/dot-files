@@ -5,11 +5,11 @@
   {
     "label": "testfile",
     "command": "testfile",
-    "args": ["$ZED_FILE"]
+    "args": ["$ZED_RELATIVE_FILE"],
   },
   {
     "label": "testchanged",
     "command": "testallchanged",
-    "args": []
-  }
+    "args": [],
+  },
 ]
