@@ -7,23 +7,23 @@ return {
     vim.g['conjure#extract#tree_sitter#enabled'] = true
     vim.g["conjure#mapping#doc_word"] = "gk"
 
-    vim.api.nvim_create_autocmd("VimEnter", {
-      pattern = "*",
-      callback = function()
-        local cwd = vim.fn.getcwd()
-        if string.find(cwd, "Workplace/seubarriga") ~= nil then
-          local overseer = require("overseer")
-          local task = overseer.new_task({
-            cmd = "lein",
-            args = { "update-in", ":plugins", "conj", "'[cider/cider-nrepl,\"0.57.0\"]'", "--", "update-in", ":repl-options", "assoc", ":init", "'(do)'", "--", "with-profile", "+test", "repl" },
-            name = "Lein REPL",
-            components = { "default" },
-          })
-          task:start()
-        end
-      end,
-      once = true,
-    })
+    -- vim.api.nvim_create_autocmd("VimEnter", {
+    --   pattern = "*",
+    --   callback = function()
+    --     local cwd = vim.fn.getcwd()
+    --     if string.find(cwd, "Workplace/seubarriga") ~= nil then
+    --       local overseer = require("overseer")
+    --       local task = overseer.new_task({
+    --         cmd = "lein",
+    --         args = { "update-in", ":plugins", "conj", "'[cider/cider-nrepl,\"0.57.0\"]'", "--", "update-in", ":repl-options", "assoc", ":init", "'(do)'", "--", "with-profile", "+test", "repl" },
+    --         name = "Lein REPL",
+    --         components = { "default" },
+    --       })
+    --       task:start()
+    --     end
+    --   end,
+    --   once = true,
+    -- })
   end,
   config = function()
     -- Auto-reload namespace on save
