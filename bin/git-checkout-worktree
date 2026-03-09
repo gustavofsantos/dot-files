@@ -22,7 +22,9 @@ if ! git show-ref --verify --quiet "refs/heads/$BRANCH_NAME"; then
     exit 1
 fi
 
-WORKTREE_PATH="$WORKTREE_PARENT/$BRANCH_NAME"
+# Sanitize branch name for directory (replace / with -)
+SAFE_BRANCH_NAME=$(echo "$BRANCH_NAME" | tr '/' '-')
+WORKTREE_PATH="$WORKTREE_PARENT/$SAFE_BRANCH_NAME"
 
 # Check if worktree path is empty or does not exist
 if [ -e "$WORKTREE_PATH" ] && [ "$(ls -A "$WORKTREE_PATH")" ]; then
