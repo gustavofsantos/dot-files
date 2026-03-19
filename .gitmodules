@@ -1,3 +1,6 @@
 [submodule ".tools/tracker"]
 	path = .tools/tracker
 	url = git@github.com:gustavofsantos/tracker.git
+[submodule "private-skills"]
+	path = private-skills
+	url = git@github.com:gustavofsantos/private-skills.git
