@@ -55,7 +55,7 @@ symlink_if_needed "$REPO_DIR/.claude" "$WORKTREE_PATH/.claude" "dir"
 symlink_if_needed "$REPO_DIR/.context" "$WORKTREE_PATH/.context" "dir"
 symlink_if_needed "$REPO_DIR/.agents" "$WORKTREE_PATH/.agents" "dir"
 symlink_if_needed "$REPO_DIR/AGENTS.md" "$WORKTREE_PATH/AGENTS.md" "file"
-symlink_if_needed "$REPO_DIR/AGENTS.md" "$WORKTREE_PATH/CLAUDE.md" "file"
+symlink_if_needed "$REPO_DIR/AGENTS.md" "$WORKTREE_PATH/CLAUDE.local.md" "file"
 
 # Output the worktree path for the parent shell to use
 echo "$WORKTREE_PATH"
