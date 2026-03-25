@@ -2,6 +2,23 @@
 
 current_dir="$PWD"
 
+# Handle --help flag
+if [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
+    cat << 'EOF'
+Usage:
+  testfile <file_path> [<file_path2> ...]
+  listchangedtests | testfile
+
+Description:
+  Runs tests for specified files. Supports seubarriga (Clojure), beyond (Python),
+  and web (Django) projects. Accepts file paths as arguments or via stdin.
+
+Options:
+  --help, -h    Show this help message
+EOF
+    exit 0
+fi
+
 # Collect file paths from arguments or stdin
 file_paths=()
 
