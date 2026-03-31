@@ -61,9 +61,9 @@ symlink_if_needed() {
 # Symlink shared resources from main repo
 symlink_if_needed "$REPO_DIR/.cursor" "$WORKTREE_PATH/.cursor" "dir"
 symlink_if_needed "$REPO_DIR/.claude" "$WORKTREE_PATH/.claude" "dir"
-symlink_if_needed "$REPO_DIR/.context" "$WORKTREE_PATH/.context" "dir"
+symlink_if_needed "$REPO_DIR/.work" "$WORKTREE_PATH/.work" "dir"
 symlink_if_needed "$REPO_DIR/.agents" "$WORKTREE_PATH/.agents" "dir"
 symlink_if_needed "$REPO_DIR/AGENTS.md" "$WORKTREE_PATH/AGENTS.md" "file"
-symlink_if_needed "$REPO_DIR/AGENTS.md" "$WORKTREE_PATH/CLAUDE.local.md" "file"
+symlink_if_needed "$REPO_DIR/CLAUDE.local.md" "$WORKTREE_PATH/CLAUDE.local.md" "file"
 
 echo "$WORKTREE_PATH"
