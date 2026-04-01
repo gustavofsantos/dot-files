@@ -24,10 +24,12 @@ History is Git. The agent and the human collaborate through the same files.
 ```
 .work/
   stories/        ← all stories, regardless of status
+  session.md      ← current context snapshot (created when a session starts)
 ```
 
-That's it. No subdirectories per state, no scripts, no templates directory.
+No subdirectories per state, no scripts, no templates directory.
 Stories are plain Markdown files. The agent creates them directly.
+`session.md` is the recitation document — rewritten after every completed task.
 
 ---
 
@@ -158,6 +160,15 @@ head -6 .work/stories/*.md | grep -E "(id:|status:|title:)"
 
 # read the first 20 lines of a story (front-matter + história)
 head -20 .work/stories/003-setup-fretboard-canvas.md
+
+# is there an active session?
+cat .work/session.md
+
+# which story is the session tracking?
+head -5 .work/session.md | grep story
+
+# what agent last touched the session?
+head -5 .work/session.md | grep agent
 ```
 
 ---
@@ -171,14 +182,62 @@ head -20 .work/stories/003-setup-fretboard-canvas.md
 - Set `status: in-progress` to start a session
 - Review stories in `review` against acceptance criteria
 - Set `status: done` after review passes, or `status: in-progress` if rework is needed
+- Delete `session.md` after setting `status: done`
 
 ### Agent responsibilities
 - Find and read the `in-progress` story before doing anything
+- Read and rewrite `session.md` at session start (create if absent)
 - Derive the session contract from Acceptance Criteria and Tasks
 - Work through tasks in declared order
-- Check off tasks as completed (`- [x]`)
-- Update Implementation Notes after each task completion
+- After each task: update both the story file and `session.md`
 - Stop and ask if any AC is ambiguous before starting
+
+---
+
+## session.md
+
+The story is the **contract** — stable, authoritative, permanent.
+`session.md` is **current state** — volatile, always overwritten, tail-anchored.
+
+Together they let any agent pick up a session cold with no context loss.
+The story gives the goal; `session.md` gives where things stand right now.
+
+Only one `session.md` exists at a time, mirroring the WIP limit on stories.
+
+### Format
+
+```markdown
+---
+story: "NNN-slug"
+agent: claude-code | cursor | gemini | ...
+started: YYYY-MM-DD
+updated: YYYY-MM-DDTHH:MM:SS
+---
+
+# Session: <story title>
+
+## Active task
+- [ ] <the single task currently being worked on>
+
+## Remaining tasks
+- [ ] <next task>
+- [ ] <task after that>
+
+## Completed this session
+- [x] <task 1>
+- [x] <task 2>
+
+## Working context
+<!-- Written for a fresh agent that has never seen this session. -->
+<!-- Mandatory. At minimum one line after each completed task. -->
+<!-- What was decided, which files were touched, what the current state is. -->
+
+## Blockers / questions
+<!-- Empty means none. -->
+```
+
+The task lists mirror the story's Tasks section. The story remains authoritative —
+`session.md` only tracks position and live context.
 
 ---
 
@@ -186,11 +245,17 @@ head -20 .work/stories/003-setup-fretboard-canvas.md
 
 Before writing a single line of code:
 
-1. Run `grep -l "status: in-progress" .work/stories/*.md` to find the active story
-2. Read the full story file
-3. Verify Tasks section is populated — if empty, tell the human to use
+1. `grep -l "status: in-progress" .work/stories/*.md` — find the active story
+2. Read the full story file (establishes the contract)
+3. Check if `.work/session.md` exists
+   - **Exists:** read it — current state left by the previous agent or session
+   - **Does not exist:** create it, populate task lists from the story's Tasks section
+4. **Rewrite `session.md` immediately** — update `agent` and `updated` fields.
+   This recitation act anchors the current goal at the tail of the context
+   before any tool call is made.
+5. Verify Tasks are defined in the story — if empty, stop and ask the human to run
    `story-task-planner` first
-4. Confirm no AC is ambiguous — ask before proceeding
+6. Confirm no AC is ambiguous — ask before proceeding
 
 **If no story is in-progress:** stop. Do not invent scope. Ask the human to set a
 story to `in-progress` first.
@@ -201,23 +266,55 @@ story to `in-progress` first.
 
 - Work task by task in declared order
 - After completing each task:
-  - Mark it `[x]` in the story file
-  - Add at least one line to Implementation Notes describing the decision or approach
+  1. Mark it `[x]` in the **story file** Tasks section (permanent record)
+  2. Add at least one line to Implementation Notes in the **story file**
+  3. **Rewrite `session.md`:**
+     - Move the completed task from Active/Remaining into Completed
+     - Promote the next task to Active
+     - Update Working context with the decision or state change just made
+     - Update the `updated` timestamp
 - Scope boundary: if new work surfaces that is not in the ACs, create a new story
-  file in `.work/stories/` with `status: backlog` — do not fold it into the current
-  session
-- When a relevant external resource appears (a PR is opened, a doc is created),
-  add it to the `refs` list in the front-matter
+  in `.work/stories/` with `status: backlog` — do not fold it into the current session
+- When a relevant external resource appears (PR opened, doc created), add it to
+  `refs` in the story front-matter
+
+The `session.md` rewrite is the recitation. It keeps the goal visible at the context
+tail across the entire session, regardless of how many tool calls accumulate.
+
+---
+
+## Agent protocol — model handoff
+
+When switching agents mid-story (Claude Code → Cursor, etc.):
+
+**Outgoing agent — before stopping:**
+1. Complete or pause at a clean task boundary (do not hand off mid-task)
+2. Write a handoff note in Working context:
+   `Handoff: <one sentence on what was just done and what the next step is>`
+3. Rewrite `session.md` with the handoff note in place
+
+**Incoming agent — before starting:**
+1. Read the story (contract)
+2. Read `session.md` (current state, with handoff note)
+3. Rewrite `session.md` — update `agent` and `updated`, append
+   `Picked up from <previous-agent>` in Working context
+4. Proceed from Active task
+
+The rewrite on pickup is mandatory. It recites the goals into the incoming
+agent's context tail before any work begins.
 
 ---
 
 ## Agent protocol — session end
 
-1. Ensure all completed tasks are marked `[x]`
-2. Implementation Notes must have at least one entry per completed task
-3. Set `status: review` — this signals the human that work is ready for evaluation
-4. Report to human: which ACs are satisfied, which are not, any blockers
-5. Do NOT set `status: done` — that is the human's action after review
+1. All completed tasks marked `[x]` in both story and `session.md`
+2. Implementation Notes have at least one entry per completed task
+3. Set Active task in `session.md` to `(none — awaiting human review)`
+4. Write a final summary line in Working context: what was done, what remains, blockers
+5. Set `status: review` in the **story front-matter** (frees the WIP slot)
+6. Report to human: which ACs are satisfied, which are not, any blockers
+7. Do NOT set `status: done` — that is the human's action after review
+8. Leave `session.md` in place until the human sets `status: done`
 
 ---
 
@@ -239,12 +336,18 @@ No script, no template file to copy. Just write the Markdown file directly.
 | Anti-pattern | Correct behavior |
 |---|---|
 | Starting without an in-progress story | Stop. Ask the human. |
+| Starting without reading `session.md` | Always read it if it exists, then rewrite |
+| Skipping the `session.md` rewrite after a task | Rewrite after every completed task |
+| Updating story tasks but not `session.md` | Both must be updated together |
 | Expanding scope mid-session | New story with `status: backlog`. Keep current scope. |
 | Marking task done based on intent | Verify against actual observable behavior first |
 | Setting `status: done` | Only the human does this after review |
 | Leaving story as `in-progress` after finishing | Set `status: review` to free the WIP slot |
 | Skipping Implementation Notes | At least one line per completed task |
 | Batch-updating notes at session end | Update notes after each task, not at the end |
+| Handing off without a handoff note | Write one sentence in Working context first |
+| Leaving Working context empty | At minimum one line after any task completion |
+| Deleting `session.md` before human sets `done` | Leave it in place through review |
 | Reading all story files to find status | Use `grep` on front-matter |
 
 ---
@@ -254,4 +357,3 @@ No script, no template file to copy. Just write the Markdown file directly.
 ```bash
 mkdir -p .work/stories
 ```
-
