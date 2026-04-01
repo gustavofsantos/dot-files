@@ -210,7 +210,7 @@ Only one `session.md` exists at a time, mirroring the WIP limit on stories.
 ---
 story: "NNN-slug"
 agent: claude-code | cursor | gemini | ...
-started: YYYY-MM-DD
+started: YYYY-MM-DDTHH:MM:SS
 updated: YYYY-MM-DDTHH:MM:SS
 ---
 
