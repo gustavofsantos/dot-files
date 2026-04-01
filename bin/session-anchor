@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# session-anchor
+#
+# PostToolUse hook for Claude Code — injects a short session anchor into
+# the context after Bash or Read tool calls.
+#
+# Install:
+#   Place in your dotfiles, then symlink to a directory on $PATH:
+#   ln -s ~/dotfiles/bin/session-anchor ~/.local/bin/session-anchor
+#
+# Hook config (.claude/settings.local.json):
+#   {
+#     "hooks": {
+#       "PostToolUse": [
+#         {
+#           "matcher": "Bash|Read",
+#           "hooks": [{ "type": "command", "command": "session-anchor" }]
+#         }
+#       ]
+#     }
+#   }
+#
+# Output: {"additionalContext": "..."} → Claude Code injects this into
+# the model's context as part of the tool result.
+# Silent (exit 0) when not in a git repo or no session is active.
+
+# Resolve the repo root from wherever the tool call fired
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+
+if [ -z "$REPO_ROOT" ]; then
+  exit 0
+fi
+
+SESSION_FILE="$REPO_ROOT/.work/session.md"
+
+if [ ! -f "$SESSION_FILE" ]; then
+  exit 0
+fi
+
+STORY=$(grep -m1 "^story:" "$SESSION_FILE" | sed 's/story: *"\?\([^"]*\)"\?/\1/' | xargs)
+ACTIVE=$(grep -A1 "^## Active task" "$SESSION_FILE" | grep "^\- \[" | sed 's/^- \[.\] *//' | xargs)
+
+if [ -z "$STORY" ] && [ -z "$ACTIVE" ]; then
+  exit 0
+fi
+
+if [ -n "$ACTIVE" ]; then
+  ANCHOR="[session] story: $STORY | active: $ACTIVE"
+else
+  ANCHOR="[session] story: $STORY | no active task — check .work/session.md"
+fi
+
+printf '{"additionalContext": "%s"}\n' "$ANCHOR"
