@@ -53,7 +53,8 @@ symlink_if_needed() {
 symlink_if_needed "$REPO_DIR/.cursor" "$WORKTREE_PATH/.cursor" "dir"
 symlink_if_needed "$REPO_DIR/.claude" "$WORKTREE_PATH/.claude" "dir"
 symlink_if_needed "$REPO_DIR/.agents" "$WORKTREE_PATH/.agents" "dir"
-symlink_if_needed "$REPO_DIR/.work" "$WORKTREE_PATH/.work" "dir"
+mkdir -p "$WORKTREE_PATH/.work"
+symlink_if_needed "$REPO_DIR/.work/stories" "$WORKTREE_PATH/.work/stories" "dir"
 symlink_if_needed "$REPO_DIR/AGENTS.md" "$WORKTREE_PATH/AGENTS.md" "file"
 symlink_if_needed "$REPO_DIR/CLAUDE.local.md" "$WORKTREE_PATH/CLAUDE.local.md" "file"
 
