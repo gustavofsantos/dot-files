@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python3
 # session-anchor
 #
 # PostToolUse hook for Claude Code — injects a short session anchor into
@@ -24,30 +24,101 @@
 # the model's context as part of the tool result.
 # Silent (exit 0) when not in a git repo or no session is active.
 
-# Resolve the repo root from wherever the tool call fired
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
 
-if [ -z "$REPO_ROOT" ]; then
-  exit 0
-fi
 
-SESSION_FILE="$REPO_ROOT/.work/session.md"
+# ---------------------------------------------------------------------------
+# Parsing
+# ---------------------------------------------------------------------------
 
-if [ ! -f "$SESSION_FILE" ]; then
-  exit 0
-fi
+def repo_root() -> Path | None:
+    result = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        return None
+    return Path(result.stdout.strip())
 
-STORY=$(grep -m1 "^story:" "$SESSION_FILE" | sed 's/story: *"\?\([^"]*\)"\?/\1/' | xargs)
-ACTIVE=$(grep -A1 "^## Active task" "$SESSION_FILE" | grep "^\- \[" | sed 's/^- \[.\] *//' | xargs)
 
-if [ -z "$STORY" ] && [ -z "$ACTIVE" ]; then
-  exit 0
-fi
+def parse_frontmatter(text: str) -> dict:
+    """Parse YAML front-matter (stdlib only, no PyYAML required)."""
+    if not text.startswith("---"):
+        return {}
+    end = text.find("\n---", 3)
+    if end == -1:
+        return {}
+    block = text[3:end].strip()
+    result = {}
+    for line in block.splitlines():
+        if ":" in line:
+            key, _, value = line.partition(":")
+            result[key.strip()] = value.strip().strip('"')
+    return result
 
-if [ -n "$ACTIVE" ]; then
-  ANCHOR="[session] story: $STORY | active: $ACTIVE"
-else
-  ANCHOR="[session] story: $STORY | no active task — check .work/session.md"
-fi
 
-printf '{"additionalContext": "%s"}\n' "$ANCHOR"
+def parse_section(text: str, heading: str) -> str:
+    """Return the first meaningful line under a ## heading."""
+    pattern = rf"^## {re.escape(heading)}\s*$(.*?)(?=^## |\Z)"
+    match = re.search(pattern, text, re.MULTILINE | re.DOTALL)
+    if not match:
+        return ""
+    block = match.group(1).strip()
+    for line in block.splitlines():
+        line = line.strip()
+        if line and not line.startswith("<!--"):
+            return re.sub(r"^-\s*\[.\]\s*", "", line)
+    return ""
+
+
+# ---------------------------------------------------------------------------
+# Anchor building — edit this to experiment with recitation format
+# ---------------------------------------------------------------------------
+
+def build_anchor(frontmatter: dict, text: str) -> str | None:
+    unit = frontmatter.get("unit", "")
+    unit_type = frontmatter.get("type", "")
+
+    if not unit:
+        return None
+
+    if unit_type == "spike":
+        next_step = parse_section(text, "Next step")
+        focus = f"next: {next_step}" if next_step else "check .work/session.md for next step"
+        return f"[session] spike: {unit} | {focus}"
+
+    active = parse_section(text, "Active task")
+    focus = f"active: {active}" if active else "no active task — check .work/session.md"
+    label = unit_type if unit_type else "unit"
+    return f"[session] {label}: {unit} | {focus}"
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def main():
+    root = repo_root()
+    if not root:
+        sys.exit(0)
+
+    session_file = root / ".work" / "session.md"
+    if not session_file.exists():
+        sys.exit(0)
+
+    text = session_file.read_text()
+    frontmatter = parse_frontmatter(text)
+    anchor = build_anchor(frontmatter, text)
+
+    if not anchor:
+        sys.exit(0)
+
+    print(json.dumps({"additionalContext": anchor}))
+
+
+if __name__ == "__main__":
+    main()
