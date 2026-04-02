@@ -6,6 +6,7 @@ status: backlog
 created: YYYY-MM-DD
 started:
 completed:
+repo:
 tags: []
 refs: []
 ---
@@ -24,13 +25,11 @@ Passos mínimos para reproduzir.
 
 ## Contexto
 
-Ambiente, versão, worktree, story relacionada se houver.
+Ambiente, versão, worktree, work unit relacionada se houver.
 
 ## Verificação do fix
 
-- [ ] condição verificável de que o bug foi corrigido
+- [ ] comportamento esperado confirmado
 - [ ] sem regressões nas áreas afetadas
 
 ## Notas de implementação
-
-[preenchido pelo agente durante a execução]

@@ -6,35 +6,48 @@ status: backlog
 created: YYYY-MM-DD
 started:
 completed:
+repo:
 tags: []
 refs: []
 ---
 
-## Pergunta
+## Central Question
 
-Uma pergunta específica e verificável que este spike deve responder.
+{One sentence with a factual or yes/no answer.}
 
 ## Timebox
 
-[ex: 2 horas, meio dia]
+{ex: 2 horas, meio dia}
 
 ## Contexto
 
 Por que essa pergunta precisa ser respondida agora. O que está bloqueado.
 
-## Abordagem
+## Answer
 
-Como a exploração será conduzida. Quais partes do código, docs ou experimentos
-serão examinados.
+{Written in Phase 4 of legacy-analysis.}
 
-## Pronto quando
+## Evidence
 
-- [ ] A pergunta acima foi respondida ou explicitamente descartada com justificativa
+### Traversal Map
 
-## Findings
 
-[preenchido pelo agente durante a execução]
+### Affirmations
 
-## Próximos passos
 
-[novas stories ou tasks geradas como resultado — links ou ids]
+### Ignored Scope
+
+
+### Axioms Used
+
+
+### Theorems Promoted This Session
+
+
+### Theorems Validated This Session
+
+
+## Open Questions
+
+
+## Notas de implementação

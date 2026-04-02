@@ -6,6 +6,7 @@ status: backlog
 created: YYYY-MM-DD
 started:
 completed:
+repo:
 tags: []
 refs: []
 ---
@@ -19,5 +20,3 @@ Descrição direta do que precisa ser feito.
 - [ ] condição verificável
 
 ## Notas de implementação
-
-[preenchido pelo agente durante a execução]
