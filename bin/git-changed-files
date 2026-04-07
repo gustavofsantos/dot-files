@@ -60,7 +60,7 @@ case "$MODE" in
         ;;
     "branch")
         main_branch=$("$SCRIPT_DIR/git-main-branch")
-        all_changed_files=$(git diff --name-only "$main_branch"...HEAD 2>/dev/null || true)
+        all_changed_files=$(git diff --name-only origin/"$main_branch"...HEAD 2>/dev/null || true)
         ;;
     "default")
         staged_files=$(git diff --name-only --cached 2>/dev/null || true)
