@@ -1,0 +1,126 @@
+#!/usr/bin/env python3
+"""
+painter-session-attach — attach to a tmux session for a painter session file.
+Restores the session automatically if it no longer exists.
+
+Usage:
+    painter-session-attach --session PAINT-001-api
+"""
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+PAINTER_DIR = Path.home() / ".painter"
+SESSIONS_DIR = PAINTER_DIR / "sessions"
+
+
+def parse_frontmatter(path: Path) -> dict:
+    content = path.read_text()
+    if not content.startswith("---"):
+        print(f"error: no frontmatter found in {path}", file=sys.stderr)
+        sys.exit(1)
+
+    end = content.find("---", 3)
+    if end == -1:
+        print(f"error: frontmatter not closed in {path}", file=sys.stderr)
+        sys.exit(1)
+
+    fm_block = content[3:end].strip()
+    fields = {}
+    for line in fm_block.splitlines():
+        if ":" not in line:
+            continue
+        key, _, value = line.partition(":")
+        fields[key.strip()] = value.strip().strip('"').strip("'")
+
+    return fields
+
+
+def find_session_path(session_id: str) -> Path | None:
+    candidate = SESSIONS_DIR / f"{session_id}.md"
+    if candidate.exists():
+        return candidate
+    return None
+
+
+def tmux_session_exists(session_name: str) -> bool:
+    result = subprocess.run(
+        ["tmux", "has-session", "-t", session_name],
+        capture_output=True,
+    )
+    return result.returncode == 0
+
+
+def restore_tmux_session(session_name: str, worktree: str) -> None:
+    worktree_path = Path(worktree).expanduser().resolve()
+    if not worktree_path.exists():
+        print(f"error: worktree path does not exist: {worktree_path}", file=sys.stderr)
+        print("the worktree may have been deleted. recreate it before attaching.", file=sys.stderr)
+        sys.exit(1)
+
+    subprocess.run(
+        ["tmux", "new-session", "-d", "-s", session_name, "-c", str(worktree_path)],
+        check=True,
+    )
+
+
+def attach_tmux_session(session_name: str) -> None:
+    # if inside tmux already, switch-client; otherwise attach-session
+    if os.environ.get("TMUX"):
+        os.execvp("tmux", ["tmux", "switch-client", "-t", session_name])
+    else:
+        os.execvp("tmux", ["tmux", "attach-session", "-t", session_name])
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Attach to a painter tmux session")
+    parser.add_argument("--session", required=True, help="Session ID (e.g. PAINT-001-api)")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print what would happen without attaching",
+    )
+    args = parser.parse_args()
+
+    session_path = find_session_path(args.session)
+    if not session_path:
+        print(f"error: session file not found for '{args.session}' in {SESSIONS_DIR}", file=sys.stderr)
+        sys.exit(1)
+
+    fm = parse_frontmatter(session_path)
+    session_name = fm.get("tmux-session") or fm.get("id")
+    worktree = fm.get("worktree")
+
+    if not session_name:
+        print("error: 'tmux-session' field missing from session frontmatter", file=sys.stderr)
+        sys.exit(1)
+
+    if not worktree:
+        print("error: 'worktree' field missing from session frontmatter", file=sys.stderr)
+        sys.exit(1)
+
+    exists = tmux_session_exists(session_name)
+
+    if args.dry_run:
+        status = "alive" if exists else "dead — would restore"
+        print(json.dumps({
+            "session": session_name,
+            "worktree": worktree,
+            "tmux-status": status,
+            "session-file": str(session_path),
+        }, indent=2))
+        return
+
+    if not exists:
+        print(f"tmux session '{session_name}' not found. restoring...", file=sys.stderr)
+        restore_tmux_session(session_name, worktree)
+
+    attach_tmux_session(session_name)
+
+
+if __name__ == "__main__":
+    main()
