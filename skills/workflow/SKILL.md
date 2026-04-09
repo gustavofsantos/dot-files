@@ -1,5 +1,5 @@
 ---
-name: painter-workflow
+name: workflow
 description: >
   Protocol for managing work using The Painter CLI — a tmux-native personal workflow system.
   Use this skill whenever working inside a painter worktree, when the user mentions a card,
@@ -12,8 +12,8 @@ description: >
 
 Two abstractions. One source of truth.
 
-**Card** — unit of intent. Lives at `~/.painter/cards/<id>-<slug>.md`.
-**Session** — unit of execution for one repo front. Lives at `~/.painter/sessions/<card-id>-<repo>.md`.
+**Card** — unit of intent. Lives at `~/.painter/cards/<nnn>-<slug>.md`.
+**Session** — unit of execution for one repo front. Lives at `~/.painter/sessions/<nnn>-<repo>.md`.
 
 The card is the source of truth. Sessions are derived. Tmux sessions are ephemeral — always reconstructable.
 
@@ -24,10 +24,10 @@ The card is the source of truth. Sessions are derived. Tmux sessions are ephemer
 ```
 ~/.painter/
   cards/
-    PAINT-001-slug.md
+    001-fpf-6823-sync-manual-entries.md
     archive/            ← archived cards and sessions — never read these
   sessions/
-    PAINT-001-api.md
+    001-api.md
     archive/
   .counter              ← sequential ID counter
 ```
@@ -38,12 +38,12 @@ The card is the source of truth. Sessions are derived. Tmux sessions are ephemer
 
 ```yaml
 ---
-id: PAINT-001
+id: "001"
 title: "Fix auth bug"
 status: inbox | not-now | active | done
 tags: [feature, api, sentry]
 sessions:
-  - /Users/you/.painter/sessions/PAINT-001-api.md
+  - /Users/you/.painter/sessions/001-api.md
 created: 2026-04-08
 updated: 2026-04-08
 ---
@@ -67,12 +67,12 @@ Tags are free-form. Status is the only validated field.
 
 ```yaml
 ---
-id: PAINT-001-api
-card: PAINT-001
+id: 001-api
+card: "001"
 repo: api
 branch: feat/fix-auth-bug
 worktree: /abs/path/to/worktree
-tmux-session: PAINT-001-api
+tmux-session: 001-api
 ---
 
 ## Current focus
@@ -114,18 +114,18 @@ All scripts output JSON by default. Pass `--format text` for human-readable outp
 Prerequisites: worktree must already exist. Run any project-specific worktree setup scripts first.
 
 ```
-painter-session-create --card PAINT-001 --repo <repo> --branch <branch> --worktree /abs/path
+painter-session-create --card 001 --repo <repo> --branch <branch> --worktree /abs/path
 ```
 
 Then attach:
 ```
-painter-session-attach --session PAINT-001-<repo>
+painter-session-attach --session 001-<repo>
 ```
 
 ### Resuming work
 
 ```
-painter-session-attach --session PAINT-001-api
+painter-session-attach --session 001-api
 ```
 
 If the tmux session is dead, `painter-session-attach` restores it automatically from the session file.
@@ -146,7 +146,7 @@ Hypothesis: the token is being validated before the refresh window closes.
 1. Set `status: done` in the card frontmatter.
 2. Archive:
    ```
-   painter-card-archive --card PAINT-001
+   painter-card-archive --card 001
    ```
    This moves the card and all linked session files to `archive/`.
 
