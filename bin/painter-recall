@@ -33,6 +33,7 @@ Claude Code hook registration (claude_hooks.json):
 """
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -153,10 +154,7 @@ def main():
         print(f"[painter-recall] branch: {fm.get('branch', '?')}")
         print()
 
-    print("--- painter: current focus ---")
-    print(focus)
-    print("--- end ---")
-
+    print(json.dumps({"additionalContext": focus}))
 
 if __name__ == "__main__":
     main()
