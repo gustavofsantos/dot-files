@@ -24,7 +24,7 @@ The card is the source of truth. Sessions are derived. Tmux sessions are ephemer
 ```
 ~/.painter/
   cards/
-    001-fpf-6823-sync-manual-entries.md
+    001-api-authentication.md
     archive/            ← archived cards and sessions — never read these
   sessions/
     001-api.md
@@ -134,6 +134,8 @@ If the tmux session is dead, `painter-session-attach` restores it automatically 
 
 Update `## Current focus` in the session file at natural checkpoints — when switching context, before a long search, after completing a subtask. Keep it short and specific.
 
+Update it proactively. Do not wait to be asked. It is what keeps the session anchored during long runs across large codebases.
+
 Example:
 ```
 ## Current focus
@@ -160,24 +162,6 @@ Then attach to the session you need:
 ```
 painter-session-attach --session PAINT-001-api
 ```
-
----
-
-## painter-recall — hook behavior
-
-`painter-recall` is registered as a Claude Code hook. It runs automatically and injects the `## Current focus` section from the active session file.
-
-- Auto-detects the session by matching cwd against `worktree` in session files.
-- Exits silently if no session is found or focus is empty — never blocks.
-- Output is wrapped: `--- painter: current focus --- ... --- end ---`
-
-**Update `## Current focus` in the session file when:**
-- Switching from one area of the codebase to another
-- Starting a long search across multiple files or repos
-- Completing a discrete subtask
-- The current focus has been stale for a while
-
-Do not wait to be asked. Keeping it current is what makes the recall useful.
 
 ---
 
