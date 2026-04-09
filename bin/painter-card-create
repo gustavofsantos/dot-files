@@ -18,7 +18,6 @@ PAINTER_DIR = Path.home() / ".painter"
 CARDS_DIR = PAINTER_DIR / "cards"
 COUNTER_FILE = PAINTER_DIR / ".counter"
 VALID_STATUSES = {"inbox", "not-now", "active", "done"}
-ID_PREFIX = "PAINT"
 
 
 def read_counter() -> int:
@@ -35,7 +34,7 @@ def next_id() -> str:
     current = read_counter()
     next_val = current + 1
     write_counter(next_val)
-    return f"{ID_PREFIX}-{next_val:03d}"
+    return f"{next_val:03d}"
 
 
 def slugify(title: str) -> str:

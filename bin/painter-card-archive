@@ -85,7 +85,7 @@ def find_card_path(card_id: str) -> Path | None:
     if not CARDS_DIR.exists():
         return None
     for path in CARDS_DIR.glob("*.md"):
-        if path.name.startswith(f"{card_id}-") or path.stem == card_id:
+        if path.stem == card_id or path.stem.startswith(f"{card_id}-"):
             return path
     return None
 
