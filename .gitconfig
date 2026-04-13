@@ -106,6 +106,9 @@
 [branch]
   autosetuprebase = always
 
+[rebase]
+  updateRefs = true
+
 [color]
   diff = auto
   status = auto
