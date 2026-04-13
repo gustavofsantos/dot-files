@@ -1,102 +1,99 @@
 ---
 name: incremental-refactor
 description: >
-  Apply safe, incremental refactoring using tiny steps and the flocking rules to discover
-  abstractions organically. Use this skill whenever the user wants to clean up code, remove
-  duplication, extract a concept, rename something, or improve structure — without changing
-  behavior. Trigger on phrases like "refactor this", "clean this up", "this feels wrong",
-  "there's duplication here", "extract this", "rename this", "this is hard to read", or
-  when code has obvious structural problems. Do NOT make large sweeping changes; every step
-  must keep tests green.
+  Provides constraints for safe, incremental refactoring. Use when the user wants
+  to clean up code, remove duplication, extract a concept, or improve structure
+  without changing behavior. In Claude Code sessions, produces a constraint block
+  for the card's Context section. Trigger on phrases like "refactor this",
+  "clean this up", "there's duplication here", "this feels wrong", "extract this",
+  or when code has structural problems identified during review.
 ---
 
 # Incremental Refactoring
 
 ## Core idea
 
-Refactoring is **changing structure without changing behavior**. The safety net is your
-test suite. If tests aren't green before you start, fix that first.
-
-Take the smallest possible step. Run tests. Repeat.
+Refactoring is changing structure without changing behavior.
+The safety net is the test suite. If tests aren't green before you start, fix that first.
 
 ---
 
-## The discipline
+## How to use this skill in Claude Code
 
-**One change at a time.** Not "one commit at a time" — one *logical change* at a time.
-
-After every single change:
-1. Run the tests
-2. If green → continue
-3. If red → undo the change, understand why, try differently
-
-Never accumulate multiple untested changes. If you're unsure whether a change is safe,
-make it smaller.
+In Claude Code sessions, paste the constraint block below into the card's `## Context`
+before starting the session. Claude Code applies it during planning — not as an
+interactive loop.
 
 ---
 
-## The Flocking Rules
+## Constraint block
 
-Use these three rules to organically discover abstractions from duplication:
+Copy this into the card's `## Context`:
 
-1. **Find the things that are most alike**
-   Look for code that does similar things — similar structure, similar shape, similar intent.
+```
+## Design constraints — incremental refactoring
 
-2. **Find the smallest difference between them**
-   Don't look at everything at once. Find one single thing that differs.
-
-3. **Make the simplest change to remove that difference**
-   Make them identical in that one way. Don't jump to the final abstraction.
-
-Repeat until the duplication is obvious enough to extract cleanly.
-
-> The flocking rules are iterative. You won't see the right abstraction on the first pass.
-> Trust the process.
+- Tests must be green before the first change. If they aren't, stop and report.
+- One logical change at a time. Run tests after each change.
+- If tests go red: undo the last change immediately. Understand why. Try smaller.
+- Do not mix refactoring with behavior changes in the same task.
+- Do not extract an abstraction until the duplication is obvious.
+  Apply the flocking rules: find the most alike things, find the smallest difference,
+  make the simplest change to remove that difference. Repeat.
+- Do not refactor code that has no tests. Write a characterization test first.
+- No speculative abstractions — only extract what two or more concrete cases demand.
+```
 
 ---
 
-## Common safe refactoring moves
+## The flocking rules
 
-Each of these is a single step:
+When facing duplication or unclear abstractions:
+
+1. Find the things that are most alike.
+2. Find the smallest difference between them.
+3. Make the simplest change to eliminate that difference.
+
+Repeat until the pattern is obvious enough to name and extract cleanly.
+The right abstraction is discovered, not designed.
+
+---
+
+## Common safe moves (each is one step)
 
 | Move | Safe when |
 |---|---|
-| Rename variable/function | Tests still pass after rename |
-| Extract variable | Behavior is identical, name is more expressive |
+| Rename variable/function | Tests still pass |
+| Extract variable | Behavior identical, name is more expressive |
 | Extract function | New function does exactly what the old code did |
-| Inline function | Function is called once or its name doesn't add clarity |
+| Inline function | Called once or name adds no clarity |
 | Move function | Cohesion improves, no circular dependencies introduced |
 | Replace magic value with named constant | All uses updated |
 
 ---
 
-## What to avoid
+## When there are no tests
 
-- **Big refactors**: rewriting multiple things at once
-- **Refactor + feature**: mixing structural change with behavior change in the same step
-- **Speculative abstraction**: extracting a pattern you "think" you'll need
-- **Untested refactoring**: changing code that has no tests (fix the coverage gap first, or use approval/characterization tests)
+1. Write a characterization test — captures current behavior, whatever it is.
+2. Use it as the safety net.
+3. Then refactor.
 
----
-
-## When you have no tests
-
-If the code to be refactored has no tests:
-
-1. Write a **characterization test** first — a test that captures the current behavior, whatever it is
-2. Use it as your safety net
-3. Then refactor
-
-Do not refactor untested code without a safety net.
+Never refactor untested code without a safety net.
 
 ---
 
-## Signals to watch for
+## Signals the constraint is being violated
 
-Trigger this skill when:
+- Multiple structural changes in a single task
+- Behavior change mixed with a structural change
+- Abstraction extracted before two concrete cases exist
+- Tests skipped "because the refactor is obviously safe"
 
-- User says "refactor", "clean up", "extract", "remove duplication"
-- User shows code with obvious copy-paste duplication
-- User says "this feels wrong" or "this is hard to understand"
-- User wants to rename or reorganize without changing behavior
-- Code review identified structural issues to address
+When you see these, stop. Make the change smaller.
+
+---
+
+## Interactive use (pairing sessions, not Claude Code)
+
+If working interactively: one change, run tests, repeat. The cycle is the discipline.
+Never accumulate untested changes. If uncertain whether a change is safe, make it smaller.
