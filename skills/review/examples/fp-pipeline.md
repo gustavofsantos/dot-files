@@ -29,7 +29,7 @@ function processTransactions(transactions) {
 
 ## Output
 
-```
+<review>
 REVIEW: processTransactions — single file
 CORE CHANGE: A transaction processing pipeline that filters, normalizes currency,
              and flags high-value items.
@@ -121,4 +121,4 @@ Must fix before merge: Input mutation (t.flagged = true). Write at least one
 Consider: Full declarative pipeline refactor as described above.
 Looks good: Intent is clear, business logic is correct, transformation shape is
             already implicit in the code — the refactor reveals what's already there.
-```
+</review>

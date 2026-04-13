@@ -39,7 +39,7 @@ def process_order(order_id, user_id, items, coupon_code, shipping_address, billi
 
 ## Output
 
-```
+<review>
 REVIEW: process_order — single file
 CORE CHANGE: The complete order lifecycle — validation, pricing, persistence,
              and customer notification — in a single function.
@@ -112,6 +112,7 @@ testable without a live database or mail server.
 
 **Refactored**
 
+```python
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Optional
@@ -181,6 +182,7 @@ class OrderProcessor:
             subject="Order Confirmed",
             body=f"Dear {user['name']}, your order total is {total}.",
         )
+```
 
 ─── SUMMARY ────────────────────────────────────────────────────
 
@@ -191,4 +193,4 @@ Consider: Full structural refactor as described. Coupon as value object is the
 Looks good: Business logic is correct. The intent of each step is legible even
             in the current form. The refactor reveals structure that is already
             implicit — nothing is being invented.
-```
+</review>

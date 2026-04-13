@@ -52,7 +52,7 @@ src/seubarriga/expenses/queries_test.clj  | 41 +++++++++++++++++++
 
 ## Output
 
-```
+<review>
 REVIEW: feat/add-expense-category-filter → main
 CORE CHANGE: A category filter parameter added to the expense listing query.
 
@@ -140,4 +140,4 @@ Consider: Two additional test cases (no-match category, nil category) that would
           have caught the param bug before review.
 Looks good: Handler/query separation is clean. The change is narrow and well-scoped.
             The intent of the filter is immediately legible from the test names.
-```
+</review>
