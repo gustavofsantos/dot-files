@@ -1,20 +1,13 @@
 #!/usr/bin/env python3
 """
-work-recall — Claude Code hook script.
+work-recall — Claude Code PostToolUse hook script.
 
-Reads the session file for the current worktree and prints the
-## Current focus section to stdout. Claude Code injects this into
-context to re-anchor during long sessions.
+Reads the session file for the current worktree and injects the
+## Current focus section into Claude's context after each tool call.
 
-Designed to be registered as a Claude Code PostToolUse hook.
 Exits silently with code 0 if no session is found — never blocks Claude.
 
-Usage:
-    work-recall                          # auto-detect from cwd
-    work-recall --session 001-api        # explicit session
-    work-recall --card 001               # first active session for a card
-
-Claude Code hook registration (.claude/settings.local.json):
+Hook registration (.claude/settings.local.json):
     {
       "hooks": {
         "PostToolUse": [
@@ -30,9 +23,26 @@ Claude Code hook registration (.claude/settings.local.json):
         ]
       }
     }
+
+Alternatively, register as a SessionStart hook to inject context once per
+session instead of after every tool call (more efficient):
+
+    {
+      "hooks": {
+        "SessionStart": [
+          {
+            "hooks": [
+              {
+                "type": "command",
+                "command": "python3 ~/.claude/skills/workflow/scripts/work-recall.py"
+              }
+            ]
+          }
+        ]
+      }
+    }
 """
 
-import argparse
 import json
 import os
 import re
@@ -41,6 +51,16 @@ from pathlib import Path
 
 WORK_DIR = Path.home() / ".work"
 SESSIONS_DIR = WORK_DIR / "sessions"
+
+
+def read_stdin_event() -> dict:
+    """Read the hook event JSON from stdin. Return empty dict if unavailable."""
+    try:
+        if not sys.stdin.isatty():
+            return json.loads(sys.stdin.read())
+    except (json.JSONDecodeError, OSError):
+        pass
+    return {}
 
 
 def parse_frontmatter(path: Path) -> dict:
@@ -71,15 +91,11 @@ def extract_current_focus(path: Path) -> str | None:
 
     focus = match.group(1).strip()
 
+    # Ignore placeholder comments
     if not focus or focus.startswith("<!--"):
         return None
 
     return focus
-
-
-def find_session_by_id(session_id: str) -> Path | None:
-    candidate = SESSIONS_DIR / f"{session_id}.md"
-    return candidate if candidate.exists() else None
 
 
 def find_session_by_worktree(cwd: Path) -> Path | None:
@@ -103,38 +119,20 @@ def find_session_by_worktree(cwd: Path) -> Path | None:
     return None
 
 
-def find_session_by_card(card_id: str) -> Path | None:
-    if not SESSIONS_DIR.exists():
-        return None
-
-    for path in sorted(SESSIONS_DIR.glob(f"{card_id}-*.md")):
-        return path
-
-    return None
-
-
 def main():
-    parser = argparse.ArgumentParser(
-        description="Inject current focus from work session into Claude context"
-    )
-    parser.add_argument("--session", help="Explicit session ID (e.g. 001-api)")
-    parser.add_argument("--card", help="Card ID — uses first matching session")
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Print session metadata alongside focus (for debugging)",
-    )
-    args = parser.parse_args()
+    event = read_stdin_event()
 
-    session_path = None
+    # hook_event_name is provided by Claude Code in the stdin JSON.
+    # Needed to set the correct hookEventName in output — PostToolUse and
+    # SessionStart both support additionalContext via hookSpecificOutput,
+    # but the hookEventName field must match the actual event.
+    hook_event = event.get("hook_event_name", "PostToolUse")
 
-    if args.session:
-        session_path = find_session_by_id(args.session)
-    elif args.card:
-        session_path = find_session_by_card(args.card)
-    else:
-        cwd = Path(os.getcwd())
-        session_path = find_session_by_worktree(cwd)
+    # Prefer cwd from the event payload; fall back to process cwd.
+    raw_cwd = event.get("cwd") or os.getcwd()
+    cwd = Path(raw_cwd)
+
+    session_path = find_session_by_worktree(cwd)
 
     if not session_path:
         sys.exit(0)
@@ -144,13 +142,15 @@ def main():
     if not focus:
         sys.exit(0)
 
-    if args.verbose:
-        fm = parse_frontmatter(session_path)
-        print(f"[work-recall] session: {fm.get('id', '?')}  card: {fm.get('card', '?')}  repo: {fm.get('repo', '?')}")
-        print(f"[work-recall] branch: {fm.get('branch', '?')}")
-        print()
-
-    print(json.dumps({"additionalContext": focus}))
+    # Per Claude Code hook docs, additionalContext must be nested inside
+    # hookSpecificOutput with a hookEventName field matching the event.
+    # Top-level {"additionalContext": ...} is not the correct format.
+    print(json.dumps({
+        "hookSpecificOutput": {
+            "hookEventName": hook_event,
+            "additionalContext": focus,
+        }
+    }))
 
 
 if __name__ == "__main__":
