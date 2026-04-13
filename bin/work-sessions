@@ -1,0 +1,337 @@
+#!/usr/bin/env python3
+"""
+work-sessions — interactive tmux session picker with card context.
+
+Dense display format:
+  ● 001 · Auth refactor                [active]
+    ● api        feat/auth-refactor    3h   "wiring middleware"
+    ○ frontend   feat/auth-refactor    1h   dead
+
+Usage:
+  work-sessions          # interactive fzf picker
+  work-sessions --list   # print to stdout and exit (no fzf)
+
+Keybindings in fzf:
+  Enter     attach to selected session (restore if dead)
+  Esc / q   dismiss
+
+Tmux floating window setup (add to tmux.conf):
+  bind-key o display-popup -E -w 80% -h 60% "work-sessions"
+"""
+
+import os
+import re
+import sys
+import subprocess
+from datetime import datetime, timezone
+from pathlib import Path
+
+WORK_DIR = Path("~/.work").expanduser()
+CARDS_DIR = WORK_DIR / "cards"
+SESSIONS_DIR = WORK_DIR / "sessions"
+
+ALIVE = "●"
+DEAD  = "○"
+
+STATUS_ORDER = {"active": 0, "inbox": 1, "not-now": 2, "done": 3}
+
+
+# ── frontmatter parsing ───────────────────────────────────────────────────────
+
+def parse_frontmatter(path: Path) -> dict:
+    """Return frontmatter fields as a dict. Silently returns {} on failure."""
+    try:
+        text = path.read_text()
+    except OSError:
+        return {}
+
+    if not text.startswith("---"):
+        return {}
+
+    end = text.find("\n---", 3)
+    if end == -1:
+        return {}
+
+    block = text[3:end].strip()
+    data = {}
+    current_key = None
+    list_items = []
+
+    for line in block.splitlines():
+        list_match = re.match(r"^\s+-\s+(.*)", line)
+        scalar_match = re.match(r"^(\w[\w-]*):\s*(.*)", line)
+
+        if list_match:
+            if current_key:
+                list_items.append(list_match.group(1).strip())
+        elif scalar_match:
+            if current_key and list_items:
+                data[current_key] = list_items
+                list_items = []
+            current_key = scalar_match.group(1)
+            value = scalar_match.group(2).strip()
+            if value.startswith("[") and value.endswith("]"):
+                inner = value[1:-1].strip()
+                data[current_key] = [v.strip() for v in inner.split(",")] if inner else []
+                current_key = None
+            else:
+                data[current_key] = value
+
+    if current_key and list_items:
+        data[current_key] = list_items
+
+    return data
+
+
+def body_first_section(path: Path, heading: str = "Current focus") -> str:
+    """Return first non-empty line under a heading, or ''."""
+    try:
+        text = path.read_text()
+    except OSError:
+        return ""
+
+    in_section = False
+    for line in text.splitlines():
+        if line.strip() == f"## {heading}":
+            in_section = True
+            continue
+        if in_section:
+            if line.startswith("## "):
+                break
+            stripped = line.strip()
+            if stripped:
+                return stripped[:60]
+    return ""
+
+
+# ── tmux helpers ──────────────────────────────────────────────────────────────
+
+def tmux_live_sessions() -> set:
+    """Return set of live tmux session names."""
+    try:
+        out = subprocess.check_output(
+            ["tmux", "list-sessions", "-F", "#{session_name}"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        return set(out.strip().splitlines())
+    except subprocess.CalledProcessError:
+        return set()
+
+
+def session_age(path: Path) -> str:
+    """Return human-readable age of file modification time."""
+    try:
+        mtime = path.stat().st_mtime
+    except OSError:
+        return "?"
+
+    now = datetime.now(timezone.utc).timestamp()
+    delta = int(now - mtime)
+
+    if delta < 60:
+        return f"{delta}s"
+    if delta < 3600:
+        return f"{delta // 60}m"
+    if delta < 86400:
+        return f"{delta // 3600}h"
+    return f"{delta // 86400}d"
+
+
+# ── data loading ──────────────────────────────────────────────────────────────
+
+def load_sessions_for_card(card_id: str, live: set) -> list[dict]:
+    """Load all session files belonging to a card, sorted by mtime desc."""
+    sessions = []
+    if not SESSIONS_DIR.exists():
+        return sessions
+
+    for path in SESSIONS_DIR.glob(f"{card_id}-*.md"):
+        fm = parse_frontmatter(path)
+        if not fm:
+            continue
+        tmux_name = fm.get("tmux-session", path.stem)
+        sessions.append({
+            "id":         fm.get("id", path.stem),
+            "repo":       fm.get("repo", "?"),
+            "branch":     fm.get("branch", ""),
+            "tmux":       tmux_name,
+            "alive":      tmux_name in live,
+            "focus":      body_first_section(path),
+            "age":        session_age(path),
+            "mtime":      path.stat().st_mtime if path.exists() else 0,
+            "path":       str(path),
+        })
+
+    sessions.sort(key=lambda s: s["mtime"], reverse=True)
+    return sessions
+
+
+def load_cards() -> list[dict]:
+    """Load all non-archived cards, sorted by last activity desc."""
+    if not CARDS_DIR.exists():
+        return []
+
+    live = tmux_live_sessions()
+    cards = []
+
+    for path in CARDS_DIR.glob("*.md"):
+        fm = parse_frontmatter(path)
+        if not fm:
+            continue
+
+        card_id = fm.get("id", path.stem)
+        status  = fm.get("status", "inbox")
+        if status == "done":
+            continue
+
+        sessions = load_sessions_for_card(card_id, live)
+        last_activity = max(
+            (s["mtime"] for s in sessions),
+            default=path.stat().st_mtime,
+        )
+
+        cards.append({
+            "id":       card_id,
+            "title":    fm.get("title", path.stem),
+            "status":   status,
+            "sessions": sessions,
+            "mtime":    last_activity,
+        })
+
+    cards.sort(key=lambda c: c["mtime"], reverse=True)
+    return cards
+
+
+# ── rendering ─────────────────────────────────────────────────────────────────
+
+def render_card_header(card: dict) -> str:
+    has_alive = any(s["alive"] for s in card["sessions"])
+    dot   = ALIVE if has_alive else DEAD
+    title = card["title"][:40]
+    status = card["status"]
+    return f"{dot} {card['id']} · {title:<42} [{status}]"
+
+
+def render_session_line(s: dict) -> str:
+    dot    = ALIVE if s["alive"] else DEAD
+    repo   = s["repo"][:10]
+    branch = s["branch"][:28]
+    age    = s["age"]
+    state  = "" if s["alive"] else "dead"
+    focus  = f'"{s["focus"]}"' if s["focus"] and s["alive"] else state
+    return f"    {dot} {repo:<12} {branch:<30} {age:<6} {focus}"
+
+
+def build_display(cards: list[dict]) -> list[tuple[str, str]]:
+    """
+    Return list of (display_line, tmux_session_name).
+    Card header lines have tmux_session = '' (not selectable).
+    """
+    rows = []
+    for card in cards:
+        rows.append((render_card_header(card), ""))
+        for s in card["sessions"]:
+            rows.append((render_session_line(s), s["tmux"]))
+        if not card["sessions"]:
+            rows.append(("    (no sessions)", ""))
+    return rows
+
+
+# ── actions ───────────────────────────────────────────────────────────────────
+
+def restore_session(tmux_name: str) -> bool:
+    """Call work-session-restore for a dead session. Returns True on success."""
+    scripts = Path("~/.claude/skills/workflow/scripts").expanduser()
+    result = subprocess.run(
+        ["python3", str(scripts / "work-session-restore.py"), "--session", tmux_name],
+        capture_output=True,
+    )
+    return result.returncode == 0
+
+
+def attach_session(tmux_name: str, live: set):
+    """Restore if needed, then attach. Replaces current process."""
+    if tmux_name not in live:
+        ok = restore_session(tmux_name)
+        if not ok:
+            print(f"Failed to restore session: {tmux_name}", file=sys.stderr)
+            sys.exit(1)
+
+    # If already inside tmux, switch-client. Otherwise new-session attach.
+    if os.environ.get("TMUX"):
+        os.execvp("tmux", ["tmux", "switch-client", "-t", tmux_name])
+    else:
+        os.execvp("tmux", ["tmux", "attach-session", "-t", tmux_name])
+
+
+# ── fzf picker ────────────────────────────────────────────────────────────────
+
+def run_fzf(rows: list[tuple[str, str]]) -> str | None:
+    """
+    Feed display lines to fzf. Return the selected tmux session name, or None.
+    Card headers (empty session name) are non-selectable via a reload trick —
+    we filter them out post-selection instead (simpler).
+    """
+    display_lines = [line for line, _ in rows]
+    session_map   = {line: tmux for line, tmux in rows}
+
+    fzf_input = "\n".join(display_lines).encode()
+
+    try:
+        result = subprocess.run(
+            [
+                "fzf",
+                "--ansi",
+                "--no-sort",
+                "--reverse",
+                "--border=rounded",
+                "--prompt=  sessions › ",
+                "--header=Enter: attach   Esc: dismiss",
+                "--height=100%",
+                "--margin=1,2",
+            ],
+            input=fzf_input,
+            capture_output=True,
+        )
+    except FileNotFoundError:
+        print("fzf not found. Install with: brew install fzf", file=sys.stderr)
+        sys.exit(1)
+
+    if result.returncode != 0:
+        return None  # Esc or q
+
+    selected = result.stdout.decode().strip()
+    tmux_name = session_map.get(selected, "")
+    return tmux_name if tmux_name else None  # ignore header lines
+
+
+# ── entrypoint ────────────────────────────────────────────────────────────────
+
+def main():
+    list_only = "--list" in sys.argv
+
+    cards = load_cards()
+
+    if not cards:
+        print("No active cards.")
+        sys.exit(0)
+
+    rows = build_display(cards)
+
+    if list_only:
+        for line, _ in rows:
+            print(line)
+        sys.exit(0)
+
+    live = tmux_live_sessions()
+    selected = run_fzf(rows)
+
+    if selected is None:
+        sys.exit(0)
+
+    attach_session(selected, live)
+
+
+if __name__ == "__main__":
+    main()
