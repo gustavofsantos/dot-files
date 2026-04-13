@@ -12,7 +12,7 @@ font-family = BerkeleyMono Nerd Font
 
 font-feature = +liga,+dlig,+calt
 font-size = 14
-adjust-cell-height = 4
+adjust-cell-height = 6
 cursor-style = block
 cursor-invert-fg-bg = true
 # theme = earl-grey
