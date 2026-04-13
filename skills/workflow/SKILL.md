@@ -39,6 +39,57 @@ The card is the source of truth. Sessions are derived. Tmux sessions are ephemer
 
 ---
 
+## Scripts
+
+All scripts live at `~/.claude/skills/workflow/scripts/` and are invoked with `python3`.
+
+| Script | Purpose |
+|---|---|
+| `work-card-create.py` | Scaffold a new card |
+| `work-card-list.py` | List cards, filter by status or tag |
+| `work-card-archive.py` | Move a done card and its sessions to archive |
+| `work-session-create.py` | Create a session file and link it to a card |
+| `work-session-attach.py` | Attach to tmux session, restores if dead |
+| `work-session-restore.py` | Restore dead tmux sessions without attaching |
+| `work-recall.py` | Inject current focus into context (hook script) |
+
+**Invocation pattern:**
+
+```bash
+SCRIPTS=~/.claude/skills/workflow/scripts
+
+python3 $SCRIPTS/work-card-create.py --title "Fix auth bug" --status inbox
+python3 $SCRIPTS/work-card-list.py --status active --format text
+python3 $SCRIPTS/work-card-archive.py --card 001
+python3 $SCRIPTS/work-session-create.py --card 001 --repo api --branch feat/fix-auth --worktree /abs/path
+python3 $SCRIPTS/work-session-attach.py --session 001-api
+python3 $SCRIPTS/work-session-restore.py --all
+```
+
+All scripts accept `--format json` (default) or `--format text`. Use `--help` on any script for full usage.
+
+**Hook registration** (`.claude/settings.local.json`):
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash|Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/skills/workflow/scripts/work-recall.py"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+---
+
 ## Card schema
 
 ```yaml
@@ -98,20 +149,6 @@ Updated at every checkpoint — context switches, completed subtasks, blockers.
 
 ---
 
-## Scripts
-
-| Script | Purpose |
-|---|---|
-| `work-card-create` | Scaffold a new card |
-| `work-card-list` | List cards, filter by status or tag |
-| `work-card-archive` | Move a done card and its sessions to archive |
-| `work-session-create` | Create a session file and link it to a card |
-| `work-session-attach` | Attach to tmux session, restores if dead |
-| `work-session-restore` | Restore dead tmux sessions without attaching |
-| `work-recall` | Inject current focus into context (hook script) |
-
----
-
 ## Skill integration
 
 This table is the orchestration map. When a lifecycle moment occurs, invoke the skill.
@@ -158,8 +195,8 @@ directly relevant. Spikes are large; facts are small.
 Entry points: Jira ticket, Sentry issue, verbal description, scratch idea.
 
 1. Create the card:
-   ```
-   work-card-create --title "<title>" [--status inbox] [--tags feature,api]
+   ```bash
+   python3 ~/.claude/skills/workflow/scripts/work-card-create.py --title "<title>" [--status inbox] [--tags feature,api]
    ```
 2. Fill `## Objective` from available information.
 3. Fill `## Context` with background, links, and any constraints.
@@ -183,8 +220,10 @@ Entry points: Jira ticket, Sentry issue, verbal description, scratch idea.
 Prerequisites: worktree must already exist.
 
 ```bash
-work-session-create --card 001 --repo <repo> --branch <branch> --worktree /abs/path
-work-session-attach --session 001-<repo>
+python3 ~/.claude/skills/workflow/scripts/work-session-create.py \
+  --card 001 --repo <repo> --branch <branch> --worktree /abs/path
+
+python3 ~/.claude/skills/workflow/scripts/work-session-attach.py --session 001-<repo>
 ```
 
 ### Session start protocol
@@ -234,8 +273,8 @@ Do not reproduce its protocol here.
 After review passes:
 1. Set card status to `done`.
 2. Archive:
-   ```
-   work-card-archive --card 001
+   ```bash
+   python3 ~/.claude/skills/workflow/scripts/work-card-archive.py --card 001
    ```
    Moves card and linked session files to `archive/`.
    Spike documents and facts remain in `~/.knowledge/` — they outlive the card.
@@ -245,8 +284,8 @@ After review passes:
 ## Recovering after a reboot
 
 ```bash
-work-session-restore --all
-work-session-attach --session 001-<repo>
+python3 ~/.claude/skills/workflow/scripts/work-session-restore.py --all
+python3 ~/.claude/skills/workflow/scripts/work-session-attach.py --session 001-<repo>
 ```
 
 ---

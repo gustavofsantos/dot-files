@@ -1,0 +1,157 @@
+#!/usr/bin/env python3
+"""
+work-recall — Claude Code hook script.
+
+Reads the session file for the current worktree and prints the
+## Current focus section to stdout. Claude Code injects this into
+context to re-anchor during long sessions.
+
+Designed to be registered as a Claude Code PostToolUse hook.
+Exits silently with code 0 if no session is found — never blocks Claude.
+
+Usage:
+    work-recall                          # auto-detect from cwd
+    work-recall --session 001-api        # explicit session
+    work-recall --card 001               # first active session for a card
+
+Claude Code hook registration (.claude/settings.local.json):
+    {
+      "hooks": {
+        "PostToolUse": [
+          {
+            "matcher": "Bash|Read",
+            "hooks": [
+              {
+                "type": "command",
+                "command": "python3 ~/.claude/skills/workflow/scripts/work-recall.py"
+              }
+            ]
+          }
+        ]
+      }
+    }
+"""
+
+import argparse
+import json
+import os
+import re
+import sys
+from pathlib import Path
+
+WORK_DIR = Path.home() / ".work"
+SESSIONS_DIR = WORK_DIR / "sessions"
+
+
+def parse_frontmatter(path: Path) -> dict:
+    content = path.read_text()
+    if not content.startswith("---"):
+        return {}
+
+    end = content.find("---", 3)
+    if end == -1:
+        return {}
+
+    fm_block = content[3:end].strip()
+    fields = {}
+    for line in fm_block.splitlines():
+        if ":" not in line:
+            continue
+        key, _, value = line.partition(":")
+        fields[key.strip()] = value.strip().strip('"').strip("'")
+
+    return fields
+
+
+def extract_current_focus(path: Path) -> str | None:
+    content = path.read_text()
+    match = re.search(r"^## Current focus\s*\n(.*?)(?=^##|\Z)", content, re.MULTILINE | re.DOTALL)
+    if not match:
+        return None
+
+    focus = match.group(1).strip()
+
+    if not focus or focus.startswith("<!--"):
+        return None
+
+    return focus
+
+
+def find_session_by_id(session_id: str) -> Path | None:
+    candidate = SESSIONS_DIR / f"{session_id}.md"
+    return candidate if candidate.exists() else None
+
+
+def find_session_by_worktree(cwd: Path) -> Path | None:
+    if not SESSIONS_DIR.exists():
+        return None
+
+    cwd_resolved = cwd.resolve()
+
+    for path in sorted(SESSIONS_DIR.glob("*.md")):
+        fm = parse_frontmatter(path)
+        worktree = fm.get("worktree", "")
+        if not worktree:
+            continue
+        try:
+            worktree_resolved = Path(worktree).expanduser().resolve()
+            if cwd_resolved == worktree_resolved or cwd_resolved.is_relative_to(worktree_resolved):
+                return path
+        except Exception:
+            continue
+
+    return None
+
+
+def find_session_by_card(card_id: str) -> Path | None:
+    if not SESSIONS_DIR.exists():
+        return None
+
+    for path in sorted(SESSIONS_DIR.glob(f"{card_id}-*.md")):
+        return path
+
+    return None
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Inject current focus from work session into Claude context"
+    )
+    parser.add_argument("--session", help="Explicit session ID (e.g. 001-api)")
+    parser.add_argument("--card", help="Card ID — uses first matching session")
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Print session metadata alongside focus (for debugging)",
+    )
+    args = parser.parse_args()
+
+    session_path = None
+
+    if args.session:
+        session_path = find_session_by_id(args.session)
+    elif args.card:
+        session_path = find_session_by_card(args.card)
+    else:
+        cwd = Path(os.getcwd())
+        session_path = find_session_by_worktree(cwd)
+
+    if not session_path:
+        sys.exit(0)
+
+    focus = extract_current_focus(session_path)
+
+    if not focus:
+        sys.exit(0)
+
+    if args.verbose:
+        fm = parse_frontmatter(session_path)
+        print(f"[work-recall] session: {fm.get('id', '?')}  card: {fm.get('card', '?')}  repo: {fm.get('repo', '?')}")
+        print(f"[work-recall] branch: {fm.get('branch', '?')}")
+        print()
+
+    print(json.dumps({"additionalContext": focus}))
+
+
+if __name__ == "__main__":
+    main()
