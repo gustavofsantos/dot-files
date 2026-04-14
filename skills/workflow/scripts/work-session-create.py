@@ -35,6 +35,27 @@ def write_text(path: Path, content: str) -> None:
     path.write_text(content)
 
 
+def extract_pending_tasks(card_path: Path) -> list[str]:
+    """Extract unchecked tasks from the card's ## Tasks section."""
+    content = read_text(card_path)
+    match = re.search(
+        r"^## Tasks\s*\n(.*?)(?=^##|\Z)",
+        content,
+        re.MULTILINE | re.DOTALL,
+    )
+    if not match:
+        return []
+
+    tasks_body = match.group(1)
+    pending = []
+    for line in tasks_body.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("- [ ]"):
+            pending.append(stripped)
+
+    return pending
+
+
 def append_session_to_card(card_path: Path, session_path: Path) -> None:
     content = read_text(card_path)
     session_str = str(session_path)
@@ -80,7 +101,23 @@ def append_session_to_card(card_path: Path, session_path: Path) -> None:
     write_text(card_path, updated_content)
 
 
-def build_session_content(session_id: str, card_id: str, repo: str, branch: str, worktree: str) -> str:
+def build_session_content(
+    session_id: str,
+    card_id: str,
+    repo: str,
+    branch: str,
+    worktree: str,
+    pending_tasks: list[str],
+) -> str:
+    if pending_tasks:
+        first = pending_tasks[0]
+        rest = pending_tasks[1:]
+        in_progress_block = f"{first}"
+        next_block = "\n".join(rest) if rest else "<!-- no further tasks -->"
+    else:
+        in_progress_block = "<!-- populate from card ## Tasks before starting -->"
+        next_block = "<!-- populate from card ## Tasks before starting -->"
+
     return f"""---
 id: {session_id}
 card: "{card_id}"
@@ -91,8 +128,15 @@ tmux-session: {session_id}
 ---
 
 ## Current focus
-<!-- What's being worked on right now in this repo front.
-     Updated at every checkpoint — context switches, completed subtasks, blockers. -->
+
+### Done
+<!-- Agent moves completed items here (marked [x]) as they finish. -->
+
+### In progress
+{in_progress_block}
+
+### Next
+{next_block}
 """
 
 
@@ -117,7 +161,8 @@ def create_session(card_id: str, repo: str, branch: str, worktree_path: Path) ->
         print(f"error: session file already exists: {session_path}", file=sys.stderr)
         sys.exit(1)
 
-    content = build_session_content(session_id, card_id, repo, branch, str(worktree_path))
+    pending_tasks = extract_pending_tasks(card_path)
+    content = build_session_content(session_id, card_id, repo, branch, str(worktree_path), pending_tasks)
     write_text(session_path, content)
 
     append_session_to_card(card_path, session_path)
@@ -130,6 +175,7 @@ def create_session(card_id: str, repo: str, branch: str, worktree_path: Path) ->
         "worktree": str(worktree_path),
         "tmux-session": session_id,
         "path": str(session_path),
+        "tasks_loaded": len(pending_tasks),
     }
 
 
@@ -157,6 +203,7 @@ def main():
         print(f"{session['id']}  {session['card']}  {session['repo']}  {session['branch']}")
         print(f"worktree: {session['worktree']}")
         print(f"path: {session['path']}")
+        print(f"tasks loaded: {session['tasks_loaded']}")
 
 
 if __name__ == "__main__":

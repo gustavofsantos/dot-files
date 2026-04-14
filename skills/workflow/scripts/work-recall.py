@@ -3,7 +3,8 @@
 work-recall — Claude Code PostToolUse hook script.
 
 Reads the session file for the current worktree and injects the
-## Current focus section into Claude's context after each tool call.
+## Current focus section (Done / In progress / Next) into Claude's
+context after each tool call.
 
 Exits silently with code 0 if no session is found — never blocks Claude.
 
@@ -13,24 +14,6 @@ Hook registration (.claude/settings.local.json):
         "PostToolUse": [
           {
             "matcher": "Bash|Read",
-            "hooks": [
-              {
-                "type": "command",
-                "command": "python3 ~/.claude/skills/workflow/scripts/work-recall.py"
-              }
-            ]
-          }
-        ]
-      }
-    }
-
-Alternatively, register as a SessionStart hook to inject context once per
-session instead of after every tool call (more efficient):
-
-    {
-      "hooks": {
-        "SessionStart": [
-          {
             "hooks": [
               {
                 "type": "command",
@@ -54,7 +37,6 @@ SESSIONS_DIR = WORK_DIR / "sessions"
 
 
 def read_stdin_event() -> dict:
-    """Read the hook event JSON from stdin. Return empty dict if unavailable."""
     try:
         if not sys.stdin.isatty():
             return json.loads(sys.stdin.read())
@@ -85,17 +67,33 @@ def parse_frontmatter(path: Path) -> dict:
 
 def extract_current_focus(path: Path) -> str | None:
     content = path.read_text()
-    match = re.search(r"^## Current focus\s*\n(.*?)(?=^##|\Z)", content, re.MULTILINE | re.DOTALL)
+
+    # Extract the full ## Current focus block (until next ## or end of file)
+    match = re.search(
+        r"^## Current focus\s*\n(.*?)(?=^##|\Z)",
+        content,
+        re.MULTILINE | re.DOTALL,
+    )
     if not match:
         return None
 
-    focus = match.group(1).strip()
+    focus_body = match.group(1).strip()
 
-    # Ignore placeholder comments
-    if not focus or focus.startswith("<!--"):
+    # Ignore empty or placeholder-only sections
+    if not focus_body or all(
+        line.strip().startswith("<!--") or not line.strip()
+        for line in focus_body.splitlines()
+    ):
         return None
 
-    return focus
+    # Strip HTML comments (<!-- ... -->) from the output
+    focus_body = re.sub(r"<!--.*?-->", "", focus_body, flags=re.DOTALL).strip()
+
+    if not focus_body:
+        return None
+
+    # Format for injection: prepend the section header for clarity
+    return f"## Current focus\n\n{focus_body}"
 
 
 def find_session_by_worktree(cwd: Path) -> Path | None:
@@ -121,14 +119,8 @@ def find_session_by_worktree(cwd: Path) -> Path | None:
 
 def main():
     event = read_stdin_event()
-
-    # hook_event_name is provided by Claude Code in the stdin JSON.
-    # Needed to set the correct hookEventName in output — PostToolUse and
-    # SessionStart both support additionalContext via hookSpecificOutput,
-    # but the hookEventName field must match the actual event.
     hook_event = event.get("hook_event_name", "PostToolUse")
 
-    # Prefer cwd from the event payload; fall back to process cwd.
     raw_cwd = event.get("cwd") or os.getcwd()
     cwd = Path(raw_cwd)
 
@@ -142,9 +134,6 @@ def main():
     if not focus:
         sys.exit(0)
 
-    # Per Claude Code hook docs, additionalContext must be nested inside
-    # hookSpecificOutput with a hookEventName field matching the event.
-    # Top-level {"additionalContext": ...} is not the correct format.
     print(json.dumps({
         "hookSpecificOutput": {
             "hookEventName": hook_event,

@@ -118,11 +118,23 @@ Relevant background. Links to Jira, Sentry, docs, prior decisions.
 If design constraints apply (evolutionary-design, incremental-refactor),
 state them here as named constraints — not as prose.
 
+## Tasks
+Tasks defined by the human before execution begins. The agent checks these off.
+- [ ] Task 1: description
+- [ ] Task 2: description
+- [ ] Task 3: description
+
 ## Current focus
-What is being worked on right now. Kept current by the agent.
+What is being worked on right now. Kept current by the agent. See session file
+for the structured Done / In progress / Next breakdown.
 ```
 
 **Valid statuses:** `inbox` `not-now` `active` `done`
+
+**On card completion:** when all tasks in `## Tasks` are checked `[x]`, the agent
+signals the human: "All tasks are complete. Ready for review." The human then
+runs the review skill and archives the card. The agent never moves a card to `done`
+unilaterally.
 
 `facts` — IDs of facts in `~/.knowledge/facts/` discovered while working this card.
 `spikes` — paths to spike narratives produced during planning or investigation.
@@ -143,9 +155,26 @@ tmux-session: 001-api
 ---
 
 ## Current focus
-What is being worked on right now in this specific repo front.
-Updated at every checkpoint — context switches, completed subtasks, blockers.
+
+### Done
+<!-- Items completed this session. Agent marks here after each finished task. -->
+- [x] Example: scaffolded migration file
+
+### In progress
+<!-- The single item being worked on right now. One item maximum. -->
+- [ ] Example: implementing the query with optional filter
+
+### Next
+<!-- Remaining items planned for this session, in order. -->
+- [ ] Example: handler wiring and integration test
 ```
+
+**The agent fully rewrites `## Current focus` after each completed subtask.**
+It never appends — it rewrites the entire section, moving finished items to `### Done`,
+keeping one item in `### In progress`, and maintaining the ordered `### Next` list.
+
+`work-recall.py` extracts the entire `## Current focus` block and injects it after
+every tool call. The agent always sees the current state of Done / In progress / Next.
 
 ---
 
@@ -207,9 +236,10 @@ Entry points: Jira ticket, Sentry issue, verbal description, scratch idea.
 6. If the objective is clear enough to implement:
    → invoke `user-story-builder` if the scope needs shaping.
    → invoke `user-story-planner` to break into tasks.
+   → write the resulting tasks into `## Tasks` in the card.
    → set status to `active`.
 
-**Card stays lean.** Objective + context + pointers. No prose that belongs in a spike.
+**Card stays lean.** Objective + context + tasks + pointers. No prose that belongs in a spike.
 
 ---
 
@@ -217,7 +247,7 @@ Entry points: Jira ticket, Sentry issue, verbal description, scratch idea.
 
 ### Starting a session
 
-Prerequisites: worktree must already exist.
+Prerequisites: worktree must already exist. Card must have tasks defined in `## Tasks`.
 
 ```bash
 python3 ~/.claude/skills/workflow/scripts/work-session-create.py \
@@ -229,44 +259,60 @@ python3 ~/.claude/skills/workflow/scripts/work-session-attach.py --session 001-<
 ### Session start protocol
 
 1. Run knowledge retrieval (see above).
-2. Read the card.
+2. Read the card — objective, context, and full `## Tasks` list.
 3. Read the session file if it exists.
-4. Reconstruct context: objective → current focus → relevant facts.
+4. Populate `## Current focus` in the session file:
+   - `### Done` — empty (or carry over from prior interrupted session)
+   - `### In progress` — first unchecked task from the card's `## Tasks`
+   - `### Next` — remaining unchecked tasks in order
 5. State what you understand and what you're about to do. Wait for confirmation
    if anything is ambiguous.
 
 ### During execution
 
-- Update `## Current focus` in the session file at every natural checkpoint.
-  A checkpoint is: context switch, completed subtask, blocked state, model handoff.
+**After each completed subtask:**
+
+1. Rewrite `## Current focus` in full:
+   - Move the finished item from `### In progress` to `### Done` (mark `[x]`)
+   - Pull the next item from `### Next` into `### In progress`
+   - Remove it from `### Next`
+2. Mark the corresponding task `[x]` in the card's `## Tasks`.
+3. Update `updated:` date in the card frontmatter.
+
+**When `### Next` is empty and `### In progress` is marked done:**
+
+Signal to the human:
+> "All planned tasks are complete. Ready for review."
+
+Do not set card status to `done`. That is the human's action after review passes.
+
+**Scope discipline:**
+
 - New work that surfaces outside card scope → create a new card in `inbox`, do not expand scope.
 - New fact discovered → write to `~/.knowledge/facts/`, add ID to card's `facts:` field,
   run `qmd update`.
-- Keep `## Current focus` honest. It is how you recover context, not how you report progress.
 
 ### Context recovery
 
 When resuming an interrupted session or switching worktrees:
 
-1. Read session file → `## Current focus` is your anchor.
-2. Read card → objective and constraints.
+1. Read session file → `## Current focus` is the anchor. Done / In progress / Next tell you exactly where execution stopped.
+2. Read card → `## Tasks` confirms which tasks are checked overall.
 3. Run knowledge retrieval.
 4. Reconstruct: "We were doing X because of Y. The next step was Z."
 5. State the reconstruction to the human before proceeding.
 
 ### Model handoff
 
-**Outgoing:** finish at a task boundary. Write one sentence in `## Current focus`:
-`Handoff: <what was done and what comes next>`.
+**Outgoing:** finish at a task boundary. Ensure `## Current focus` is fully up to date before handing off. Write one sentence at the bottom of `### In progress`: `Handoff: <what was done and what comes next>`.
 
-**Incoming:** read card, read session, run knowledge retrieval. Rewrite `## Current focus`
-appending `Picked up from <previous-agent>`. Proceed.
+**Incoming:** read card, read session, run knowledge retrieval. Rewrite `## Current focus` if stale. Proceed.
 
 ---
 
 ## Phase 3 — Reviewing a card
 
-When work is complete, invoke `review` skill.
+When all tasks are complete, invoke `review` skill.
 The review skill handles both safety/scope review and architectural depth.
 Do not reproduce its protocol here.
 
@@ -297,4 +343,7 @@ python3 ~/.claude/skills/workflow/scripts/work-session-attach.py --session 001-<
 - Worktree paths must be absolute.
 - Status must be one of the four valid values.
 - Facts and spikes are pointers only. Never copy content into the card.
-- The agent updates `## Current focus`. The human updates `## Objective` and `## Context`.
+- The agent rewrites `## Current focus` in the session file after every completed subtask — never appends.
+- The agent checks off tasks in the card's `## Tasks` as they complete — never at session end in bulk.
+- The agent updates `## Current focus` in the card with a one-line summary of what's actively happening.
+- The human updates `## Objective`, `## Context`, and `## Tasks`. The agent does not rewrite these.
