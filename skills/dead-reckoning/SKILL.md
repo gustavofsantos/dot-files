@@ -17,7 +17,22 @@ description: >
 
 # Dead Reckoning — Legacy Analysis
 
----
+## Session flow
+
+```mermaid
+flowchart TD
+    A[Session Start] --> B{Prior .session.md?}
+    B -- Yes, interrupted --> C[Ask: continue or fresh?]
+    B -- No --> D[Check card spikes field]
+    C --> E[Load spike & orient]
+    D --> E
+    E --> F[Knowledge retrieval via qmd]
+    F --> G[Phase 1: Orient]
+    G --> H[Phase 2: Traverse]
+    H --> I[Phase 3: Promote to facts]
+    I --> J[Phase 4: Finalize spike]
+    J --> K[Delete .session.md]
+```
 
 ## Storage layout
 
@@ -38,8 +53,6 @@ Facts are atoms promoted from the spike into the permanent library.
 
 See the `knowledge` skill for fact format and promotion protocol.
 
----
-
 ## Session start
 
 1. Read `.session.md` if it exists.
@@ -59,8 +72,6 @@ See the `knowledge` skill for fact format and promotion protocol.
 
 **If no system name is clear:** ask "What system is this?" before anything else.
 
----
-
 ## Phase 1 — Orient
 
 **Identify the central question.** A topic is not a question. If the input is vague:
@@ -79,11 +90,23 @@ Wait for confirmation or redirection.
 
 **Rewrite `.session.md`** with Phase 1 complete.
 
----
-
 ## Phase 2 — Traverse
 
 Core loop. Repeat until the central question is answered or a genuine edge is reached.
+
+```mermaid
+flowchart TD
+    A[Read code — behavior not syntax] --> B[Produce affirmation]
+    B --> C{"Does this hold?"}
+    C -- Yes --> D[Mark as candidate\nAppend to spike\nRewrite .session.md]
+    C -- No --> E[Ask what's wrong\nCorrect claim\nDo not continue]
+    E --> C
+    D --> F{Edge type?}
+    F -- Scope edge --> G[Record SCOPE-n\nContinue]
+    F -- Knowledge edge --> H[Signal to human\nWait for input]
+    F -- None --> A
+    G --> A
+```
 
 **Traverse one step.** Read code. Understand behavior, not syntax.
 
@@ -147,8 +170,6 @@ and fact confirmation or invalidation.
 
 Never conflate these.
 
----
-
 ## Phase 3 — Promote to facts
 
 For each candidate affirmation:
@@ -161,8 +182,6 @@ Unconfirmed candidates stay in the spike as narrative — not promoted.
 
 Update `.session.md` to reflect facts promoted.
 
----
-
 ## Phase 4 — Finalize spike
 
 1. Write the **Answer** section in the spike document — response to the central
@@ -172,8 +191,6 @@ Update `.session.md` to reflect facts promoted.
 3. Add the spike path to the originating card's `spikes:` field.
 4. Report to human: question answered or not, open questions, facts promoted.
 5. Delete `.session.md` — state now lives in the spike and the knowledge library.
-
----
 
 ## Spike document format
 
@@ -213,8 +230,6 @@ Update `.session.md` to reflect facts promoted.
 
 {Genuine unknowns not resolved.}
 ```
-
----
 
 ## What this skill does not do
 

@@ -178,6 +178,19 @@ every tool call. The agent always sees the current state of Done / In progress /
 
 ---
 
+## Card lifecycle
+
+```mermaid
+flowchart LR
+    A[inbox] --> B[active]
+    A -.->|deprioritized| C[not-now]
+    C -.->|reprioritized| A
+    B --> D[done → archive]
+```
+
+Cards move forward. The agent never moves a card to `done` — that is the human's action
+after review passes.
+
 ## Skill integration
 
 This table is the orchestration map. When a lifecycle moment occurs, invoke the skill.
@@ -244,6 +257,20 @@ Entry points: Jira ticket, Sentry issue, verbal description, scratch idea.
 ---
 
 ## Phase 2 — Executing a card
+
+### Execution loop
+
+```mermaid
+flowchart TD
+    A[Session start\nknowledge retrieval] --> B[Read card + session file]
+    B --> C[Populate Current focus]
+    C --> D[Work on In progress item]
+    D --> E[Subtask complete]
+    E --> F[Rewrite Current focus\nCheck off task in card]
+    F --> G{Next items?}
+    G -- Yes --> D
+    G -- No --> H[Signal: all tasks complete\nReady for review]
+```
 
 ### Starting a session
 
