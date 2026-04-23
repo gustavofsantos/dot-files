@@ -17,37 +17,92 @@ description: >
 
 # Dead Reckoning — Legacy Analysis
 
----
-
 ## Storage layout
 
 ```
+~/.work/
+  sessions/
+    NNN-<repo>.md         ← workflow session file, owns ## Traversal during investigation
+
 ~/.knowledge/
   facts/
     FACT-NNN-slug.md      ← validated facts, global, permanent
   spikes/
     NNN-slug.md           ← this session's spike document
-
-{worktree}/
-  .session.md             ← traversal state, local, rewritten constantly
 ```
 
 The spike document is the narrative output of this skill.
 Facts are atoms promoted from the spike into the permanent library.
-`.session.md` is ephemeral — it anchors the agent during the session.
+Traversal state (affirmations, scope records, dynamic paths) lives in `## Traversal`
+inside the workflow session file — not in the worktree.
 
 See the `knowledge` skill for fact format and promotion protocol.
+See the `workflow` skill for the session file schema.
 
----
+## Session file during traversal
+
+Dead reckoning adds two things to the workflow session file: it manages `## Current focus`
+to reflect investigation phases, and it owns a `## Traversal` section for ephemeral state.
+
+```markdown
+## Current focus
+
+### Done
+- [x] Phase 1: Orient — central question confirmed
+
+### In progress
+- [ ] Phase 2: Traverse — entry: src/auth/token.clj:refresh-token
+
+### Next
+- [ ] Phase 3: Promote to facts
+- [ ] Phase 4: Finalize spike
+
+## Traversal
+
+**Spike:** ~/.knowledge/spikes/001-auth-investigation.md
+**Central question:** Does token refresh happen before expiry validation?
+
+### Pending affirmations
+
+[A1] Auth middleware checks expiry before delegating to refresh handler
+     ↳ Anchored at: src/auth/middleware.clj:47
+     ↳ Status: candidate for promotion
+
+### Scope records
+
+[SCOPE-1] Did not traverse: billing integration
+           Reason: out of scope
+           Risk: billing may depend on token state
+
+### Dynamic paths
+
+[DYNAMIC-1] Dynamic dispatch at: src/auth/handler.clj:23
+             Cannot resolve statically. Human verification required.
+```
+
+`work-recall.py` injects `## Current focus` after every tool call, giving the agent
+continuous phase awareness without reading the full session file.
 
 ## Session start
 
-1. Read `.session.md` if it exists.
-   - References an ongoing spike → load it from `~/.knowledge/spikes/` and continue.
-   - Interrupted session → ask "Continue or start fresh?"
-2. If no session: check the card's `spikes:` field for a prior spike on this topic.
-   If found, load it silently and orient from where it left off.
-3. Run knowledge retrieval:
+1. Find the workflow session for this card:
+   ```bash
+   python3 $SCRIPTS/work-card-list.py --status active --format json
+   ```
+   Read the card's `sessions:` field to locate the session file.
+
+2. Read the session file at `~/.work/sessions/<id>-<repo>.md`.
+   - Has `## Traversal` section → ongoing investigation. Load the spike from the path
+     in `**Spike:**` and continue from where it left off.
+   - No `## Traversal` section → fresh investigation. Add the section before starting.
+
+3. If no session file exists, create one:
+   ```bash
+   python3 $SCRIPTS/work-session-create.py \
+     --card <id> --repo <repo> --branch <branch> --worktree /abs/path
+   ```
+
+4. Run knowledge retrieval:
    ```bash
    qmd query "<investigation topic>" --min-score 0.5 -n 6 --files
    ```
@@ -55,11 +110,12 @@ See the `knowledge` skill for fact format and promotion protocol.
    surface it to the human before traversal begins:
    > "FACT-007 covers auth token refresh in this system. Should I treat it as an axiom
    > for this session, or do you want to verify it fresh?"
-4. Rewrite `.session.md` with initial spike state before any tool call.
+
+5. Rewrite `## Current focus` and `## Traversal` in the session file before any tool call.
+
+**If no card exists yet:** create one first with `work-card-create.py`, then create the session.
 
 **If no system name is clear:** ask "What system is this?" before anything else.
-
----
 
 ## Phase 1 — Orient
 
@@ -69,7 +125,8 @@ See the `knowledge` skill for fact format and promotion protocol.
 > 'Does X happen before Y?' or 'Who owns Z when W occurs?'"
 
 A good central question has a factual or yes/no answer, narrow enough for one session.
-Once confirmed, write it at the top of the spike document.
+Once confirmed, write it at the top of the spike document and in `**Central question:**`
+in the `## Traversal` section.
 
 **Declare entry points.** Before touching code:
 
@@ -77,9 +134,8 @@ Once confirmed, write it at the top of the spike document.
 
 Wait for confirmation or redirection.
 
-**Rewrite `.session.md`** with Phase 1 complete.
-
----
+**Update session file:** move Phase 1 to `### Done` in `## Current focus`. Move Phase 2
+to `### In progress` with the confirmed entry point.
 
 ## Phase 2 — Traverse
 
@@ -97,7 +153,8 @@ Core loop. Repeat until the central question is answered or a genuine edge is re
 
 **Pause and ask: "Does this hold?"** Wait for a real answer.
 
-- Yes → mark as candidate for promotion. Append to spike document.
+- Yes → mark as candidate for promotion. Append to spike document. Add to
+  `### Pending affirmations` in `## Traversal`.
 - No → stop. Ask what's wrong. Correct and re-ask. Do not continue until resolved,
   or human explicitly says "set it aside and keep going."
 
@@ -137,21 +194,32 @@ Treat dependent affirmations as suspect until re-verified.
 
 Do not run lenses automatically. Offer them. Wait for the human to decide.
 
-**Rewrite `.session.md`** after every validated affirmation, scope/dynamic record,
-and fact confirmation or invalidation.
+**When traversal reveals mappable structure**, produce a Mermaid diagram in the spike
+as a visual layer alongside the prose. The diagram distills structure already described
+in affirmations — it does not replace them.
+
+Good candidates:
+- Call sequence between components → `sequenceDiagram`
+- State transitions in a domain object → `stateDiagram-v2`
+- Data flow or component boundaries → `flowchart`
+
+Place the diagram in `## Flow diagrams` in the spike, referencing the affirmation IDs
+it distills (`[A1]–[A4]`). Only produce a diagram when the structure is clear enough
+to be accurate — a misleading diagram is worse than no diagram.
+
+**Update the session file** after every validated affirmation, scope/dynamic record,
+and fact confirmation or invalidation. Rewrite `## Traversal` in full — never append.
 
 **Signal edges clearly:**
 
-- *Scope edge* — chose not to go further: note in ignored scope, continue.
+- *Scope edge* — chose not to go further: note in `### Scope records`, continue.
 - *Knowledge edge* — cannot go further: say so explicitly, wait for human.
 
 Never conflate these.
 
----
-
 ## Phase 3 — Promote to facts
 
-For each candidate affirmation:
+For each candidate affirmation in `### Pending affirmations`:
 
 > "Candidate: '{statement}' — anchored at {commit hash or file:line}.
 > Promote to a permanent fact?"
@@ -159,9 +227,7 @@ For each candidate affirmation:
 If confirmed, invoke the `knowledge` skill promotion protocol.
 Unconfirmed candidates stay in the spike as narrative — not promoted.
 
-Update `.session.md` to reflect facts promoted.
-
----
+Update `## Traversal` to reflect which affirmations have been promoted.
 
 ## Phase 4 — Finalize spike
 
@@ -171,9 +237,11 @@ Update `.session.md` to reflect facts promoted.
    (Not "we didn't look" — that's Ignored Scope.)
 3. Add the spike path to the originating card's `spikes:` field.
 4. Report to human: question answered or not, open questions, facts promoted.
-5. Delete `.session.md` — state now lives in the spike and the knowledge library.
-
----
+5. Clear `## Traversal` from the session file — state now lives in the spike and
+   the knowledge library.
+6. Update `## Current focus`: move all phases to `### Done`. If the card has
+   remaining tasks, pull the next one into `### In progress`. If this was the
+   entire card, signal: "Investigation complete. Ready for planning."
 
 ## Spike document format
 
@@ -191,6 +259,12 @@ Update `.session.md` to reflect facts promoted.
 ## Traversal map
 
 {Entry points and path taken.}
+
+## Flow diagrams
+
+{Optional. Mermaid diagrams of structures revealed during traversal — call sequences,
+state machines, data flows. Each diagram notes which affirmations it distills.
+Omit this section if no mappable structure was found.}
 
 ## Affirmations
 
@@ -214,13 +288,12 @@ Update `.session.md` to reflect facts promoted.
 {Genuine unknowns not resolved.}
 ```
 
----
-
 ## What this skill does not do
 
 - Does not begin traversal without a confirmed central question.
 - Does not continue past a rejected affirmation without resolution.
-- Does not append to `.session.md` — always fully rewritten.
+- Does not append to the session file's `## Traversal` — always fully rewritten.
 - Does not invent facts — only the human confirms external truths.
 - Does not promote unconfirmed candidates to the knowledge library.
 - Does not run thinking lenses automatically — offers them at the right moment.
+- Does not create files in the worktree — all state lives in `~/.work/sessions/`.
