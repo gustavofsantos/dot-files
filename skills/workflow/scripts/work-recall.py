@@ -29,6 +29,7 @@ Hook registration (.claude/settings.local.json):
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -70,7 +71,7 @@ def extract_current_focus(path: Path) -> str | None:
 
     # Extract the full ## Current focus block (until next ## or end of file)
     match = re.search(
-        r"^## Current focus\s*\n(.*?)(?=^##|\Z)",
+        r"^## Current focus\s*\n(.*?)(?=^##[^#]|\Z)",
         content,
         re.MULTILINE | re.DOTALL,
     )
@@ -96,13 +97,27 @@ def extract_current_focus(path: Path) -> str | None:
     return f"## Current focus\n\n{focus_body}"
 
 
+def current_git_branch(cwd: Path) -> str | None:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(cwd), "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True, text=True, timeout=3,
+        )
+        branch = result.stdout.strip()
+        return branch if branch and branch != "HEAD" else None
+    except Exception:
+        return None
+
+
 def find_session_by_worktree(cwd: Path) -> Path | None:
     if not SESSIONS_DIR.exists():
         return None
 
     cwd_resolved = cwd.resolve()
+    branch = current_git_branch(cwd)
 
-    for path in sorted(SESSIONS_DIR.glob("*.md")):
+    worktree_matches: list[Path] = []
+    for path in SESSIONS_DIR.glob("*.md"):
         fm = parse_frontmatter(path)
         worktree = fm.get("worktree", "")
         if not worktree:
@@ -110,11 +125,13 @@ def find_session_by_worktree(cwd: Path) -> Path | None:
         try:
             worktree_resolved = Path(worktree).expanduser().resolve()
             if cwd_resolved == worktree_resolved or cwd_resolved.is_relative_to(worktree_resolved):
-                return path
+                if branch and fm.get("branch") == branch:
+                    return path
+                worktree_matches.append(path)
         except Exception:
             continue
 
-    return None
+    return max(worktree_matches, default=None)
 
 
 def main():
