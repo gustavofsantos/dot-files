@@ -18,23 +18,6 @@ and written to whenever a validated fact is discovered.
 
 ---
 
-## Fact lifecycle
-
-```mermaid
-flowchart TD
-    A[Discovery during traversal] --> B[Human confirms]
-    B --> C{Verified in code?}
-    C -- No --> D[confidence: asserted]
-    C -- Yes --> E[confidence: validated\nanchored to commit/file:line]
-    D --> F{Later verified?}
-    F -- Yes --> E
-    E --> G{Still accurate?}
-    G -- No --> H[confidence: invalidated\nAdd Invalidated section\nCascade review]
-    G -- Yes --> E
-```
-
-Facts are never deleted — only invalidated. The history of what was believed is useful.
-
 ## Storage layout
 
 ```
@@ -180,21 +163,6 @@ If a related fact exists, update it rather than creating a new one.
 Single source of truth — never duplicate.
 
 ---
-
-## Knowledge graph
-
-```mermaid
-flowchart LR
-    Card -->|spikes field| Spike
-    Card -->|facts field| Fact
-    Spike -->|references by ID| Fact
-    Fact -->|Depends on| Fact
-    DeadReckoning[dead-reckoning\nsession] -->|produces| Spike
-    DeadReckoning -->|promotes| Fact
-```
-
-Facts and spikes outlive cards. When a card is archived, its facts and spikes remain
-in `~/.knowledge/` — they accumulate across the full history of work.
 
 ## Promoting a theorem from dead-reckoning
 

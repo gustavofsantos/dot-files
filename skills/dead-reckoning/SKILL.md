@@ -17,24 +17,6 @@ description: >
 
 # Dead Reckoning — Legacy Analysis
 
-## Session flow
-
-```mermaid
-flowchart TD
-    A[Session Start] --> B{Session file exists?}
-    B -- Yes, has Traversal section --> C[Load spike & continue]
-    B -- Yes, no Traversal section --> D[Fresh investigation\nAdd Traversal section]
-    B -- No --> E[work-session-create.py]
-    E --> D
-    C --> F[Knowledge retrieval via qmd]
-    D --> F
-    F --> G[Phase 1: Orient]
-    G --> H[Phase 2: Traverse]
-    H --> I[Phase 3: Promote to facts]
-    I --> J[Phase 4: Finalize spike]
-    J --> K[Clear Traversal section\nUpdate Current focus to Done]
-```
-
 ## Storage layout
 
 ```
@@ -159,20 +141,6 @@ to `### In progress` with the confirmed entry point.
 
 Core loop. Repeat until the central question is answered or a genuine edge is reached.
 
-```mermaid
-flowchart TD
-    A[Read code — behavior not syntax] --> B[Produce affirmation]
-    B --> C{"Does this hold?"}
-    C -- Yes --> D[Mark as candidate\nAppend to spike\nUpdate session file]
-    C -- No --> E[Ask what's wrong\nCorrect claim\nDo not continue]
-    E --> C
-    D --> F{Edge type?}
-    F -- Scope edge --> G[Record SCOPE-n\nContinue]
-    F -- Knowledge edge --> H[Signal to human\nWait for input]
-    F -- None --> A
-    G --> A
-```
-
 **Traverse one step.** Read code. Understand behavior, not syntax.
 
 **Produce an affirmation** — a plain-language behavioral claim, not a code description:
@@ -226,6 +194,19 @@ Treat dependent affirmations as suspect until re-verified.
 
 Do not run lenses automatically. Offer them. Wait for the human to decide.
 
+**When traversal reveals mappable structure**, produce a Mermaid diagram in the spike
+as a visual layer alongside the prose. The diagram distills structure already described
+in affirmations — it does not replace them.
+
+Good candidates:
+- Call sequence between components → `sequenceDiagram`
+- State transitions in a domain object → `stateDiagram-v2`
+- Data flow or component boundaries → `flowchart`
+
+Place the diagram in `## Flow diagrams` in the spike, referencing the affirmation IDs
+it distills (`[A1]–[A4]`). Only produce a diagram when the structure is clear enough
+to be accurate — a misleading diagram is worse than no diagram.
+
 **Update the session file** after every validated affirmation, scope/dynamic record,
 and fact confirmation or invalidation. Rewrite `## Traversal` in full — never append.
 
@@ -278,6 +259,12 @@ Update `## Traversal` to reflect which affirmations have been promoted.
 ## Traversal map
 
 {Entry points and path taken.}
+
+## Flow diagrams
+
+{Optional. Mermaid diagrams of structures revealed during traversal — call sequences,
+state machines, data flows. Each diagram notes which affirmations it distills.
+Omit this section if no mappable structure was found.}
 
 ## Affirmations
 
