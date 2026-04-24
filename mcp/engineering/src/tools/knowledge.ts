@@ -1,5 +1,6 @@
 import * as path from "path";
 import { FACTS_DIR, listFiles } from "../lib/fs.js";
+import { createStore, getDefaultDbPath } from "@tobilu/qmd";
 
 export interface KnowledgeResult {
   path: string;
@@ -17,28 +18,17 @@ export async function knowledge_query(
   n: number = 8
 ): Promise<KnowledgeQueryResult> {
   try {
-    const proc = Bun.spawn(
-      ["qmd", "query", query, "--min-score", String(min_score), "-n", String(n), "--files"],
-      { stdout: "pipe", stderr: "pipe" }
-    );
-
-    const exitCode = await proc.exited;
-    if (exitCode !== 0) throw new Error("qmd exited non-zero");
-
-    const stdout = await new Response(proc.stdout).text();
-    const lines = stdout.split("\n").filter((l) => l.trim().length > 0);
-
-    const results: KnowledgeResult[] = lines.map((line) => {
-      const parts = line.trim().split(/\s+/);
-      const lastPart = parts[parts.length - 1];
-      const scoreCandidate = parseFloat(lastPart ?? "");
-      if (!isNaN(scoreCandidate) && parts.length > 1) {
-        return { path: parts.slice(0, -1).join(" "), score: scoreCandidate };
-      }
-      return { path: line.trim(), score: null };
-    });
-
-    return { results: results.slice(0, n), source: "qmd" };
+    const store = await createStore({ dbPath: getDefaultDbPath() });
+    try {
+      const hits = await store.search({ query, minScore: min_score, limit: n });
+      const results: KnowledgeResult[] = hits.map((r) => ({
+        path: r.displayPath,
+        score: r.score,
+      }));
+      return { results, source: "qmd" };
+    } finally {
+      await store.close();
+    }
   } catch {
     // Fallback: glob FACTS_DIR and filter by query words
     const files = await listFiles(FACTS_DIR, /\.md$/);
