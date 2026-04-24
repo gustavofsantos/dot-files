@@ -59,7 +59,7 @@ to reflect investigation phases, and it owns a `## Traversal` section for epheme
 
 ## Traversal
 
-**Spike:** ~/.knowledge/spikes/001-auth-investigation.md
+**Spike:** [[001-auth-investigation]]
 **Central question:** Does token refresh happen before expiry validation?
 
 ### Pending affirmations
@@ -108,7 +108,7 @@ continuous phase awareness without reading the full session file.
    ```
    Load relevant facts silently. If a fact is directly relevant to the central question,
    surface it to the human before traversal begins:
-   > "FACT-007 covers auth token refresh in this system. Should I treat it as an axiom
+   > "[[FACT-007-auth-token-refresh-window]] covers auth token refresh in this system. Should I treat it as an axiom
    > for this session, or do you want to verify it fresh?"
 
 5. Rewrite `## Current focus` and `## Traversal` in the session file before any tool call.
@@ -148,7 +148,7 @@ Core loop. Repeat until the central question is answered or a genuine edge is re
 ```
 [A{n}] {Behavioral claim at business or architecture level}
        ↳ Anchored at: {file:line or function name}
-       ↳ Depends on: {FACT-NNN or prior affirmation — omit if none}
+       ↳ Depends on: {[[FACT-NNN-slug]] or prior affirmation — omit if none}
 ```
 
 **Pause and ask: "Does this hold?"** Wait for a real answer.
@@ -175,7 +175,7 @@ Core loop. Repeat until the central question is answered or a genuine edge is re
 
 **Reference existing facts explicitly.** When relying on a loaded fact:
 
-> "I'm relying on FACT-007 — '{fact statement}'. Is that still accurate?"
+> "I'm relying on [[FACT-007-auth-token-refresh-window]] — '{fact statement}'. Is that still accurate?"
 
 If invalidated: update the fact per the `knowledge` skill protocol immediately.
 Treat dependent affirmations as suspect until re-verified.
@@ -232,10 +232,10 @@ Update `## Traversal` to reflect which affirmations have been promoted.
 ## Phase 4 — Finalize spike
 
 1. Write the **Answer** section in the spike document — response to the central
-   question, referencing affirmation IDs and fact IDs.
+   question, referencing affirmation IDs and fact wiki links.
 2. Write the **Open Questions** section — genuine unknowns reached but not resolved.
    (Not "we didn't look" — that's Ignored Scope.)
-3. Add the spike path to the originating card's `spikes:` field.
+3. Add a wiki link to the spike in the originating card's `spikes:` field.
 4. Report to human: question answered or not, open questions, facts promoted.
 5. Clear `## Traversal` from the session file — state now lives in the spike and
    the knowledge library.
@@ -254,7 +254,7 @@ Update `## Traversal` to reflect which affirmations have been promoted.
 
 ## Answer
 
-{Response to the central question. References [A-n] and FACT-NNN.}
+{Response to the central question. References [A-n] and [[FACT-NNN-slug]].}
 
 ## Traversal map
 
@@ -281,7 +281,7 @@ Omit this section if no mappable structure was found.}
 
 ## Facts promoted this session
 
-- FACT-NNN — {one-line summary}
+- [[FACT-NNN-slug]] — {one-line summary}
 
 ## Open questions
 
