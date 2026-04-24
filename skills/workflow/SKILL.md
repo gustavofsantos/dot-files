@@ -33,41 +33,46 @@ The card is the source of truth. Sessions are derived. Tmux sessions are ephemer
   facts/                ← managed by the knowledge skill
   spikes/               ← managed by the knowledge skill
   .counters/
-    cards               ← sequential ID counter for cards
-    facts               ← sequential ID counter for facts
-    spikes              ← sequential ID counter for spikes
+    cards
+    facts
+    spikes
 ```
 
 ---
 
-## Scripts
+## MCP tools — engineering server
 
-All scripts live at `~/.claude/skills/workflow/scripts/` and are invoked with `python3`.
+Card and session operations use the `engineering` MCP server directly. No scripts.
+
+| Tool | Purpose |
+|---|---|
+| `card_create(title, status?, tags?)` | Scaffold a new card |
+| `card_list(status?, tag?)` | List non-archived cards |
+| `card_get(id)` | Read full card content |
+| `card_set_status(id, status)` | Update card status |
+| `card_archive(id, force?)` | Move done card + sessions to archive |
+| `session_create(card_id, repo, branch, worktree)` | Create session and link to card |
+| `session_get(session_id)` | Read full session content |
+| `session_update_focus(session_id, done[], in_progress, next[])` | Rewrite Current focus |
+
+**Valid statuses:** `inbox` `not-now` `active` `done`
+
+## Shell scripts — tmux and hooks only
+
+Scripts that have no MCP equivalent live at `~/.claude/skills/workflow/scripts/`.
 
 | Script | Purpose |
 |---|---|
-| `work-card-create.py` | Scaffold a new card |
-| `work-card-list.py` | List cards, filter by status or tag |
-| `work-card-archive.py` | Move a done card and its sessions to archive |
-| `work-session-create.py` | Create a session file and link it to a card |
 | `work-session-attach.py` | Attach to tmux session, restores if dead |
 | `work-session-restore.py` | Restore dead tmux sessions without attaching |
-| `work-recall.py` | Inject current focus into context (hook script) |
-
-**Invocation pattern:**
+| `work-recall.py` | PostToolUse hook — injects Current focus into context |
 
 ```bash
 SCRIPTS=~/.claude/skills/workflow/scripts
 
-python3 $SCRIPTS/work-card-create.py --title "Fix auth bug" --status inbox
-python3 $SCRIPTS/work-card-list.py --status active --format text
-python3 $SCRIPTS/work-card-archive.py --card 001
-python3 $SCRIPTS/work-session-create.py --card 001 --repo api --branch feat/fix-auth --worktree /abs/path
 python3 $SCRIPTS/work-session-attach.py --session 001-api
 python3 $SCRIPTS/work-session-restore.py --all
 ```
-
-All scripts accept `--format json` (default) or `--format text`. Use `--help` on any script for full usage.
 
 **Hook registration** (`.claude/settings.local.json`):
 
@@ -101,7 +106,7 @@ status: inbox | not-now | active | done
 tags: [feature, api]
 repo:
 sessions:
-  - "[[001-api]]"
+  - /abs/path/to/engineering/sessions/001-api.md
 spikes:
   - "[[001-auth-token-investigation]]"
 facts:
@@ -130,15 +135,13 @@ What is being worked on right now. Kept current by the agent. See session file
 for the structured Done / In progress / Next breakdown.
 ```
 
-**Valid statuses:** `inbox` `not-now` `active` `done`
-
 **On card completion:** when all tasks in `## Tasks` are checked `[x]`, the agent
 signals the human: "All tasks are complete. Ready for review." The human then
 runs the review skill and archives the card. The agent never moves a card to `done`
 unilaterally.
 
 `facts` — wiki links to facts in `~/engineering/facts/` discovered while working this card.
-`spikes` — wiki links to spike narratives in `~/engineering/spikes/` produced during planning or investigation.
+`spikes` — wiki links to spike narratives in `~/engineering/spikes/`.
 Keep both lean — IDs and paths only, never copy content.
 
 ---
@@ -158,21 +161,18 @@ tmux-session: 001-api
 ## Current focus
 
 ### Done
-<!-- Items completed this session. Agent marks here after each finished task. -->
 - [x] Example: scaffolded migration file
 
 ### In progress
-<!-- The single item being worked on right now. One item maximum. -->
 - [ ] Example: implementing the query with optional filter
 
 ### Next
-<!-- Remaining items planned for this session, in order. -->
 - [ ] Example: handler wiring and integration test
 ```
 
-**The agent fully rewrites `## Current focus` after each completed subtask.**
-It never appends — it rewrites the entire section, moving finished items to `### Done`,
-keeping one item in `### In progress`, and maintaining the ordered `### Next` list.
+**The agent calls `session_update_focus` after each completed subtask** — never
+manually edits the session file. The tool atomically rewrites the Current focus
+section, moving done items, updating in-progress, and reordering next.
 
 `work-recall.py` extracts the entire `## Current focus` block and injects it after
 every tool call. The agent always sees the current state of Done / In progress / Next.
@@ -180,8 +180,6 @@ every tool call. The agent always sees the current state of Done / In progress /
 ---
 
 ## Skill integration
-
-This table is the orchestration map. When a lifecycle moment occurs, invoke the skill.
 
 | Moment | Skill |
 |---|---|
@@ -204,19 +202,19 @@ Invoke skills by name. Do not reproduce their protocol here.
 
 Run this at the start of every session, silently, before any other action:
 
-```bash
-qmd query "<card title> <card objective>" --min-score 0.5 -n 8 --files
+```
+knowledge_query(query: "<card title> <card objective>", min_score: 0.5, n: 8)
 ```
 
-Load the returned facts and spike excerpts into working context.
+Load the returned facts into working context.
 If nothing scores above threshold, proceed without — do not ask the human.
 If something relevant surfaces that the human hasn't mentioned, note it:
 
 > "Before we start — [[FACT-012-auth-token-refresh]] covers auth token refresh behavior in this system.
 > Worth keeping in mind."
 
-Do not read the full spike narratives unless a fact ID points to one that is
-directly relevant. Spikes are large; facts are small.
+Do not read spike narratives unless a fact ID points to one that is directly relevant.
+Spikes are large; facts are small.
 
 ---
 
@@ -225,20 +223,20 @@ directly relevant. Spikes are large; facts are small.
 Entry points: Jira ticket, Sentry issue, verbal description, scratch idea.
 
 1. Create the card:
-   ```bash
-   python3 ~/.claude/skills/workflow/scripts/work-card-create.py --title "<title>" [--status inbox] [--tags feature,api]
    ```
-2. Fill `## Objective` from available information.
+   card_create(title: "<title>", status: "inbox", tags: ["feature", "api"])
+   ```
+2. Fill `## Objective` from available information using `card_get(id)` then write.
 3. Fill `## Context` with background, links, and any constraints.
 4. Run knowledge retrieval. Surface relevant facts to the human.
 5. If the objective requires investigation before planning:
    → invoke `dead-reckoning`. The spike document is linked in the card's `spikes:` field.
-   → facts discovered are written to `~/engineering/facts/` and listed in `facts:`.
+   → facts discovered are promoted to `~/engineering/facts/` and listed in `facts:`.
 6. If the objective is clear enough to implement:
    → invoke `user-story-builder` if the scope needs shaping.
    → invoke `user-story-planner` to break into tasks.
    → write the resulting tasks into `## Tasks` in the card.
-   → set status to `active`.
+   → `card_set_status(id, "active")`
 
 **Card stays lean.** Objective + context + tasks + pointers. No prose that belongs in a spike.
 
@@ -250,22 +248,24 @@ Entry points: Jira ticket, Sentry issue, verbal description, scratch idea.
 
 Prerequisites: worktree must already exist. Card must have tasks defined in `## Tasks`.
 
-```bash
-python3 ~/.claude/skills/workflow/scripts/work-session-create.py \
-  --card 001 --repo <repo> --branch <branch> --worktree /abs/path
+```
+session_create(card_id: "001", repo: "<repo>", branch: "<branch>", worktree: "/abs/path")
+```
 
+Then attach via tmux:
+```bash
 python3 ~/.claude/skills/workflow/scripts/work-session-attach.py --session 001-<repo>
 ```
 
 ### Session start protocol
 
 1. Run knowledge retrieval (see above).
-2. Read the card — objective, context, and full `## Tasks` list.
-3. Read the session file if it exists.
-4. Populate `## Current focus` in the session file:
-   - `### Done` — empty (or carry over from prior interrupted session)
-   - `### In progress` — first unchecked task from the card's `## Tasks`
-   - `### Next` — remaining unchecked tasks in order
+2. `card_get("001")` — read objective, context, and full `## Tasks` list.
+3. `session_get("001-<repo>")` — read current focus if session exists.
+4. Call `session_update_focus` to set initial state:
+   - `done: []`
+   - `in_progress: "<first unchecked task from card ## Tasks>"`
+   - `next: [<remaining unchecked tasks in order>]`
 5. State what you understand and what you're about to do. Wait for confirmation
    if anything is ambiguous.
 
@@ -273,14 +273,14 @@ python3 ~/.claude/skills/workflow/scripts/work-session-attach.py --session 001-<
 
 **After each completed subtask:**
 
-1. Rewrite `## Current focus` in full:
-   - Move the finished item from `### In progress` to `### Done` (mark `[x]`)
-   - Pull the next item from `### Next` into `### In progress`
-   - Remove it from `### Next`
-2. Mark the corresponding task `[x]` in the card's `## Tasks`.
+1. Call `session_update_focus(session_id, done, in_progress, next)`:
+   - Move the finished item to `done` (it will render as `[x]`)
+   - Set `in_progress` to the next task
+   - Pass remaining tasks in `next`
+2. Mark the corresponding task `[x]` in the card's `## Tasks` (edit the card file directly).
 3. Update `updated:` date in the card frontmatter.
 
-**When `### Next` is empty and `### In progress` is marked done:**
+**When `next` is empty and `in_progress` is done:**
 
 Signal to the human:
 > "All planned tasks are complete. Ready for review."
@@ -289,24 +289,26 @@ Do not set card status to `done`. That is the human's action after review passes
 
 **Scope discipline:**
 
-- New work that surfaces outside card scope → create a new card in `inbox`, do not expand scope.
+- New work that surfaces outside card scope → `card_create(title, status: "inbox")`, do not expand scope.
 - New fact discovered → invoke `knowledge` skill. Add wiki link to card's `facts:` field.
 
 ### Context recovery
 
 When resuming an interrupted session or switching worktrees:
 
-1. Read session file → `## Current focus` is the anchor. Done / In progress / Next tell you exactly where execution stopped.
-2. Read card → `## Tasks` confirms which tasks are checked overall.
+1. `session_get("001-<repo>")` → Current focus is the anchor.
+2. `card_get("001")` → confirms which tasks are checked overall.
 3. Run knowledge retrieval.
 4. Reconstruct: "We were doing X because of Y. The next step was Z."
 5. State the reconstruction to the human before proceeding.
 
 ### Model handoff
 
-**Outgoing:** finish at a task boundary. Ensure `## Current focus` is fully up to date before handing off. Write one sentence at the bottom of `### In progress`: `Handoff: <what was done and what comes next>`.
+**Outgoing:** finish at a task boundary. Call `session_update_focus` to ensure state is
+current. Append one sentence to `in_progress`: `Handoff: <what was done and what comes next>`.
 
-**Incoming:** read card, read session, run knowledge retrieval. Rewrite `## Current focus` if stale. Proceed.
+**Incoming:** `card_get`, `session_get`, run knowledge retrieval. Call `session_update_focus`
+if state is stale. Proceed.
 
 ---
 
@@ -317,12 +319,8 @@ The review skill handles both safety/scope review and architectural depth.
 Do not reproduce its protocol here.
 
 After review passes:
-1. Set card status to `done`.
-2. Archive:
-   ```bash
-   python3 ~/.claude/skills/workflow/scripts/work-card-archive.py --card 001
-   ```
-   Moves card and linked session files to `archive/`.
+1. `card_set_status(id, "done")`
+2. `card_archive(id)` — moves card and linked session files to `archive/`.
    Spike documents and facts remain in `~/engineering/` — they outlive the card.
 
 ---
@@ -343,7 +341,6 @@ python3 ~/.claude/skills/workflow/scripts/work-session-attach.py --session 001-<
 - Worktree paths must be absolute.
 - Status must be one of the four valid values.
 - Facts and spikes are pointers only. Never copy content into the card. Reference by wiki link.
-- The agent rewrites `## Current focus` in the session file after every completed subtask — never appends.
+- The agent calls `session_update_focus` after every completed subtask — never appends or edits the session file directly.
 - The agent checks off tasks in the card's `## Tasks` as they complete — never at session end in bulk.
-- The agent updates `## Current focus` in the card with a one-line summary of what's actively happening.
 - The human updates `## Objective`, `## Context`, and `## Tasks`. The agent does not rewrite these.

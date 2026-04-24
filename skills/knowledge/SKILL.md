@@ -29,16 +29,12 @@ and written to whenever a validated fact is discovered.
     001-auth-investigation.md
     002-payment-flow-traversal.md
   .counters/
-    facts     ← sequential ID counter for facts
-    spikes    ← sequential ID counter for spikes
+    facts    ← sequential ID counter
+    spikes   ← sequential ID counter
 ```
 
-Facts and spikes live as siblings of cards and sessions under `~/engineering/`.
-They are global — not scoped to a system or repo. A fact about Clojure lazy sequences
-is as valid here as a fact about SeuBarriga's billing rules.
-
-Spikes are narratives — the story of an investigation. They reference facts but do not
-contain them.
+Facts are global — not scoped to a system or repo.
+Spikes are narratives produced by `dead-reckoning`. They reference facts but do not contain them.
 
 ---
 
@@ -90,7 +86,7 @@ Never invent a fact. Never assert confidence higher than the evidence supports.
 Spikes live in `~/engineering/spikes/`. They are produced by `dead-reckoning`.
 Their format is defined in the `dead-reckoning` skill.
 
-A spike references facts by ID. It never contains the fact content.
+A spike references facts by wiki link. It never contains the fact content.
 
 ```markdown
 This confirms that auth token refresh happens before expiry validation.
@@ -107,27 +103,33 @@ only replacements.
 
 When a validated discovery warrants permanent storage:
 
-1. Scaffold the fact file:
-   ```bash
-   python3 ~/.claude/skills/knowledge/scripts/knowledge-fact-create.py \
-     --title "Short label" \
-     [--tags auth,clojure] \
-     [--confidence asserted]
+1. Check for duplicates or related facts first:
    ```
-   This allocates the next FACT-NNN ID from `.counters/facts`, creates the file
-   at `~/engineering/facts/FACT-NNN-<slug>.md`, and prints the path.
-
-2. Fill all required fields. Leave `confirmed` blank if confidence is `asserted`.
-
-3. Update the qmd index:
-   ```bash
-   qmd update
-   qmd embed
+   knowledge_query(query: "<proposed fact statement>", min_score: 0.6, n: 5)
    ```
-   Run both. `update` re-indexes text; `embed` regenerates vectors for semantic search.
-   This is required for the fact to be retrievable in future sessions.
+   If a related fact exists, use `fact_update` to extend it rather than creating a duplicate.
 
-4. Add the fact ID to the originating card's `facts:` field.
+2. Scaffold the fact:
+   ```
+   fact_create(title: "<short label>", tags: ["auth", "clojure"], confidence: "asserted")
+   ```
+   Returns `{ id, title, confidence, path }`. The ID is allocated atomically from the counter.
+
+3. Fill the body — read the scaffolded file, then write `## Statement`, `## Evidence`,
+   `## Depends on`, and `refs`:
+   ```
+   fact_get(id: "FACT-001")   ← read the scaffold
+   fact_update(id: "FACT-001", fields: { refs: { spike: "...", card: "007" } })
+   ```
+
+4. Update the qmd index:
+   ```bash
+   qmd update && qmd embed
+   ```
+   Required for the fact to be retrievable in future sessions.
+   The MCP server writes the file; qmd indexes it for semantic search.
+
+5. Add the fact wiki link to the originating card's `facts:` field.
 
 ---
 
@@ -135,34 +137,45 @@ When a validated discovery warrants permanent storage:
 
 ### At session start (automatic)
 
-```bash
-qmd query "<card title> <card objective>" --min-score 0.5 -n 8 --files
+```
+knowledge_query(query: "<card title> <card objective>", min_score: 0.5, n: 8)
 ```
 
-Returns file paths. Read the ones above threshold. Ignore the rest.
+Returns file paths with scores. Load the ones above threshold. Ignore the rest.
 
 ### During investigation
 
-```bash
-# Semantic search — best for "do we know anything about X"
-qmd query "auth token expiry behavior" -n 5
+```
+# Basic semantic search — "do we know anything about X"
+knowledge_query(query: "auth token expiry behavior", n: 5)
 
-# Keyword search — best for known terms
+# Read a specific fact
+fact_get(id: "FACT-007")   ← accepts "FACT-007" or "007"
+```
+
+For rich multi-type queries (BM25 + vector + reranking), use qmd CLI directly:
+
+```bash
+# Keyword search — exact terms, identifiers
 qmd search "FACT-007" --full
 
-# Get a specific fact
-qmd get "facts/FACT-007-auth-token-refresh-window.md" --full
+# Semantic + keyword combined
+qmd query $'lex: auth token\nvec: token refresh before expiry check' -n 5
 ```
 
-### Finding related facts before writing a new one
+Use `knowledge_query` for standard retrieval. Use qmd CLI when query type matters.
 
-Before creating a fact, check for duplicates or related facts:
-```bash
-qmd query "<proposed fact statement>" -n 5 --min-score 0.6
+---
+
+## Updating a fact
+
+To merge fields into a fact's front-matter without touching the body:
+
+```
+fact_update(id: "FACT-007", fields: { confidence: "validated", confirmed: "2026-04-24", refs: { commit: "abc1234" } })
 ```
 
-If a related fact exists, update it rather than creating a new one.
-Single source of truth — never duplicate.
+To update the body (Statement, Evidence, Notes), use `fact_get` to read, then edit the file directly.
 
 ---
 
@@ -171,16 +184,16 @@ Single source of truth — never duplicate.
 When `dead-reckoning` produces a confirmed theorem:
 
 1. The theorem has: a statement, an anchor (commit hash or file:line), and human confirmation.
-2. Scaffold a fact with `--confidence validated`:
-   ```bash
-   python3 ~/.claude/skills/knowledge/scripts/knowledge-fact-create.py \
-     --title "..." --tags "..." --confidence validated
+2. Create with `confidence: "validated"`:
    ```
-3. Set `confirmed` to today's date.
-4. Set `refs.spike` to the spike document that produced it.
-5. Set `refs.commit` if available.
-6. Run `qmd update && qmd embed`.
-7. In the spike document, replace the full theorem text with `→ [[FACT-NNN-slug]]`.
+   fact_create(title: "...", tags: ["..."], confidence: "validated")
+   ```
+3. Set refs and confirmed date:
+   ```
+   fact_update(id: "FACT-NNN", fields: { confirmed: "2026-04-24", refs: { spike: "[[001-auth-investigation]]", commit: "abc1234" } })
+   ```
+4. Run `qmd update && qmd embed`.
+5. In the spike document, replace the full theorem text with `→ [[FACT-NNN-slug]]`.
 
 ---
 
@@ -188,19 +201,15 @@ When `dead-reckoning` produces a confirmed theorem:
 
 When a fact is discovered to be wrong or outdated:
 
-1. Add a `## Invalidated` section to the fact file:
-   ```markdown
-   ## Invalidated
+```
+fact_invalidate(id: "FACT-007", reason: "Auth was refactored in commit abc123 — expiry now checked post-refresh.")
+```
 
-   **Date:** YYYY-MM-DD
-   **Reason:** What changed or what was wrong.
-   **Cascade:** List any facts that depended on this one and must be reviewed.
-   ```
-2. Change `confidence` to `invalidated` in the front-matter.
-3. Run `qmd update && qmd embed`.
+This sets `confidence: invalidated` and appends an `## Invalidated` section with date and reason.
+Then run `qmd update && qmd embed`.
 
 Do not delete invalidated facts. The history of what was believed is useful.
-Spikes that referenced the fact still make sense if the fact records why it was invalidated.
+Identify any facts that `## Depends on` the invalidated one and review them.
 
 ---
 
@@ -221,7 +230,7 @@ Run once when setting up a new machine.
 - One fact per atomic claim. If a fact needs two paragraphs, it contains two claims — split it.
 - Facts are global. Never scope them to a system when the claim is universal.
 - Never copy fact content into a card or spike. Reference by wiki link only.
-- A fact exists to be found. If it cannot be found by `qmd query`, it does not exist.
+- A fact exists to be found. If it cannot be found by `knowledge_query`, it does not exist.
   Always run `qmd update && qmd embed` after writing.
 - Confidence is a property of the evidence, not of how certain you feel.
   Asserted = human said so. Validated = code confirms it.
