@@ -33,8 +33,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-WORK_DIR = Path.home() / ".work"
-SESSIONS_DIR = WORK_DIR / "sessions"
+ENG_DIR = Path.home() / "engineering"
+SESSIONS_DIR = ENG_DIR / "sessions"
 
 
 def read_stdin_event() -> dict:
@@ -69,7 +69,6 @@ def parse_frontmatter(path: Path) -> dict:
 def extract_current_focus(path: Path) -> str | None:
     content = path.read_text()
 
-    # Extract the full ## Current focus block (until next ## or end of file)
     match = re.search(
         r"^## Current focus\s*\n(.*?)(?=^##[^#]|\Z)",
         content,
@@ -80,20 +79,17 @@ def extract_current_focus(path: Path) -> str | None:
 
     focus_body = match.group(1).strip()
 
-    # Ignore empty or placeholder-only sections
     if not focus_body or all(
         line.strip().startswith("<!--") or not line.strip()
         for line in focus_body.splitlines()
     ):
         return None
 
-    # Strip HTML comments (<!-- ... -->) from the output
     focus_body = re.sub(r"<!--.*?-->", "", focus_body, flags=re.DOTALL).strip()
 
     if not focus_body:
         return None
 
-    # Format for injection: prepend the section header for clarity
     return f"## Current focus\n\n{focus_body}"
 
 

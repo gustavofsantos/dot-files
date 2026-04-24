@@ -14,8 +14,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-WORK_DIR = Path.home() / ".work"
-SESSIONS_DIR = WORK_DIR / "sessions"
+ENG_DIR = Path.home() / "engineering"
+SESSIONS_DIR = ENG_DIR / "sessions"
 
 
 def parse_frontmatter(path: Path) -> dict:

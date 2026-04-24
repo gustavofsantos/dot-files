@@ -13,26 +13,18 @@ import sys
 from datetime import date
 from pathlib import Path
 
-WORK_DIR = Path.home() / ".work"
-CARDS_DIR = WORK_DIR / "cards"
-COUNTER_FILE = WORK_DIR / ".counter"
+ENG_DIR = Path.home() / "engineering"
+CARDS_DIR = ENG_DIR / "cards"
+COUNTERS_DIR = ENG_DIR / ".counters"
 VALID_STATUSES = {"inbox", "not-now", "active", "done"}
 
 
-def read_counter() -> int:
-    if not COUNTER_FILE.exists():
-        return 0
-    return int(COUNTER_FILE.read_text().strip())
-
-
-def write_counter(value: int) -> None:
-    COUNTER_FILE.write_text(str(value))
-
-
 def next_id() -> str:
-    current = read_counter()
+    COUNTERS_DIR.mkdir(parents=True, exist_ok=True)
+    counter_path = COUNTERS_DIR / "cards"
+    current = int(counter_path.read_text().strip()) if counter_path.exists() else 0
     next_val = current + 1
-    write_counter(next_val)
+    counter_path.write_text(str(next_val))
     return f"{next_val:03d}"
 
 

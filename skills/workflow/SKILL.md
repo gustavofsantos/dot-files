@@ -13,8 +13,8 @@ description: >
 
 Two abstractions. One source of truth.
 
-**Card** — unit of intent. Lives at `~/.work/cards/<nnn>-<slug>.md`.
-**Session** — unit of execution for one repo front. Lives at `~/.work/sessions/<nnn>-<repo>.md`.
+**Card** — unit of intent. Lives at `~/engineering/cards/<nnn>-<slug>.md`.
+**Session** — unit of execution for one repo front. Lives at `~/engineering/sessions/<nnn>-<repo>.md`.
 
 The card is the source of truth. Sessions are derived. Tmux sessions are ephemeral.
 
@@ -23,18 +23,19 @@ The card is the source of truth. Sessions are derived. Tmux sessions are ephemer
 ## Directory layout
 
 ```
-~/.work/
+~/engineering/
   cards/
     001-fix-auth-bug.md
     archive/            ← completed cards — never read these
   sessions/
     001-api.md
     archive/
-  .counter              ← sequential ID counter
-
-~/.knowledge/           ← managed by the knowledge skill
-  facts/
-  spikes/
+  facts/                ← managed by the knowledge skill
+  spikes/               ← managed by the knowledge skill
+  .counters/
+    cards               ← sequential ID counter for cards
+    facts               ← sequential ID counter for facts
+    spikes              ← sequential ID counter for spikes
 ```
 
 ---
@@ -136,8 +137,8 @@ signals the human: "All tasks are complete. Ready for review." The human then
 runs the review skill and archives the card. The agent never moves a card to `done`
 unilaterally.
 
-`facts` — wiki links to facts in `~/.knowledge/facts/` discovered while working this card.
-`spikes` — wiki links to spike narratives produced during planning or investigation.
+`facts` — wiki links to facts in `~/engineering/facts/` discovered while working this card.
+`spikes` — wiki links to spike narratives in `~/engineering/spikes/` produced during planning or investigation.
 Keep both lean — IDs and paths only, never copy content.
 
 ---
@@ -232,7 +233,7 @@ Entry points: Jira ticket, Sentry issue, verbal description, scratch idea.
 4. Run knowledge retrieval. Surface relevant facts to the human.
 5. If the objective requires investigation before planning:
    → invoke `dead-reckoning`. The spike document is linked in the card's `spikes:` field.
-   → facts discovered are written to `~/.knowledge/facts/` and listed in `facts:`.
+   → facts discovered are written to `~/engineering/facts/` and listed in `facts:`.
 6. If the objective is clear enough to implement:
    → invoke `user-story-builder` if the scope needs shaping.
    → invoke `user-story-planner` to break into tasks.
@@ -289,8 +290,7 @@ Do not set card status to `done`. That is the human's action after review passes
 **Scope discipline:**
 
 - New work that surfaces outside card scope → create a new card in `inbox`, do not expand scope.
-- New fact discovered → write to `~/.knowledge/facts/`, add wiki link to card's `facts:` field,
-  run `qmd update`.
+- New fact discovered → invoke `knowledge` skill. Add wiki link to card's `facts:` field.
 
 ### Context recovery
 
@@ -323,7 +323,7 @@ After review passes:
    python3 ~/.claude/skills/workflow/scripts/work-card-archive.py --card 001
    ```
    Moves card and linked session files to `archive/`.
-   Spike documents and facts remain in `~/.knowledge/` — they outlive the card.
+   Spike documents and facts remain in `~/engineering/` — they outlive the card.
 
 ---
 

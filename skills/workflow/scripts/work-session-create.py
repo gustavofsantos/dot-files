@@ -13,9 +13,9 @@ import sys
 from datetime import date
 from pathlib import Path
 
-WORK_DIR = Path.home() / ".work"
-CARDS_DIR = WORK_DIR / "cards"
-SESSIONS_DIR = WORK_DIR / "sessions"
+ENG_DIR = Path.home() / "engineering"
+CARDS_DIR = ENG_DIR / "cards"
+SESSIONS_DIR = ENG_DIR / "sessions"
 
 
 def find_card_path(card_id: str) -> Path | None:

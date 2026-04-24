@@ -21,16 +21,20 @@ and written to whenever a validated fact is discovered.
 ## Storage layout
 
 ```
-~/.knowledge/
+~/engineering/
   facts/
     FACT-001-auth-token-refresh-window.md
     FACT-002-billing-cycle-immutability.md
   spikes/
     001-auth-investigation.md
     002-payment-flow-traversal.md
+  .counters/
+    facts     ← sequential ID counter for facts
+    spikes    ← sequential ID counter for spikes
 ```
 
-Facts are global — not scoped to a system or repo. A fact about Clojure lazy sequences
+Facts and spikes live as siblings of cards and sessions under `~/engineering/`.
+They are global — not scoped to a system or repo. A fact about Clojure lazy sequences
 is as valid here as a fact about SeuBarriga's billing rules.
 
 Spikes are narratives — the story of an investigation. They reference facts but do not
@@ -83,7 +87,7 @@ Never invent a fact. Never assert confidence higher than the evidence supports.
 
 ## Spike format
 
-Spikes live in `~/.knowledge/spikes/`. They are produced by `dead-reckoning`.
+Spikes live in `~/engineering/spikes/`. They are produced by `dead-reckoning`.
 Their format is defined in the `dead-reckoning` skill.
 
 A spike references facts by ID. It never contains the fact content.
@@ -103,21 +107,19 @@ only replacements.
 
 When a validated discovery warrants permanent storage:
 
-1. Determine the next ID:
+1. Scaffold the fact file:
    ```bash
-   ls ~/.knowledge/facts/ | grep -oP 'FACT-\d+' | sort -t- -k2 -n | tail -1
+   python3 ~/.claude/skills/knowledge/scripts/knowledge-fact-create.py \
+     --title "Short label" \
+     [--tags auth,clojure] \
+     [--confidence asserted]
    ```
-   Increment by 1. Zero-pad to 3 digits: FACT-001, FACT-002, etc.
+   This allocates the next FACT-NNN ID from `.counters/facts`, creates the file
+   at `~/engineering/facts/FACT-NNN-<slug>.md`, and prints the path.
 
-2. Create the file:
-   ```bash
-   ~/.knowledge/facts/FACT-NNN-<slug>.md
-   ```
-   Slug: kebab-case summary of the statement. Max 5 words.
+2. Fill all required fields. Leave `confirmed` blank if confidence is `asserted`.
 
-3. Fill all required fields. Leave `confirmed` blank if confidence is `asserted`.
-
-4. Update the qmd index:
+3. Update the qmd index:
    ```bash
    qmd update
    qmd embed
@@ -125,7 +127,7 @@ When a validated discovery warrants permanent storage:
    Run both. `update` re-indexes text; `embed` regenerates vectors for semantic search.
    This is required for the fact to be retrievable in future sessions.
 
-5. Add the fact ID to the originating card's `facts:` field.
+4. Add the fact ID to the originating card's `facts:` field.
 
 ---
 
@@ -169,7 +171,11 @@ Single source of truth — never duplicate.
 When `dead-reckoning` produces a confirmed theorem:
 
 1. The theorem has: a statement, an anchor (commit hash or file:line), and human confirmation.
-2. Create a fact with `confidence: validated`.
+2. Scaffold a fact with `--confidence validated`:
+   ```bash
+   python3 ~/.claude/skills/knowledge/scripts/knowledge-fact-create.py \
+     --title "..." --tags "..." --confidence validated
+   ```
 3. Set `confirmed` to today's date.
 4. Set `refs.spike` to the spike document that produced it.
 5. Set `refs.commit` if available.
@@ -201,8 +207,8 @@ Spikes that referenced the fact still make sense if the fact records why it was 
 ## qmd collection setup (one-time)
 
 ```bash
-qmd collection add ~/.knowledge --name knowledge
-qmd context add qmd://knowledge "Engineering knowledge base — facts and spike narratives"
+qmd collection add ~/engineering --name engineering
+qmd context add qmd://engineering "Engineering memory — cards, sessions, facts, and spike narratives"
 qmd embed
 ```
 

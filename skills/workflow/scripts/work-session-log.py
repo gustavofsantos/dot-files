@@ -2,7 +2,7 @@
 """
 work-session-log — PostToolUse hook for Claude Code and Cursor.
 
-Appends mechanical capture entries to ~/.work/sessions/<id>.log.jsonl
+Appends mechanical capture entries to ~/engineering/sessions/<id>.log.jsonl
 automatically, without requiring agent attention.
 
 Captures:
@@ -72,8 +72,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-WORK_DIR = Path.home() / ".work"
-SESSIONS_DIR = WORK_DIR / "sessions"
+ENG_DIR = Path.home() / "engineering"
+SESSIONS_DIR = ENG_DIR / "sessions"
 
 GIT_PREFIX = "git "
 TEST_PATTERNS = [
@@ -140,11 +140,6 @@ def current_git_branch(cwd: Path) -> str | None:
 
 
 def find_session_log_path(candidates: list[Path]) -> Path | None:
-    """
-    Find the session log path by matching candidate directories against
-    worktree paths in session files. Branch match wins; otherwise the
-    highest-numbered (most recent) worktree match is used.
-    """
     if not SESSIONS_DIR.exists():
         return None
 
@@ -203,8 +198,6 @@ def classify_bash(cmd: str) -> dict | None:
     return None
 
 
-# ── Entry builders ─────────────────────────────────────────────────────────────
-
 def entry_from_claude_code_post_tool_use(event: dict) -> dict | None:
     tool_name = event.get("tool_name", "")
     tool_input = event.get("tool_input", {})
@@ -233,11 +226,6 @@ def entry_from_claude_code_post_tool_use(event: dict) -> dict | None:
 
 
 def entry_from_cursor_post_tool_use(event: dict) -> dict | None:
-    """
-    Cursor postToolUse fires for all tools. afterFileEdit and afterShellExecution
-    are more specific and preferred. This handler only covers Write-type tools
-    that afterFileEdit may not catch (e.g. create-new-file operations).
-    """
     tool_name = event.get("tool_name", "")
     tool_input = event.get("tool_input", {})
     now = ts()
@@ -281,12 +269,6 @@ def entry_from_cursor_after_shell_execution(event: dict) -> dict | None:
 
 
 def entry_from_cursor_pre_compact(event: dict) -> dict:
-    """
-    Always log compaction events — they mark context resets.
-    This is the signal that prior reasoning is no longer in the window.
-    Logged regardless of content, because the absence of a preCompact entry
-    in the log means the window was never compacted during that session.
-    """
     return {
         "ts": ts(),
         "source": "cursor",
@@ -298,8 +280,6 @@ def entry_from_cursor_pre_compact(event: dict) -> dict:
         "is_first": event.get("is_first_compaction"),
     }
 
-
-# ── Routing ────────────────────────────────────────────────────────────────────
 
 def build_entry(event: dict) -> dict | None:
     hook_event = event.get("hook_event_name", "")
@@ -323,10 +303,6 @@ def build_entry(event: dict) -> dict | None:
 
 
 def resolve_search_paths(event: dict) -> list[Path]:
-    """
-    Build candidate directories for session matching.
-    Cursor provides workspace_roots (most reliable); both provide cwd.
-    """
     paths = []
 
     for root in event.get("workspace_roots", []):

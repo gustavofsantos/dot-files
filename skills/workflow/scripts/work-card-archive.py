@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 work-card-archive — move a done card to the archive directory.
-Also moves all associated session files to ~/.work/sessions/archive/.
+Also moves all associated session files to ~/engineering/sessions/archive/.
 
 Usage:
     work-card-archive --card 001
@@ -15,10 +15,10 @@ import shutil
 import sys
 from pathlib import Path
 
-WORK_DIR = Path.home() / ".work"
-CARDS_DIR = WORK_DIR / "cards"
+ENG_DIR = Path.home() / "engineering"
+CARDS_DIR = ENG_DIR / "cards"
 ARCHIVE_DIR = CARDS_DIR / "archive"
-SESSIONS_DIR = WORK_DIR / "sessions"
+SESSIONS_DIR = ENG_DIR / "sessions"
 SESSIONS_ARCHIVE_DIR = SESSIONS_DIR / "archive"
 
 

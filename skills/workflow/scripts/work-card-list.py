@@ -12,8 +12,8 @@ import re
 import sys
 from pathlib import Path
 
-WORK_DIR = Path.home() / ".work"
-CARDS_DIR = WORK_DIR / "cards"
+ENG_DIR = Path.home() / "engineering"
+CARDS_DIR = ENG_DIR / "cards"
 ARCHIVE_DIR = CARDS_DIR / "archive"
 VALID_STATUSES = {"inbox", "not-now", "active", "done"}
 
