@@ -49,7 +49,7 @@ created: YYYY-MM-DD
 confirmed: YYYY-MM-DD
 tags: [auth, clojure, seubarriga]
 refs:
-  - spike: ~/.knowledge/spikes/001-auth-investigation.md
+  - spike: "[[001-auth-investigation]]"
   - card: "007"
   - commit: abc1234
 ---
@@ -66,7 +66,7 @@ Prefer commit hash over file:line — a changed hash signals staleness.
 
 ## Depends on
 
-- FACT-NNN (if this fact builds on another)
+- [[FACT-NNN-slug]] (if this fact builds on another)
 
 ## Notes
 
@@ -90,11 +90,11 @@ A spike references facts by ID. It never contains the fact content.
 
 ```markdown
 This confirms that auth token refresh happens before expiry validation.
-→ FACT-007
+→ [[FACT-007-auth-token-refresh-window]]
 
 The billing cycle is immutable once created — updates are not possible,
 only replacements.
-→ FACT-012, FACT-013
+→ [[FACT-012-billing-cycle-immutability]], [[FACT-013-billing-replacement-flow]]
 ```
 
 ---
@@ -174,7 +174,7 @@ When `dead-reckoning` produces a confirmed theorem:
 4. Set `refs.spike` to the spike document that produced it.
 5. Set `refs.commit` if available.
 6. Run `qmd update && qmd embed`.
-7. In the spike document, replace the full theorem text with `→ FACT-NNN`.
+7. In the spike document, replace the full theorem text with `→ [[FACT-NNN-slug]]`.
 
 ---
 
@@ -214,7 +214,7 @@ Run once when setting up a new machine.
 
 - One fact per atomic claim. If a fact needs two paragraphs, it contains two claims — split it.
 - Facts are global. Never scope them to a system when the claim is universal.
-- Never copy fact content into a card or spike. Reference by ID only.
+- Never copy fact content into a card or spike. Reference by wiki link only.
 - A fact exists to be found. If it cannot be found by `qmd query`, it does not exist.
   Always run `qmd update && qmd embed` after writing.
 - Confidence is a property of the evidence, not of how certain you feel.

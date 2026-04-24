@@ -100,12 +100,12 @@ status: inbox | not-now | active | done
 tags: [feature, api]
 repo:
 sessions:
-  - ~/.work/sessions/001-api.md
+  - "[[001-api]]"
 spikes:
-  - ~/.knowledge/spikes/001-auth-token-investigation.md
+  - "[[001-auth-token-investigation]]"
 facts:
-  - FACT-007
-  - FACT-012
+  - "[[FACT-007-auth-token-refresh-window]]"
+  - "[[FACT-012-billing-cycle-immutability]]"
 created: 2026-04-08
 updated: 2026-04-08
 ---
@@ -136,8 +136,8 @@ signals the human: "All tasks are complete. Ready for review." The human then
 runs the review skill and archives the card. The agent never moves a card to `done`
 unilaterally.
 
-`facts` — IDs of facts in `~/.knowledge/facts/` discovered while working this card.
-`spikes` — paths to spike narratives produced during planning or investigation.
+`facts` — wiki links to facts in `~/.knowledge/facts/` discovered while working this card.
+`spikes` — wiki links to spike narratives produced during planning or investigation.
 Keep both lean — IDs and paths only, never copy content.
 
 ---
@@ -211,7 +211,7 @@ Load the returned facts and spike excerpts into working context.
 If nothing scores above threshold, proceed without — do not ask the human.
 If something relevant surfaces that the human hasn't mentioned, note it:
 
-> "Before we start — FACT-012 covers auth token refresh behavior in this system.
+> "Before we start — [[FACT-012-auth-token-refresh]] covers auth token refresh behavior in this system.
 > Worth keeping in mind."
 
 Do not read the full spike narratives unless a fact ID points to one that is
@@ -289,7 +289,7 @@ Do not set card status to `done`. That is the human's action after review passes
 **Scope discipline:**
 
 - New work that surfaces outside card scope → create a new card in `inbox`, do not expand scope.
-- New fact discovered → write to `~/.knowledge/facts/`, add ID to card's `facts:` field,
+- New fact discovered → write to `~/.knowledge/facts/`, add wiki link to card's `facts:` field,
   run `qmd update`.
 
 ### Context recovery
@@ -342,7 +342,7 @@ python3 ~/.claude/skills/workflow/scripts/work-session-attach.py --session 001-<
 - Card body is what makes agent delegation effective. Populate it; never leave placeholders.
 - Worktree paths must be absolute.
 - Status must be one of the four valid values.
-- Facts and spikes are pointers only. Never copy content into the card.
+- Facts and spikes are pointers only. Never copy content into the card. Reference by wiki link.
 - The agent rewrites `## Current focus` in the session file after every completed subtask — never appends.
 - The agent checks off tasks in the card's `## Tasks` as they complete — never at session end in bulk.
 - The agent updates `## Current focus` in the card with a one-line summary of what's actively happening.
