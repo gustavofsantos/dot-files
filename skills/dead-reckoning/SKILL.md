@@ -20,11 +20,10 @@ description: >
 ## Storage layout
 
 ```
-~/.work/
+~/engineering/
   sessions/
     NNN-<repo>.md         ← workflow session file, owns ## Traversal during investigation
 
-~/.knowledge/
   facts/
     FACT-NNN-slug.md      ← validated facts, global, permanent
   spikes/
@@ -86,25 +85,24 @@ continuous phase awareness without reading the full session file.
 ## Session start
 
 1. Find the workflow session for this card:
-   ```bash
-   python3 $SCRIPTS/work-card-list.py --status active --format json
    ```
-   Read the card's `sessions:` field to locate the session file.
+   card_list(status: "active")
+   ```
+   Read the returned card's `sessions:` field to locate the session file.
 
-2. Read the session file at `~/.work/sessions/<id>-<repo>.md`.
+2. Read the session file at `~/engineering/sessions/<id>-<repo>.md`.
    - Has `## Traversal` section → ongoing investigation. Load the spike from the path
      in `**Spike:**` and continue from where it left off.
    - No `## Traversal` section → fresh investigation. Add the section before starting.
 
 3. If no session file exists, create one:
-   ```bash
-   python3 $SCRIPTS/work-session-create.py \
-     --card <id> --repo <repo> --branch <branch> --worktree /abs/path
+   ```
+   session_create(card_id: "<id>", repo: "<repo>", branch: "<branch>", worktree: "/abs/path")
    ```
 
 4. Run knowledge retrieval:
-   ```bash
-   qmd query "<investigation topic>" --min-score 0.5 -n 6 --files
+   ```
+   knowledge_query(query: "<investigation topic>", min_score: 0.5, n: 6)
    ```
    Load relevant facts silently. If a fact is directly relevant to the central question,
    surface it to the human before traversal begins:
@@ -113,7 +111,7 @@ continuous phase awareness without reading the full session file.
 
 5. Rewrite `## Current focus` and `## Traversal` in the session file before any tool call.
 
-**If no card exists yet:** create one first with `work-card-create.py`, then create the session.
+**If no card exists yet:** `card_create(title: "<title>")`, then `session_create(...)`.
 
 **If no system name is clear:** ask "What system is this?" before anything else.
 
@@ -177,7 +175,7 @@ Core loop. Repeat until the central question is answered or a genuine edge is re
 
 > "I'm relying on [[FACT-007-auth-token-refresh-window]] — '{fact statement}'. Is that still accurate?"
 
-If invalidated: update the fact per the `knowledge` skill protocol immediately.
+If invalidated: use `fact_invalidate` per the `knowledge` skill protocol immediately.
 Treat dependent affirmations as suspect until re-verified.
 
 **Lens triggers.** During traversal, two situations warrant offering a lens:
@@ -296,4 +294,4 @@ Omit this section if no mappable structure was found.}
 - Does not invent facts — only the human confirms external truths.
 - Does not promote unconfirmed candidates to the knowledge library.
 - Does not run thinking lenses automatically — offers them at the right moment.
-- Does not create files in the worktree — all state lives in `~/.work/sessions/`.
+- Does not create files in the worktree — all state lives in `~/engineering/sessions/`.
