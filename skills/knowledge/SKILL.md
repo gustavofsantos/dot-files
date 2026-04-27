@@ -18,6 +18,19 @@ and written to whenever a validated fact is discovered.
 
 ---
 
+## Environment detection
+
+Before any operation, determine which environment you are running in:
+
+- **Claude Code**: bash tool is available. Use CLI commands and direct file access for
+  all operations. This is the full-capability path.
+- **Claude Desktop**: no bash tool. Use the qmd MCP server for queries. Fact writes
+  require generating the markdown for the user to save manually — state this clearly.
+
+To check: attempt to use the bash tool. If unavailable, you are on Claude Desktop.
+
+---
+
 ## Storage layout
 
 ```
@@ -99,83 +112,114 @@ only replacements.
 
 ---
 
-## Creating a fact
+## Querying facts
 
-When a validated discovery warrants permanent storage:
+### Claude Code
 
-1. Check for duplicates or related facts first:
-   ```
-   knowledge_query(query: "<proposed fact statement>", min_score: 0.6, n: 5)
-   ```
-   If a related fact exists, use `fact_update` to extend it rather than creating a duplicate.
+```bash
+# Semantic search
+qmd query "auth token expiry behavior" -n 5
 
-2. Scaffold the fact:
-   ```
-   fact_create(title: "<short label>", tags: ["auth", "clojure"], confidence: "asserted")
-   ```
-   Returns `{ id, title, confidence, path }`. The ID is allocated atomically from the counter.
+# Keyword + semantic combined
+qmd query $'lex: auth token\nvec: token refresh before expiry check' -n 5
 
-3. Fill the body — read the scaffolded file, then write `## Statement`, `## Evidence`,
-   `## Depends on`, and `refs`:
-   ```
-   fact_get(id: "FACT-001")   ← read the scaffold
-   fact_update(id: "FACT-001", fields: { refs: { spike: "...", card: "007" } })
-   ```
+# Exact keyword / ID lookup
+qmd search "FACT-007" --full
 
-4. Update the qmd index:
-   ```bash
-   qmd update && qmd embed
-   ```
-   Required for the fact to be retrievable in future sessions.
-   The MCP server writes the file; qmd indexes it for semantic search.
+# Read a specific fact (when you know the ID)
+cat ~/engineering/facts/FACT-007-*.md
+```
 
-5. Add the fact wiki link to the originating card's `facts:` field.
+### Claude Desktop (qmd MCP server)
+
+Use the qmd MCP server tools directly. The server exposes search and retrieval
+over the same collection. Use it for queries at session start and during investigation.
+Fact writes are not available via MCP — see "Creating a fact" below.
 
 ---
 
-## Querying facts
+## Creating a fact
 
-### At session start (automatic)
+### Claude Code
 
-```
-knowledge_query(query: "<card title> <card objective>", min_score: 0.5, n: 8)
-```
+1. Check for duplicates:
+   ```bash
+   qmd query "<proposed fact statement>" -n 5
+   ```
+   If a related fact exists, extend it rather than creating a duplicate.
 
-Returns file paths with scores. Load the ones above threshold. Ignore the rest.
+2. Allocate an ID and scaffold the file:
+   ```bash
+   NEXT=$(cat ~/engineering/.counters/facts 2>/dev/null || echo 0)
+   NEXT=$((NEXT + 1))
+   echo $NEXT > ~/engineering/.counters/facts
+   ID="FACT-$(printf '%03d' $NEXT)"
+   SLUG="<short-slug>"
+   FILE=~/engineering/facts/${ID}-${SLUG}.md
+   ```
 
-### During investigation
+3. Write the scaffolded file:
+   ```bash
+   cat > "$FILE" << 'EOF'
+   ---
+   id: FACT-NNN
+   title: ""
+   confidence: asserted
+   created: YYYY-MM-DD
+   tags: []
+   refs: []
+   ---
 
-```
-# Basic semantic search — "do we know anything about X"
-knowledge_query(query: "auth token expiry behavior", n: 5)
+   ## Statement
 
-# Read a specific fact
-fact_get(id: "FACT-007")   ← accepts "FACT-007" or "007"
-```
+   ## Evidence
 
-For rich multi-type queries (BM25 + vector + reranking), use qmd CLI directly:
+   ## Depends on
 
-```bash
-# Keyword search — exact terms, identifiers
-qmd search "FACT-007" --full
+   ## Notes
+   EOF
+   ```
+   Then fill in the body.
 
-# Semantic + keyword combined
-qmd query $'lex: auth token\nvec: token refresh before expiry check' -n 5
-```
+4. Index:
+   ```bash
+   qmd update && qmd embed
+   ```
 
-Use `knowledge_query` for standard retrieval. Use qmd CLI when query type matters.
+5. Add the wiki link to the originating card's `facts:` field.
+
+### Claude Desktop
+
+Fact writes require filesystem access. Generate the complete markdown in chat using
+the format above, state clearly that the user must save it to
+`~/engineering/facts/FACT-NNN-<slug>.md` with the correct sequential ID, and then
+run `qmd update && qmd embed` in a terminal to index it.
 
 ---
 
 ## Updating a fact
 
-To merge fields into a fact's front-matter without touching the body:
+### Claude Code
 
-```
-fact_update(id: "FACT-007", fields: { confidence: "validated", confirmed: "2026-04-24", refs: { commit: "abc1234" } })
+To update front-matter fields without touching the body, use `sed` or read-modify-write:
+
+```bash
+# Read the fact
+cat ~/engineering/facts/FACT-007-*.md
+
+# Edit in place (example: set confidence to validated)
+FILE=$(ls ~/engineering/facts/FACT-007-*.md)
+# Use your preferred editor or sed to update the YAML front-matter field
 ```
 
-To update the body (Statement, Evidence, Notes), use `fact_get` to read, then edit the file directly.
+To update the body, read the file and rewrite it.
+
+After any write: `qmd update && qmd embed`
+
+### Claude Desktop
+
+Read via qmd MCP server. For writes, generate the updated markdown and instruct
+the user to apply it.
 
 ---
 
@@ -184,36 +228,55 @@ To update the body (Statement, Evidence, Notes), use `fact_get` to read, then ed
 When `dead-reckoning` produces a confirmed theorem:
 
 1. The theorem has: a statement, an anchor (commit hash or file:line), and human confirmation.
-2. Create with `confidence: "validated"`:
-   ```
-   fact_create(title: "...", tags: ["..."], confidence: "validated")
-   ```
-3. Set refs and confirmed date:
-   ```
-   fact_update(id: "FACT-NNN", fields: { confirmed: "2026-04-24", refs: { spike: "[[001-auth-investigation]]", commit: "abc1234" } })
-   ```
-4. Run `qmd update && qmd embed`.
-5. In the spike document, replace the full theorem text with `→ [[FACT-NNN-slug]]`.
+
+2. **Claude Code** — scaffold with `confidence: "validated"`, fill refs and confirmed date,
+   then `qmd update && qmd embed`. In the spike document, replace the full theorem text
+   with `→ [[FACT-NNN-slug]]`.
+
+3. **Claude Desktop** — generate the full fact markdown with `confidence: validated`,
+   instruct the user to save it and run `qmd update && qmd embed`.
 
 ---
 
 ## Invalidating a fact
 
-When a fact is discovered to be wrong or outdated:
+### Claude Code
 
-```
-fact_invalidate(id: "FACT-007", reason: "Auth was refactored in commit abc123 — expiry now checked post-refresh.")
+```bash
+FILE=$(ls ~/engineering/facts/FACT-007-*.md)
+# Update confidence: invalidated in front-matter
+# Append an ## Invalidated section with date and reason
+qmd update && qmd embed
 ```
 
-This sets `confidence: invalidated` and appends an `## Invalidated` section with date and reason.
-Then run `qmd update && qmd embed`.
+### Claude Desktop
+
+Generate the updated markdown with `confidence: invalidated` and an `## Invalidated`
+section. Instruct the user to apply and index it.
 
 Do not delete invalidated facts. The history of what was believed is useful.
 Identify any facts that `## Depends on` the invalidated one and review them.
 
 ---
 
-## qmd collection setup (one-time)
+## Session start protocol (automatic)
+
+### Claude Code
+
+```bash
+qmd query "<card title> <card objective>" -n 8
+```
+
+Load results above score 0.5. Ignore the rest.
+
+### Claude Desktop
+
+Use the qmd MCP server query tool with the card title and objective as the query.
+Same threshold: load above 0.5, ignore the rest.
+
+---
+
+## qmd collection setup (one-time, Claude Code only)
 
 ```bash
 qmd collection add ~/engineering --name engineering
@@ -230,7 +293,9 @@ Run once when setting up a new machine.
 - One fact per atomic claim. If a fact needs two paragraphs, it contains two claims — split it.
 - Facts are global. Never scope them to a system when the claim is universal.
 - Never copy fact content into a card or spike. Reference by wiki link only.
-- A fact exists to be found. If it cannot be found by `knowledge_query`, it does not exist.
+- A fact exists to be found. If it cannot be found by query, it does not exist.
   Always run `qmd update && qmd embed` after writing.
 - Confidence is a property of the evidence, not of how certain you feel.
   Asserted = human said so. Validated = code confirms it.
+- On Claude Desktop, never silently skip a write operation. Always surface the
+  markdown to the user and explain what they need to do.
