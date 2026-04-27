@@ -1,1 +1,0 @@
-- I adhere to context-driven development
