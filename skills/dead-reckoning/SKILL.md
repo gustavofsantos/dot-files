@@ -84,11 +84,11 @@ continuous phase awareness without reading the full session file.
 
 ## Session start
 
-1. Find the workflow session for this card:
+1. Find the workflow session for this issue:
    ```
-   card_list(status: "active")
+   issue_list(status: "active")
    ```
-   Read the returned card's `sessions:` field to locate the session file.
+   Read the returned issue's `sessions:` field to locate the session file.
 
 2. Read the session file at `~/engineering/sessions/<id>-<repo>.md`.
    - Has `## Traversal` section → ongoing investigation. Load the spike from the path
@@ -97,7 +97,7 @@ continuous phase awareness without reading the full session file.
 
 3. If no session file exists, create one:
    ```
-   session_create(card_id: "<id>", repo: "<repo>", branch: "<branch>", worktree: "/abs/path")
+   session_create(issue_id: "<id>", repo: "<repo>", branch: "<branch>", worktree: "/abs/path")
    ```
 
 4. Run knowledge retrieval:
@@ -111,7 +111,7 @@ continuous phase awareness without reading the full session file.
 
 5. Rewrite `## Current focus` and `## Traversal` in the session file before any tool call.
 
-**If no card exists yet:** `card_create(title: "<title>")`, then `session_create(...)`.
+**If no issue exists yet:** `issue_create(title: "<title>")`, then `session_create(...)`.
 
 **If no system name is clear:** ask "What system is this?" before anything else.
 
@@ -233,13 +233,13 @@ Update `## Traversal` to reflect which affirmations have been promoted.
    question, referencing affirmation IDs and fact wiki links.
 2. Write the **Open Questions** section — genuine unknowns reached but not resolved.
    (Not "we didn't look" — that's Ignored Scope.)
-3. Add a wiki link to the spike in the originating card's `spikes:` field.
+3. Add a wiki link to the spike in the originating issue's `spikes:` field.
 4. Report to human: question answered or not, open questions, facts promoted.
 5. Clear `## Traversal` from the session file — state now lives in the spike and
    the knowledge library.
-6. Update `## Current focus`: move all phases to `### Done`. If the card has
+6. Update `## Current focus`: move all phases to `### Done`. If the issue has
    remaining tasks, pull the next one into `### In progress`. If this was the
-   entire card, signal: "Investigation complete. Ready for planning."
+   entire issue, signal: "Investigation complete. Ready for planning."
 
 ## Spike document format
 
@@ -248,7 +248,7 @@ Update `## Traversal` to reflect which affirmations have been promoted.
 
 **Central question:** {One sentence.}
 **Date:** YYYY-MM-DD
-**Card:** {card id if applicable}
+**Issue:** {issue id if applicable}
 
 ## Answer
 

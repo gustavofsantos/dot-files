@@ -62,7 +62,7 @@ created: {today}
 tags: {tags_yaml}
 refs:
   - spike:
-  - card:
+  - issue:
   - commit:
 ---
 
