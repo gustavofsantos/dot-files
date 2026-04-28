@@ -29,11 +29,15 @@ state file. Plan Mode handles transient session state. The issue handles everyth
     archive/            ← completed issues — never read these
   facts/                ← managed by the knowledge skill
   spikes/               ← managed by the knowledge skill
-  thinking/               ← managed by the thinking parter skill
+  terms/                ← managed by the knowledge skill
+    financeiro/
+    fretboard/
+  thinking/             ← managed by the thinking-partner skill
   .counters/
     issues
     facts
     spikes
+    terms
 ```
 
 ---
@@ -47,6 +51,7 @@ All scripts live at `~/.claude/skills/workflow/scripts/` and are invoked with `p
 | `work-issue-create.py` | Scaffold a new issue |
 | `work-issue-list.py` | List issues, filter by status or tag |
 | `work-issue-archive.py` | Move a done issue to archive |
+| `work-term-create.py` | Scaffold a new term (knowledge/terms) |
 
 ```bash
 SCRIPTS=~/.claude/skills/workflow/scripts
@@ -54,6 +59,7 @@ SCRIPTS=~/.claude/skills/workflow/scripts
 python3 $SCRIPTS/work-issue-create.py --title "Fix auth bug" --status inbox
 python3 $SCRIPTS/work-issue-list.py --status active --format text
 python3 $SCRIPTS/work-issue-archive.py --issue 001
+python3 $SCRIPTS/work-term-create.py --term "Ciclo de faturamento" --domain financeiro
 ```
 
 All scripts accept `--format json` (default) or `--format text`.
@@ -154,6 +160,19 @@ If something surfaces that the human hasn't mentioned:
 
 If a loaded fact contradicts something in the issue's Context: surface it immediately
 before any execution begins.
+
+Then run a second query targeting terms for the relevant domain. Infer the domain from
+the issue's tags, context, or the active card's subject matter:
+
+```bash
+qmd query "<domain> <key concepts from objective>" --min-score 0.5 -n 5 --files
+```
+
+Filter results to `~/engineering/terms/`. If a term surfaces that the human hasn't
+mentioned and is directly relevant to the objective, surface it the same way as facts:
+
+> "Before we start — [[TERM-003-ciclo-de-faturamento]] defines what a billing cycle
+> means in this domain. Worth keeping in mind."
 
 ---
 
