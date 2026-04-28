@@ -79,30 +79,51 @@ to reflect investigation phases, and it owns a `## Traversal` section for epheme
              Cannot resolve statically. Human verification required.
 ```
 
-`work-recall.py` injects `## Current focus` after every tool call, giving the agent
-continuous phase awareness without reading the full session file.
+After every validated affirmation or phase transition, rewrite `## Current focus` in the
+session file. Re-read that section at the start of each phase to stay oriented.
 
 ## Session start
 
-1. Find the workflow session for this issue:
+1. Find the active issue:
+   ```bash
+   python3 ~/.claude/skills/workflow/scripts/work-issue-list.py --status active --format text
    ```
-   issue_list(status: "active")
-   ```
-   Read the returned issue's `sessions:` field to locate the session file.
+   Read the issue file at `~/engineering/issues/<id>-<slug>.md`. Check its `sessions:`
+   field for an existing session file path.
 
-2. Read the session file at `~/engineering/sessions/<id>-<repo>.md`.
+2. Read the session file at `~/engineering/sessions/<issue_id>-<repo>.md`.
    - Has `## Traversal` section → ongoing investigation. Load the spike from the path
      in `**Spike:**` and continue from where it left off.
    - No `## Traversal` section → fresh investigation. Add the section before starting.
 
-3. If no session file exists, create one:
+3. If no session file exists, create it:
+   ```bash
+   mkdir -p ~/engineering/sessions
    ```
-   session_create(issue_id: "<id>", repo: "<repo>", branch: "<branch>", worktree: "/abs/path")
+   Write `~/engineering/sessions/<issue_id>-<repo>.md` with this skeleton:
+   ```markdown
+   # <repo> — <investigation topic>
+
+   **Issue:** <issue_id>
+   **Branch:** <branch>
+
+   ## Current focus
+
+   ### Done
+
+   ### In progress
+   - [ ] Phase 1: Orient — confirm central question
+
+   ### Next
+   - [ ] Phase 2: Traverse
+   - [ ] Phase 3: Promote to facts
+   - [ ] Phase 4: Finalize spike
    ```
+   Then add the session file path to the issue's `sessions:` field in its frontmatter.
 
 4. Run knowledge retrieval:
-   ```
-   knowledge_query(query: "<investigation topic>", min_score: 0.5, n: 6)
+   ```bash
+   qmd query "<investigation topic>" --min-score 0.5 -n 6
    ```
    Load relevant facts silently. If a fact is directly relevant to the central question,
    surface it to the human before traversal begins:
@@ -111,7 +132,11 @@ continuous phase awareness without reading the full session file.
 
 5. Rewrite `## Current focus` and `## Traversal` in the session file before any tool call.
 
-**If no issue exists yet:** `issue_create(title: "<title>")`, then `session_create(...)`.
+**If no issue exists yet:**
+```bash
+python3 ~/.claude/skills/workflow/scripts/work-issue-create.py --title "<title>"
+```
+Then create the session file as above.
 
 **If no system name is clear:** ask "What system is this?" before anything else.
 
@@ -175,7 +200,7 @@ Core loop. Repeat until the central question is answered or a genuine edge is re
 
 > "I'm relying on [[FACT-007-auth-token-refresh-window]] — '{fact statement}'. Is that still accurate?"
 
-If invalidated: use `fact_invalidate` per the `knowledge` skill protocol immediately.
+If invalidated: follow the invalidation protocol in the `knowledge` skill immediately.
 Treat dependent affirmations as suspect until re-verified.
 
 **Lens triggers.** During traversal, two situations warrant offering a lens:
