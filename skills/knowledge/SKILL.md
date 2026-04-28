@@ -12,7 +12,7 @@ description: >
 
 # Knowledge
 
-The knowledge library is the long-term memory of the system. It survives card completion,
+The knowledge library is the long-term memory of the system. It survives issue completion,
 session endings, and context window pressure. It is queried automatically at session start
 and written to whenever a validated fact is discovered.
 
@@ -63,7 +63,7 @@ confirmed: YYYY-MM-DD
 tags: [auth, clojure, seubarriga]
 refs:
   - spike: "[[001-auth-investigation]]"
-  - card: "007"
+  - issue: "007"
   - commit: abc1234
 ---
 
@@ -186,7 +186,7 @@ Fact writes are not available via MCP — see "Creating a fact" below.
    qmd update && qmd embed
    ```
 
-5. Add the wiki link to the originating card's `facts:` field.
+5. Add the wiki link to the originating issue's `facts:` field.
 
 ### Claude Desktop
 
@@ -264,14 +264,14 @@ Identify any facts that `## Depends on` the invalidated one and review them.
 ### Claude Code
 
 ```bash
-qmd query "<card title> <card objective>" -n 8
+qmd query "<issue title> <issue objective>" -n 8
 ```
 
 Load results above score 0.5. Ignore the rest.
 
 ### Claude Desktop
 
-Use the qmd MCP server query tool with the card title and objective as the query.
+Use the qmd MCP server query tool with the issue title and objective as the query.
 Same threshold: load above 0.5, ignore the rest.
 
 ---
@@ -280,7 +280,7 @@ Same threshold: load above 0.5, ignore the rest.
 
 ```bash
 qmd collection add ~/engineering --name engineering
-qmd context add qmd://engineering "Engineering memory — cards, sessions, facts, and spike narratives"
+qmd context add qmd://engineering "Engineering memory — issues, sessions, facts, and spike narratives"
 qmd embed
 ```
 
@@ -292,7 +292,7 @@ Run once when setting up a new machine.
 
 - One fact per atomic claim. If a fact needs two paragraphs, it contains two claims — split it.
 - Facts are global. Never scope them to a system when the claim is universal.
-- Never copy fact content into a card or spike. Reference by wiki link only.
+- Never copy fact content into an issue or spike. Reference by wiki link only.
 - A fact exists to be found. If it cannot be found by query, it does not exist.
   Always run `qmd update && qmd embed` after writing.
 - Confidence is a property of the evidence, not of how certain you feel.

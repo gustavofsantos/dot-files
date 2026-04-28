@@ -21,97 +21,67 @@ description: >
 
 ```
 ~/engineering/
-  sessions/
-    NNN-<repo>.md         ← workflow session file, owns ## Traversal during investigation
-
   facts/
     FACT-NNN-slug.md      ← validated facts, global, permanent
   spikes/
     NNN-slug.md           ← this session's spike document
 ```
 
-The spike document is the narrative output of this skill.
-Facts are atoms promoted from the spike into the permanent library.
-Traversal state (affirmations, scope records, dynamic paths) lives in `## Traversal`
-inside the workflow session file — not in the worktree.
+The spike document is the narrative output of this skill and the working document during
+traversal. Facts are atoms promoted from the spike into the permanent library.
 
 See the `knowledge` skill for fact format and promotion protocol.
-See the `workflow` skill for the session file schema.
 
-## Session file during traversal
+## Spike as working document
 
-Dead reckoning adds two things to the workflow session file: it manages `## Current focus`
-to reflect investigation phases, and it owns a `## Traversal` section for ephemeral state.
+The spike is both the working document during traversal and the final output.
+Affirmations, scope records, and dynamic paths are written directly into the spike as
+the traversal proceeds — candidates are marked `(candidate)` until the human confirms them.
 
-```markdown
-## Current focus
-
-### Done
-- [x] Phase 1: Orient — central question confirmed
-
-### In progress
-- [ ] Phase 2: Traverse — entry: src/auth/token.clj:refresh-token
-
-### Next
-- [ ] Phase 3: Promote to facts
-- [ ] Phase 4: Finalize spike
-
-## Traversal
-
-**Spike:** [[001-auth-investigation]]
-**Central question:** Does token refresh happen before expiry validation?
-
-### Pending affirmations
-
-[A1] Auth middleware checks expiry before delegating to refresh handler
-     ↳ Anchored at: src/auth/middleware.clj:47
-     ↳ Status: candidate for promotion
-
-### Scope records
-
-[SCOPE-1] Did not traverse: billing integration
-           Reason: out of scope
-           Risk: billing may depend on token state
-
-### Dynamic paths
-
-[DYNAMIC-1] Dynamic dispatch at: src/auth/handler.clj:23
-             Cannot resolve statically. Human verification required.
-```
-
-`work-recall.py` injects `## Current focus` after every tool call, giving the agent
-continuous phase awareness without reading the full session file.
+When Plan Mode is active, it provides phase tracking. Without Plan Mode, the spike itself
+is the only artifact — no separate tracking file is needed.
 
 ## Session start
 
-1. Find the workflow session for this card:
+1. Find the active issue:
+   ```bash
+   python3 ~/.claude/skills/workflow/scripts/work-issue-list.py --status active --format text
    ```
-   card_list(status: "active")
-   ```
-   Read the returned card's `sessions:` field to locate the session file.
+   Read the issue file at `~/engineering/issues/<id>-<slug>.md`.
 
-2. Read the session file at `~/engineering/sessions/<id>-<repo>.md`.
-   - Has `## Traversal` section → ongoing investigation. Load the spike from the path
-     in `**Spike:**` and continue from where it left off.
-   - No `## Traversal` section → fresh investigation. Add the section before starting.
+2. Probe whether Plan Mode is warranted. Before doing anything else, assess the scope
+   of the investigation from the central question and any context already given:
 
-3. If no session file exists, create one:
-   ```
-   session_create(card_id: "<id>", repo: "<repo>", branch: "<branch>", worktree: "/abs/path")
-   ```
+   **Signals that warrant Plan Mode:**
+   - Multiple independent entry points to traverse (more than one subsystem, service, or call tree)
+   - The question spans more than one repository or deployment boundary
+   - Open questions in the issue suggest the traversal will branch significantly
+   - You expect the work to take more than one session
 
-4. Run knowledge retrieval:
-   ```
-   knowledge_query(query: "<investigation topic>", min_score: 0.5, n: 6)
+   **Signals that do not warrant Plan Mode:**
+   - Single entry point, narrow question, one system
+   - Likely answerable in one focused session
+   - The human said something like "quick look" or "just check"
+
+   If Plan Mode is warranted, say so explicitly and ask:
+   > "This investigation looks broad — [one sentence on why]. Want to switch to Plan Mode
+   > so we can map the traversal phases before starting?"
+
+   Wait for the human's answer. If yes, enter Plan Mode now. If no, proceed linearly.
+
+3. Run knowledge retrieval:
+   ```bash
+   qmd query "<investigation topic>" --min-score 0.5 -n 6
    ```
    Load relevant facts silently. If a fact is directly relevant to the central question,
    surface it to the human before traversal begins:
    > "[[FACT-007-auth-token-refresh-window]] covers auth token refresh in this system. Should I treat it as an axiom
    > for this session, or do you want to verify it fresh?"
 
-5. Rewrite `## Current focus` and `## Traversal` in the session file before any tool call.
-
-**If no card exists yet:** `card_create(title: "<title>")`, then `session_create(...)`.
+**If no issue exists yet:**
+```bash
+python3 ~/.claude/skills/workflow/scripts/work-issue-create.py --title "<title>"
+```
 
 **If no system name is clear:** ask "What system is this?" before anything else.
 
@@ -123,8 +93,7 @@ continuous phase awareness without reading the full session file.
 > 'Does X happen before Y?' or 'Who owns Z when W occurs?'"
 
 A good central question has a factual or yes/no answer, narrow enough for one session.
-Once confirmed, write it at the top of the spike document and in `**Central question:**`
-in the `## Traversal` section.
+Once confirmed, write it in `**Central question:**` at the top of the spike document.
 
 **Declare entry points.** Before touching code:
 
@@ -132,8 +101,7 @@ in the `## Traversal` section.
 
 Wait for confirmation or redirection.
 
-**Update session file:** move Phase 1 to `### Done` in `## Current focus`. Move Phase 2
-to `### In progress` with the confirmed entry point.
+If in Plan Mode, update the plan to reflect Phase 1 complete and Phase 2 in progress.
 
 ## Phase 2 — Traverse
 
@@ -151,8 +119,7 @@ Core loop. Repeat until the central question is answered or a genuine edge is re
 
 **Pause and ask: "Does this hold?"** Wait for a real answer.
 
-- Yes → mark as candidate for promotion. Append to spike document. Add to
-  `### Pending affirmations` in `## Traversal`.
+- Yes → append to `## Affirmations` in the spike, marked `(candidate)`.
 - No → stop. Ask what's wrong. Correct and re-ask. Do not continue until resolved,
   or human explicitly says "set it aside and keep going."
 
@@ -175,7 +142,7 @@ Core loop. Repeat until the central question is answered or a genuine edge is re
 
 > "I'm relying on [[FACT-007-auth-token-refresh-window]] — '{fact statement}'. Is that still accurate?"
 
-If invalidated: use `fact_invalidate` per the `knowledge` skill protocol immediately.
+If invalidated: follow the invalidation protocol in the `knowledge` skill immediately.
 Treat dependent affirmations as suspect until re-verified.
 
 **Lens triggers.** During traversal, two situations warrant offering a lens:
@@ -205,8 +172,9 @@ Place the diagram in `## Flow diagrams` in the spike, referencing the affirmatio
 it distills (`[A1]–[A4]`). Only produce a diagram when the structure is clear enough
 to be accurate — a misleading diagram is worse than no diagram.
 
-**Update the session file** after every validated affirmation, scope/dynamic record,
-and fact confirmation or invalidation. Rewrite `## Traversal` in full — never append.
+**Update the spike document** after every validated affirmation, scope/dynamic record,
+and fact confirmation or invalidation. Write directly into the relevant sections — never
+leave state only in memory.
 
 **Signal edges clearly:**
 
@@ -217,7 +185,7 @@ Never conflate these.
 
 ## Phase 3 — Promote to facts
 
-For each candidate affirmation in `### Pending affirmations`:
+For each `(candidate)` affirmation in `## Affirmations` of the spike:
 
 > "Candidate: '{statement}' — anchored at {commit hash or file:line}.
 > Promote to a permanent fact?"
@@ -225,7 +193,7 @@ For each candidate affirmation in `### Pending affirmations`:
 If confirmed, invoke the `knowledge` skill promotion protocol.
 Unconfirmed candidates stay in the spike as narrative — not promoted.
 
-Update `## Traversal` to reflect which affirmations have been promoted.
+Mark promoted affirmations in the spike with `→ [[FACT-NNN-slug]]` replacing the candidate text.
 
 ## Phase 4 — Finalize spike
 
@@ -233,13 +201,10 @@ Update `## Traversal` to reflect which affirmations have been promoted.
    question, referencing affirmation IDs and fact wiki links.
 2. Write the **Open Questions** section — genuine unknowns reached but not resolved.
    (Not "we didn't look" — that's Ignored Scope.)
-3. Add a wiki link to the spike in the originating card's `spikes:` field.
+3. Add a wiki link to the spike in the originating issue's `spikes:` field.
 4. Report to human: question answered or not, open questions, facts promoted.
-5. Clear `## Traversal` from the session file — state now lives in the spike and
-   the knowledge library.
-6. Update `## Current focus`: move all phases to `### Done`. If the card has
-   remaining tasks, pull the next one into `### In progress`. If this was the
-   entire card, signal: "Investigation complete. Ready for planning."
+5. If in Plan Mode: mark all phases done. If this was the entire issue, signal:
+   "Investigation complete. Ready for planning."
 
 ## Spike document format
 
@@ -248,7 +213,7 @@ Update `## Traversal` to reflect which affirmations have been promoted.
 
 **Central question:** {One sentence.}
 **Date:** YYYY-MM-DD
-**Card:** {card id if applicable}
+**Issue:** {issue id if applicable}
 
 ## Answer
 
@@ -290,8 +255,7 @@ Omit this section if no mappable structure was found.}
 
 - Does not begin traversal without a confirmed central question.
 - Does not continue past a rejected affirmation without resolution.
-- Does not append to the session file's `## Traversal` — always fully rewritten.
 - Does not invent facts — only the human confirms external truths.
 - Does not promote unconfirmed candidates to the knowledge library.
 - Does not run thinking lenses automatically — offers them at the right moment.
-- Does not create files in the worktree — all state lives in `~/engineering/sessions/`.
+- Does not create files in the worktree — all state lives in the spike document.

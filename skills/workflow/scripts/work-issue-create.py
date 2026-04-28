@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-work-card-create — scaffold a new work card
+work-issue-create — scaffold a new work issue
 
 Usage:
-    work-card-create --title "Fix auth bug" [--status inbox] [--tags feature,api] [--branch feat/slug]
+    work-issue-create --title "Fix auth bug" [--status inbox] [--tags feature,api] [--branch feat/slug]
 """
 
 import argparse
@@ -14,14 +14,14 @@ from datetime import date
 from pathlib import Path
 
 ENG_DIR = Path.home() / "engineering"
-CARDS_DIR = ENG_DIR / "cards"
+ISSUES_DIR = ENG_DIR / "issues"
 COUNTERS_DIR = ENG_DIR / ".counters"
 VALID_STATUSES = {"inbox", "not-now", "active", "done"}
 
 
 def next_id() -> str:
     COUNTERS_DIR.mkdir(parents=True, exist_ok=True)
-    counter_path = COUNTERS_DIR / "cards"
+    counter_path = COUNTERS_DIR / "issues"
     current = int(counter_path.read_text().strip()) if counter_path.exists() else 0
     next_val = current + 1
     counter_path.write_text(str(next_val))
@@ -42,12 +42,12 @@ def parse_tags(tags_str: str) -> list[str]:
     return [t.strip() for t in tags_str.split(",") if t.strip()]
 
 
-def build_frontmatter(card_id: str, title: str, status: str, tags: list[str], branch: str | None) -> str:
+def build_frontmatter(issue_id: str, title: str, status: str, tags: list[str], branch: str | None) -> str:
     today = date.today().isoformat()
     tags_yaml = f"[{', '.join(tags)}]" if tags else "[]"
     branch_line = f"branch: {branch}" if branch else "branch:"
     return f"""---
-id: "{card_id}"
+id: "{issue_id}"
 title: "{title}"
 status: {status}
 {branch_line}
@@ -63,7 +63,7 @@ updated: {today}
 def scaffold_body() -> str:
     return """## Objective
 
-<!-- One sentence. What "done" looks like when this card closes. -->
+<!-- One sentence. What "done" looks like when this issue closes. -->
 
 ## Scope
 
@@ -89,30 +89,30 @@ def scaffold_body() -> str:
 """
 
 
-def create_card(title: str, status: str, tags: list[str], branch: str | None) -> dict:
-    CARDS_DIR.mkdir(parents=True, exist_ok=True)
+def create_issue(title: str, status: str, tags: list[str], branch: str | None) -> dict:
+    ISSUES_DIR.mkdir(parents=True, exist_ok=True)
 
-    card_id = next_id()
+    issue_id = next_id()
     slug = slugify(title)
-    filename = f"{card_id}-{slug}.md"
-    card_path = CARDS_DIR / filename
+    filename = f"{issue_id}-{slug}.md"
+    issue_path = ISSUES_DIR / filename
 
-    content = build_frontmatter(card_id, title, status, tags, branch) + "\n" + scaffold_body()
-    card_path.write_text(content)
+    content = build_frontmatter(issue_id, title, status, tags, branch) + "\n" + scaffold_body()
+    issue_path.write_text(content)
 
     return {
-        "id": card_id,
+        "id": issue_id,
         "title": title,
         "status": status,
         "branch": branch,
         "tags": tags,
-        "path": str(card_path),
+        "path": str(issue_path),
     }
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Create a new work card")
-    parser.add_argument("--title", required=True, help="Card title")
+    parser = argparse.ArgumentParser(description="Create a new work issue")
+    parser.add_argument("--title", required=True, help="Issue title")
     parser.add_argument(
         "--status",
         default="inbox",
@@ -131,15 +131,15 @@ def main():
     args = parser.parse_args()
 
     tags = parse_tags(args.tags)
-    card = create_card(args.title, args.status, tags, args.branch)
+    issue = create_issue(args.title, args.status, tags, args.branch)
 
     if args.fmt == "json":
-        print(json.dumps(card, indent=2))
+        print(json.dumps(issue, indent=2))
     else:
-        print(f"{card['id']}  {card['status']}  {card['title']}")
-        print(f"path: {card['path']}")
-        if card["branch"]:
-            print(f"branch: {card['branch']}")
+        print(f"{issue['id']}  {issue['status']}  {issue['title']}")
+        print(f"path: {issue['path']}")
+        if issue["branch"]:
+            print(f"branch: {issue['branch']}")
 
 
 if __name__ == "__main__":
