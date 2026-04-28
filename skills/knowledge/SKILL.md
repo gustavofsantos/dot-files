@@ -41,13 +41,20 @@ To check: attempt to use the bash tool. If unavailable, you are on Claude Deskto
   spikes/
     001-auth-investigation.md
     002-payment-flow-traversal.md
+  terms/
+    financeiro/
+      TERM-001-ciclo-de-faturamento.md
+    fretboard/
+      TERM-002-nota-musical.md
   .counters/
     facts    ← sequential ID counter
     spikes   ← sequential ID counter
+    terms    ← sequential ID counter
 ```
 
 Facts are global — not scoped to a system or repo.
 Spikes are narratives produced by `dead-reckoning`. They reference facts but do not contain them.
+Terms are scoped by business domain, not by project or codebase.
 
 ---
 
@@ -109,6 +116,80 @@ The billing cycle is immutable once created — updates are not possible,
 only replacements.
 → [[FACT-012-billing-cycle-immutability]], [[FACT-013-billing-replacement-flow]]
 ```
+
+---
+
+## Terms
+
+Terms are normative definitions of business domain concepts. They answer the question
+"what does this concept mean in this domain?" rather than "what does the code do?"
+
+**Facts vs. terms:**
+- A **fact** is empirical — a behavioral claim anchored to evidence in code (file:line, commit hash, test name). It describes what the system does.
+- A **term** is normative — it defines what a concept means in the business domain. It does not require a code anchor.
+
+**When to create a term:**
+- A domain concept appears recurrently across sessions and issues
+- There is risk of confusion between the business name and the code name
+- A concept needs an authoritative definition that can be referenced, not re-explained
+
+**Terms can exist without references.** Not every business concept has a fact yet.
+A term without a `## Referências` entry is valid — it defines the concept for future use.
+
+### Term format
+
+```markdown
+---
+id: TERM-NNN
+term: "Nome do conceito"
+domain: financeiro
+aliases: []
+---
+
+## Definição
+
+## No código
+
+<!-- Só preencher se o nome no código divergir do nome de negócio. Omitir a seção caso contrário. -->
+
+## Não é
+
+---
+
+## Referências
+
+- [[FACT-NNN-slug]]
+- [[TERM-NNN-slug]]
+```
+
+The `## No código` section is optional. Include it only when the name used in code
+diverges from the business name — e.g., the domain calls it "Ciclo de faturamento"
+but the code uses `BillingPeriod`. Omit the section entirely when names align.
+
+### Creating a term
+
+#### Claude Code
+
+```bash
+python3 ~/.claude/skills/workflow/scripts/work-term-create.py \
+  --term "Ciclo de faturamento" \
+  --domain financeiro \
+  [--aliases "billing cycle,faturamento"]
+```
+
+Then fill `## Definição` and `## Não é`, and index:
+
+```bash
+qmd update && qmd embed
+```
+
+Reference by wiki link: `[[TERM-NNN-slug]]`
+
+#### Claude Desktop
+
+Generate the full term markdown using the format above, instruct the user to save it to
+`~/engineering/terms/<domain>/TERM-NNN-<slug>.md` with the correct sequential ID, then
+run `qmd update && qmd embed` in a terminal.
 
 ---
 
@@ -299,3 +380,7 @@ Run once when setting up a new machine.
   Asserted = human said so. Validated = code confirms it.
 - On Claude Desktop, never silently skip a write operation. Always surface the
   markdown to the user and explain what they need to do.
+- Terms are scoped by business domain, not by codebase. A term in `financeiro/` applies
+  to the financial domain regardless of which project implements it.
+- The `## No código` section in a term is only written when the business name and the
+  code name diverge. When they match, omit the section entirely — do not write it empty.

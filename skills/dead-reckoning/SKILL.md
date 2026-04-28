@@ -145,6 +145,31 @@ Core loop. Repeat until the central question is answered or a genuine edge is re
 If invalidated: follow the invalidation protocol in the `knowledge` skill immediately.
 Treat dependent affirmations as suspect until re-verified.
 
+**Name divergence hook.** When traversal encounters a concept whose name in code
+diverges from the expected business name (e.g., the code uses `BillingPeriod` but
+the domain calls it "Ciclo de faturamento"):
+
+1. Query for an existing term:
+   ```bash
+   qmd query "<business concept name>" --min-score 0.5 -n 3 --files
+   ```
+   Filter results to `~/engineering/terms/`.
+
+2. **If a term exists** (`[[TERM-NNN-slug]]`): reference it in the affirmation and,
+   if the term's `## No código` section is empty, fill it in:
+   ```
+   [A{n}] {Behavioral claim}
+          ↳ Anchored at: {file:line}
+          ↳ Term: [[TERM-NNN-slug]] — note: code uses '{CodeName}'
+   ```
+
+3. **If no term exists**: pause and signal to the human before continuing:
+   > "The code uses '{CodeName}' for what I'd expect to be called '{BusinessName}'.
+   > No term exists for this concept yet. Want to create one before we continue,
+   > or proceed and flag it as a candidate term?"
+   Wait for the human's decision. Do not continue traversal past the divergence
+   without resolution.
+
 **Lens triggers.** During traversal, two situations warrant offering a lens:
 
 - An affirmation reveals something recurring — the same pattern appearing in multiple
