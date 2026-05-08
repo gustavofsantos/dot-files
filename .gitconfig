@@ -85,11 +85,6 @@
 [interactive]
     diffFilter = delta --color-only
 
-[notes]
-  rewriteMode = copy
-  rewriteRef = refs/notes/commits
-
-
 [pretty]
   default = format:"%C(yellow)%h %C(blue)%cs %C(reset)%s%C(red)%d %C(green)%an%C(reset), %C(cyan)%ar'"
   deploy = format:"%h  %cs  %<(24,trunc)%an  %s"
@@ -113,10 +108,6 @@
 
 [rebase]
   updateRefs = true
-
-[remote "origin"]
-  fetch = +refs/notes/*:refs/notes/*
-  push = refs/notes/*
 
 [color]
   diff = auto
