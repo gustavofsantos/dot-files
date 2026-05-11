@@ -7,7 +7,6 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
-  "disable_ai": true,
   "git_panel": {
     "tree_view": true,
   },
