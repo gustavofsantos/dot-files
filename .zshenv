@@ -3,6 +3,7 @@ export EDITOR='nvim'
 export GOPATH="$HOME/go"
 export PATH="$GOPATH/bin:$PATH"
 
+export PERSONAL_SESSIONS_DIR="$HOME/.ai-sessions"
 export GEM_HOME="$HOME/.gem"
 export ANDROID_HOME="$HOME/Android/Sdk"
 export PNPM_HOME="$HOME/.local/share/pnpm"
