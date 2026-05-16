@@ -2,6 +2,8 @@ export HISTFILE=$HOME/.zsh_history
 export HISTTIMEFORMAT="[%F %T] "
 export SAVEHIST=1000
 export HISTSIZE=999
+export HOMEBREW_NO_AUTO_UPDATE=1
+export HOMEBREW_NO_ENV_HINTS=1
 
 
 fpath=("$HOME/completions/" $fpath)
@@ -49,6 +51,7 @@ if [ -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then . "$HOME/.nix-profile/
 if [ -e "$HOME/.sdkman/bin/sdkman-init.sh" ]; then source "$HOME/.sdkman/bin/sdkman-init.sh"; fi
 if [ -s "$NVM_DIR/nvm.sh" ]; then source "$NVM_DIR/nvm.sh"; fi
 if [ -s "$NVM_DIR/bash_completion" ]; then source "$NVM_DIR/bash_completion"; fi
+if [ -e "$HOME/.turso" ]; then . "$HOME/.turso/env"; fi
 
 # pnpm
 export PNPM_HOME="$HOME/.local/share/pnpm"
