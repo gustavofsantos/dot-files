@@ -33,6 +33,7 @@
   conflict	= !nvim +DiffviewOpen
   dash		= !gh dash
   nuke		= !git clean -fd && git reset --hard
+  pm            = "!f() { default_branch=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD | sed 's#^origin/##'); test -n \"$default_branch\" || { echo 'origin/HEAD is not set; run git remote set-head origin --auto' >&2; return 1; }; git switch \"$default_branch\"; }; f"
 
   # Add new branch as worktree
   # git wta feature-branch
