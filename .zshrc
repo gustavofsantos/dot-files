@@ -71,3 +71,5 @@ export PATH="$BUN_INSTALL/bin:$PATH"
 # >>> railway initialize >>>
 source "$HOME/.railway/env"
 # <<< railway initialize <<<
+
+export PATH="$HOME/.git-ai/bin:$PATH"
