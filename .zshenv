@@ -15,6 +15,8 @@ export MEMORY_FILE_PATH="$HOME/.llm_memory.txt"
 export TURSO_HOME="$HOME/.turso"
 export OLLAMA_API_BASE="http://127.0.0.1:11434"
 # export AMP_TOOLBOX="$HOME/.bin"
+export HORSES_PATH="$HOME/Horses"
+export KNOWLEDGE_KB_PATH="$HORSES_PATH"
 
 export PATH="$PNPM_HOME:$PATH"
 export PATH=$PATH:"$HOME"/.local/bin
