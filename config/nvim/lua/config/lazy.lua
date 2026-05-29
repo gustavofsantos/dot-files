@@ -20,6 +20,7 @@ require("lazy").setup({
       "e-q/okcolors.nvim",
       name = "okcolors",
     },
+    "wtfox/jellybeans.nvim",
     "tpope/vim-sleuth",
     "tpope/vim-surround",
     "tpope/vim-repeat",
