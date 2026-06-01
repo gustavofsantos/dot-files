@@ -1,0 +1,8 @@
+{
+  "plugins": {
+    "mini.jump2d": {
+      "rev": "1661829512c9cfa9cc641f49836de16b49adb497",
+      "src": "https://github.com/nvim-mini/mini.jump2d"
+    }
+  }
+}
