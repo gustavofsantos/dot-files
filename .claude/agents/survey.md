@@ -18,17 +18,7 @@ your report.
 
 ## Step 0 — Orient
 
-```bash
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-PROJECT_SLUG=$(basename "$REPO_ROOT" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')
-```
-
-Load existing knowledge about this project before reading any file:
-
-```bash
-rg -l --ignore-case "$PROJECT_SLUG" ~/engineering/facts/ ~/engineering/terms/ \
-  2>/dev/null | head -8
-```
+Load existing knowledge about this project before reading any file.
 
 Read any returned files and note relevant facts as axioms. Determine zone order
 from the focus argument:
