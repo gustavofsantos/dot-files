@@ -9,6 +9,7 @@ return {
       markdown = { "vale" },
       python = { "mypy", "flake8", "ruff" },
       clojure = { "clj-kondo" },
+      json = { "prettier" },
       javascript = { "eslint_d" },
       javascriptreact = { "eslint_d" },
       typescript = { "deno", "eslint_d" },
