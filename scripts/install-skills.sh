@@ -4,17 +4,16 @@ set -euo pipefail
 DOTFILES_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "Installing custom skills..."
-mkdir -p "$HOME/.claude/skills"
-mkdir -p "$HOME/.cursor/skills"
-mkdir -p "$HOME/.agents/skills"
-for skill in "$DOTFILES_DIR"/skills/*/; do
+for skill in "$DOTFILES_DIR"/.claude/skills/*/; do
   [ -d "$skill" ] || continue
   name=$(basename "$skill")
-  # Claude Code and Gemini CLI (agents): symlinks work
   ln -sfn "$skill" "$HOME/.claude/skills/$name"
-  ln -sfn "$skill" "$HOME/.agents/skills/$name"
-  # Cursor: symlinks are broken for global skills (known bug), use copies
-  rm -rf "$HOME/.cursor/skills/$name"
-  cp -R "$skill" "$HOME/.cursor/skills/$name"
 done
 echo "Installing custom skills... OK"
+
+echo "Installing custom subagents..."
+for agent in "$DOTFILES_DIR"/.claude/agents/*; do
+  name=$(basename "$agent")
+  ln -sf "$agent" "$HOME/.claude/agents/$name"
+done
+echo "Installing custom subagents... OK"
