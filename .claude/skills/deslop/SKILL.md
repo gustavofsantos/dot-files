@@ -1,29 +1,29 @@
 ---
 name: deslop
-description: Checks the diff against master and removes AI-generated slop specific to SeuBarriga's Clojure codebase. Use when cleaning up a branch before merge or when the user asks to remove AI slop from the diff.
+description: Checks the diff against master and removes AI-generated slop from this Clojure codebase. Use when cleaning up a branch before merge or when the user asks to remove AI slop from the diff.
 ---
 
 # Diff Slop Cleanup
 
 ## Goal
 
-Inspect the branch diff against `master` and apply minimal edits to remove AI-generated cruft **only in changed code** while keeping behavior unchanged, following SeuBarriga's Clojure conventions.
+Inspect the branch diff against `master` and apply minimal edits to remove AI-generated cruft **only in changed code** while keeping behavior unchanged, following the project's Clojure conventions.
 
 ## Workflow
 
 1. **Get the diff**: `git diff master...HEAD` (or `git diff master -- <paths>` for specific files).
 2. **Identify changed code**: Only lines marked with `+` (added) or `-` (removed) in the diff are in scope. Lines without `+` or `-` are existing code — ignore them completely.
-3. **Scan for slop**: Apply the SeuBarriga-specific checklist **only to changed lines**; fix only what clearly qualifies.
+3. **Scan for slop**: Apply the project-specific checklist **only to changed lines**; fix only what clearly qualifies.
 4. **Edit minimally**: One logical change per edit (e.g., remove one comment block, or flatten one nesting in added code). Avoid broad rewrites.
 5. **Run formatting**: After edits, run `lein cljstyle fix` on modified files.
-6. **Run linting**: Run `git changed --branch | grep ".clj$" | lint` to ensure no linting errors.
+6. **Run linting**: Run `clj-kondo` on modified files to ensure no linting errors.
 7. **Summarize**: 1–3 sentences describing what was removed or simplified.
 
-## SeuBarriga-Specific Focus Areas
+## Project-Specific Focus Areas
 
 ### Comments
 - **Remove** comments that:
-  - State the obvious (e.g., `;; Check if invoice is open`, `;; Loop through items`, `;; Return result`)
+  - State the obvious (e.g., `;; Check if record is valid`, `;; Loop through items`, `;; Return result`)
   - Narrate what the code does line-by-line
   - Explain basic Clojure syntax or standard library functions
   - Are verbose block comments where the file uses terse line comments or none
@@ -34,9 +34,9 @@ Inspect the branch diff against `master` and apply minimal edits to remove AI-ge
   - Describe "why" something is done, not "what" is being done
 
 ### Docstrings
-- **Keep** docstrings that explain complex return structures or business logic (e.g., the return map of `invoice-recalculate-eligibility`)
+- **Keep** docstrings that explain complex return structures or business logic
 - **Remove or shorten** docstrings that:
-  - Merely restate the function name (e.g., `"Returns the invoice"` for `get-invoice`)
+  - Merely restate the function name (e.g., `"Returns the record"` for `get-record`)
   - Explain obvious parameters
   - Are verbose when a concise version suffices
 
@@ -52,16 +52,16 @@ Inspect the branch diff against `master` and apply minimal edits to remove AI-ge
 ### Structure & Nesting
 - **Flatten** deeply nested `if`/`let`/`when` by using:
   - Early returns with `when` or `when-not` at the top level
-  - `cond` with flat branches (align with SeuBarriga's `cond` style in `common.clj`)
+  - `cond` with flat branches (align with the project's `cond` style in surrounding files)
   - `let` bindings to break complex expressions into named steps
 - **Simplify** callback chains or threading macros that create excessive nesting
 - **Match** the flatness and style of the surrounding file — look at how existing `cond` expressions are structured
 
 ### Naming & Conventions
 - **Align** with existing naming patterns in the file:
-  - Namespace aliases (e.g., `seubarriga.domain.invoice.core` → `invoice`)
-  - Function naming (predicate functions end in `?`, e.g., `bill?`, `fund-transfer?`)
-  - Keyword namespacing (e.g., `:invoice/status`, `:payment/status`)
+  - Namespace aliases (follow the conventions already in use in the same namespace)
+  - Function naming (predicate functions end in `?`, e.g., `valid?`, `active?`)
+  - Keyword namespacing (follow conventions already in use, e.g., `:entity/status`)
 - **Prefer** `if-let`/`when-let` over nested `let` + `if`
 - **Prefer** `cond` with explicit clauses over nested `if-else` chains
 
