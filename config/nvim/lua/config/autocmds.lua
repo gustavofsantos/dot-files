@@ -110,3 +110,13 @@ vim.api.nvim_create_autocmd("FileType", {
     cmp.setup.buffer({ sources = { { name = "vim-dadbod-completion" }, { name = "buffer" } } })
   end,
 })
+
+vim.api.nvim_create_autocmd('FileType', {
+    pattern = { 'javascript', 'json', 'lua', 'clojure', 'kotlin', 'java', 'yaml' },
+    callback = function()
+      vim.treesitter.start()
+      vim.wo.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+      vim.wo.foldmethod = 'expr'
+      vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+    end,
+  })

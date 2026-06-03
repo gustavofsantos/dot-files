@@ -36,8 +36,6 @@ vim.opt.scrolloff = 3
 vim.opt.foldcolumn = "0"
 vim.opt.foldlevel = 999
 vim.opt.foldlevelstart = 99
-vim.opt.foldenable = true
-vim.opt.foldmethod = "indent"
 vim.opt.wildmenu = true
 -- vim.opt.wildmode = "longest,list"
 vim.opt.wildoptions:append { 'fuzzy' }
