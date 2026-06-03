@@ -8,9 +8,9 @@ A new filter parameter on the expense listing endpoint.
 ## Simulated diff stat
 
 ```
-src/seubarriga/expenses/queries.clj       | 34 ++++++++++++++---
-src/seubarriga/expenses/handler.clj       | 18 +++++++--
-src/seubarriga/expenses/queries_test.clj  | 41 +++++++++++++++++++
+src/myapp/expenses/queries.clj       | 34 ++++++++++++++---
+src/myapp/expenses/handler.clj       | 18 +++++++--
+src/myapp/expenses/queries_test.clj  | 41 +++++++++++++++++++
 3 files changed, 87 insertions(+), 6 deletions(-)
 ```
 
