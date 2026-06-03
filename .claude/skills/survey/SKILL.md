@@ -43,8 +43,8 @@ Agent(
 
 3. **Fact candidates.** For each entry in `## Fact candidates`, ask the human:
    > "Want to promote these N findings as facts?"
-   For any the human approves, append it to the knowledge base
-   (`~/engineering/facts/`) so later `survey`/`dead-reckoning` runs can load it.
+   For any the human approves, invoke the `fact` skill to record it in
+   `~/engineering/facts/` so later `survey`/`dead-reckoning` runs can load it.
 
 4. **Contradictions.** If the report has `## Contradictions with knowledge base`,
    surface them explicitly before proceeding. These need resolution before the

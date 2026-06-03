@@ -14,6 +14,9 @@ metadata:
 Read the active issue, then find the first task with unchecked scenarios and
 implement them test-first, in order.
 
+This skill drives `type: implementation` issues. An `investigation` issue is
+answered with `dead-reckoning`, not tested into existence — skip it here.
+
 **Locate the active issue** the same way the `issue` skill stores it:
 
 ```bash
@@ -21,15 +24,15 @@ _ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
 _CFG="${_ROOT}/.skills/config"
 if [ -f "$_CFG" ]; then
   ISSUES_DIR=$(grep '^issues=' "$_CFG" | cut -d= -f2 | xargs)
-  [[ "$ISSUES_DIR" != /* ]] && ISSUES_DIR="${_ROOT}/${ISSUES_DIR}"
-else
-  ISSUES_DIR="$HOME/.issues"
+  [[ -n "$ISSUES_DIR" && "$ISSUES_DIR" != /* ]] && ISSUES_DIR="${_ROOT}/${ISSUES_DIR}"
 fi
+ISSUES_DIR="${ISSUES_DIR:-$HOME/engineering/issues}"
 ```
 
 Each `## Tasks` entry references the scenarios (`S1, S2 — label`) it covers; the
 `## Scenarios` section holds the Given/When/Then those tasks implement. If the
-issue's `## Context` carries a `design-constraints` block, treat it as binding.
+issue's `## Context` carries a `design-constraints` block, treat it as binding, and
+treat the facts in `## Facts` (`FACT-NNN`) as established ground.
 
 ## Cycle
 
