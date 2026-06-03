@@ -1,0 +1,132 @@
+# Run the test runner for a file inside a backend-services application repo.
+# Usage: testf /absolute/path/to/repo relative/path/inside/repo.kt
+testf() {
+  local repo="${1:?usage: testf <repo-abs-path> <relative-path>}"
+  local relpath="${2:?usage: testf <repo-abs-path> <relative-path>}"
+
+  [[ -d "$repo" ]] || { echo "testf: not a directory: $repo" >&2; return 1; }
+  repo="${repo:A}"
+
+  # Allow passing an absolute file path as the second argument
+  if [[ "$relpath" == "$repo"/* ]]; then
+    relpath="${relpath#$repo/}"
+  fi
+  relpath="${relpath#./}"
+
+  local gradlew="$repo/gradlew"
+  [[ -x "$gradlew" ]] || { echo "testf: no gradlew in $repo" >&2; return 1; }
+
+  case "$(__test_detect_app "$repo")" in
+    cart-system) __test_cart_system "$repo" "$relpath" ;;
+    *)
+      echo "testf: unsupported repository (only cart-system for now): $repo" >&2
+      return 1
+      ;;
+  esac
+}
+
+__test_detect_app() {
+  local repo="$1"
+  if [[ "$(basename "$repo")" == cart-system ]] \
+    && [[ -f "$repo/settings.gradle" ]] \
+    && grep -q "rootProject.name = 'cart-system'" "$repo/settings.gradle" 2>/dev/null; then
+    echo cart-system
+    return 0
+  fi
+  echo unknown
+}
+
+__test_cart_system() {
+  local repo="$1" relpath="$2"
+  local module task test_relpath fqcn resolved
+
+  resolved="$(__test_cart_system_resolve "$relpath")"
+  if [[ -z "$resolved" ]]; then
+    resolved="$(__test_cart_system_mirror_main_test "$repo" "$relpath")"
+  fi
+  if [[ -z "$resolved" ]]; then
+    echo "testf: cannot map path to a cart-system test (expected under app/{core,adapters,containers/api}/src/test or a main source with a *Test.kt): $relpath" >&2
+    return 1
+  fi
+
+  module="${resolved%%$'\t'*}"
+  test_relpath="${resolved#*$'\t'}"
+
+  fqcn="$(__test_kotlin_path_to_fqcn "$test_relpath")" || return 1
+  task="${module}:test"
+
+  local -a cmd=(./gradlew "$task" --tests "$fqcn")
+  echo "→ cd $repo && sdk env && unset CI && ${cmd[*]}" >&2
+  (
+    cd "$repo" || return 1
+    sdk env install >/dev/null 2>&1
+    sdk env >/dev/null 2>&1
+    unset CI
+    "${cmd[@]}"
+  )
+}
+
+# Prints "<gradle-module>\t<test-relative-path>" for a test source file, or nothing.
+__test_cart_system_resolve() {
+  local relpath="$1"
+
+  case "$relpath" in
+    app/core/src/test/*)
+      echo ":app:core	$relpath"
+      return 0
+      ;;
+    app/adapters/src/test/*)
+      echo ":app:adapters	$relpath"
+      return 0
+      ;;
+    app/containers/api/src/test/*)
+      echo ":app:containers:api	$relpath"
+      return 0
+      ;;
+  esac
+  return 1
+}
+
+# main/kotlin/.../Foo.kt → test/kotlin/.../FooTest.kt when that file exists.
+__test_cart_system_mirror_main_test() {
+  local repo="$1" relpath="$2"
+  local candidate module_prefix module
+
+  case "$relpath" in
+    app/core/src/main/*) module_prefix="app/core/" ;;
+    app/adapters/src/main/*) module_prefix="app/adapters/" ;;
+    app/containers/api/src/main/*) module_prefix="app/containers/api/" ;;
+    *) return 1 ;;
+  esac
+
+  candidate="${relpath#${module_prefix}src/main/kotlin/}"
+  candidate="${module_prefix}src/test/kotlin/${candidate%.kt}Test.kt"
+
+  [[ -f "$repo/$candidate" ]] || return 1
+
+  case "$module_prefix" in
+    app/core/) module=":app:core" ;;
+    app/adapters/) module=":app:adapters" ;;
+    app/containers/api/) module=":app:containers:api" ;;
+  esac
+  echo "$module	$candidate"
+  return 0
+}
+
+__test_kotlin_path_to_fqcn() {
+  local relpath="$1"
+  local pkg
+
+  case "$relpath" in
+    */src/test/kotlin/*)
+      pkg="${relpath#*/src/test/kotlin/}"
+      ;;
+    *)
+      echo "testf: not a kotlin test path: $relpath" >&2
+      return 1
+      ;;
+  esac
+
+  pkg="${pkg%.kt}"
+  echo "${pkg//\//.}"
+}

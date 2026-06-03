@@ -3,7 +3,7 @@ export EDITOR='nvim'
 export GOPATH="$HOME/go"
 export PATH="$GOPATH/bin:$PATH"
 
-export PERSONAL_SESSIONS_DIR="$HOME/.ai-sessions"
+export PERSONAL_SESSIONS_DIR="$HOME/engineering/.ai-sessions"
 export GEM_HOME="$HOME/.gem"
 export ANDROID_HOME="$HOME/Android/Sdk"
 export PNPM_HOME="$HOME/.local/share/pnpm"
@@ -14,9 +14,12 @@ export WORKLOG_PATH="$HOME/Documents/Obsidian/vault/worklog.md"
 export MEMORY_FILE_PATH="$HOME/.llm_memory.txt"
 export TURSO_HOME="$HOME/.turso"
 export OLLAMA_API_BASE="http://127.0.0.1:11434"
+export DENO_INSTALL="$HOME/.deno"
 # export AMP_TOOLBOX="$HOME/.bin"
 export HORSES_PATH="$HOME/Horses"
 export KNOWLEDGE_KB_PATH="$HORSES_PATH"
+export PATH="$DENO_INSTALL/bin:$PATH"
+export PATH="$HOME/.poetry/bin:$PATH"
 
 export PATH="$PNPM_HOME:$PATH"
 export PATH=$PATH:"$HOME"/.local/bin
