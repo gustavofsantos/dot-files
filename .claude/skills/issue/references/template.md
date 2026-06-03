@@ -12,6 +12,9 @@ updated: {today}
 ## Objective
 One sentence. What done looks like.
 
+## Executive Summary
+Distills purpose, findings, and recommendation.
+
 ## Scenarios
 - S1. Given ... When ... Then ...        # implementation: BDD
 - S2. ...                                # investigation: Question ... → Expected finding ...
