@@ -1,5 +1,5 @@
 # Run the test runner for a file inside a backend-services application repo.
-# Usage: testf /absolute/path/to/repo relative/path/inside/repo.kt
+# Usage: testf /absolute/path/to/repo relative/path/inside/repo
 testf() {
   local repo="${1:?usage: testf <repo-abs-path> <relative-path>}"
   local relpath="${2:?usage: testf <repo-abs-path> <relative-path>}"
@@ -13,13 +13,11 @@ testf() {
   fi
   relpath="${relpath#./}"
 
-  local gradlew="$repo/gradlew"
-  [[ -x "$gradlew" ]] || { echo "testf: no gradlew in $repo" >&2; return 1; }
-
   case "$(__test_detect_app "$repo")" in
     cart-system) __test_cart_system "$repo" "$relpath" ;;
+    seubarriga)  __test_seubarriga  "$repo" "$relpath" ;;
     *)
-      echo "testf: unsupported repository (only cart-system for now): $repo" >&2
+      echo "testf: unsupported repository: $repo" >&2
       return 1
       ;;
   esac
@@ -33,7 +31,32 @@ __test_detect_app() {
     echo cart-system
     return 0
   fi
+  if [[ "$(basename "$repo")" == seubarriga ]] \
+    && [[ -f "$repo/project.clj" ]]; then
+    echo seubarriga
+    return 0
+  fi
   echo unknown
+}
+
+__test_seubarriga() {
+  local repo="$1" relpath="$2"
+
+  [[ "$relpath" == test/* && "$relpath" == *.clj ]] \
+    || { echo "testf: expected a path under test/ ending in .clj: $relpath" >&2; return 1; }
+
+  local ns
+  ns="${relpath#test/}"
+  ns="${ns%.clj}"
+  ns="${ns//\//.}"
+  ns="${ns//_/-}"
+
+  local -a cmd=(lein with-profile test midje "$ns")
+  echo "→ cd $repo && ${cmd[*]}" >&2
+  (
+    cd "$repo" || return 1
+    "${cmd[@]}"
+  )
 }
 
 __test_cart_system() {
@@ -59,9 +82,6 @@ __test_cart_system() {
   echo "→ cd $repo && sdk env && unset CI && ${cmd[*]}" >&2
   (
     cd "$repo" || return 1
-    sdk env install >/dev/null 2>&1
-    sdk env >/dev/null 2>&1
-    unset CI
     "${cmd[@]}"
   )
 }
