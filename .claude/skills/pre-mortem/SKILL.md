@@ -76,3 +76,10 @@ Summarize the pre-mortem as:
 - ...
 </template>
 
+## Feeding the result back
+
+If the work is tracked as an issue (see the `issue` skill): unresolved blockers
+become `## Open questions`, mitigations that constrain the approach go into the
+`## Context` (alongside any `design-constraints` block), and failure modes that
+define what must *not* break become `## Off-limits` entries.
+

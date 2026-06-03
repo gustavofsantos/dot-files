@@ -73,11 +73,19 @@ When the user decides thinking is done, produce the flush document using the tem
 The flush is not a summary — it's the distilled output an agent needs to act well, including
 what it should *not* do.
 
+**Next step after the flush** — hand the flush to the skill that fits the work:
+- A trackable problem/feature → `issue` (shapes objective + BDD scenarios). Paste
+  the flush's constraints into the issue's `## Context`; its "do not do" items
+  become `## Off-limits` entries.
+- A user-facing story to be sliced into tasks → `user-story-builder`.
+- A design question still open → `design` / `design-constraints`.
+
 ---
 
 ## What this skill does not do
 
 - Does not write code or pseudocode during thinking
-- Does not produce task lists or user stories — those come after the flush, from the appropriate skill
+- Does not produce task lists or user stories — those come after the flush, via the
+  `issue` or `user-story-builder` skill
 - Does not pretend thinking is complete when open questions remain
 - Does not proceed if a foundational assumption hasn't been examined

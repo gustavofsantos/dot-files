@@ -13,7 +13,7 @@ metadata:
 # Deep Review — dispatch shim
 
 This skill dispatches the heavy review work to the **`deep-review` subagent**
-(see `agents/deep-review.md` in this plugin). The subagent runs in an
+(defined in `.claude/agents/deep-review.md`). The subagent runs in an
 isolated context, reads the diff and the analytical reference files
 (simple-design-rules, metz-heuristics, dhh-expressiveness, code-smells,
 oop-criteria / fp-criteria), and returns a structured review report.
@@ -43,9 +43,10 @@ that's only useful for the review itself.
    > "Run the two-phase deep review protocol on the following target:
    > **<target>**.
    >
-   > Plugin root (for reading reference files): `${CLAUDE_PLUGIN_ROOT}`
-   > (or run `fd 'simple-design-rules.md'` from the repo to locate the
-   > reference files if the env var isn't set).
+   > Reference files live in the `deep-review` skill's `references/`
+   > directory. Locate them with `fd simple-design-rules.md ~/.claude`
+   > (or `fd simple-design-rules.md` from the repo root) and read them
+   > from that directory.
    >
    > [Any extra context the human gave, e.g. 'focus on the auth flow' or
    > 'I'm worried about edge case X' — pass through verbatim.]
@@ -56,11 +57,13 @@ that's only useful for the review itself.
 
 4. **Act on the chain pointer** in the report's summary:
    - **Green / Yellow** → tell the human the issue is ready to ship; the human
-     (not the agent) sets `status: done` and archives the issue.
-   - **Red, fixable in scope** → propose pasting the `design-constraints`
-     `refactor` block into the issue Context for a constrained fix pass.
-   - **Red, structural problems beyond scope** → propose creating a new
-     inbox issue via `workflow`.
+     (not the agent) archives the issue by moving it out of the issues
+     directory (see the `issue` skill — an issue is active while it lives there).
+   - **Red, fixable in scope** → invoke the `design-constraints` skill in
+     `refactor` mode and paste the resulting block into the issue's
+     `## Context` for a constrained fix pass, then re-run `tdd`.
+   - **Red, structural problems beyond scope** → propose tracking it via the
+     `issue` skill (a fresh issue with its own scenarios).
 
 ## Why a subagent
 

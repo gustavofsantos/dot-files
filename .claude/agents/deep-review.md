@@ -116,18 +116,16 @@ PHASE 1 — SCOPE AND SAFETY
 Only the **core change** gets depth review. Not the test files, not the wiring,
 not the migration scripts. The thing this change is fundamentally about.
 
-Load the analytical pillars before proceeding. Read each reference file from
-the plugin (paths relative to plugin root):
+Load the analytical pillars before proceeding. They live in the `deep-review`
+skill's `references/` directory. Locate that directory with
+`fd simple-design-rules.md ~/.claude` (or `fd simple-design-rules.md` from the
+repo root), then read each file from it:
 
-- `skills/deep-review/references/simple-design-rules.md` — Kent Beck, four rules
-- `skills/deep-review/references/metz-heuristics.md` — Sandi Metz structural limits
-- `skills/deep-review/references/dhh-expressiveness.md` — DHH conceptual compression
-- `skills/deep-review/references/code-smells.md` — Kerievsky/Fowler smell catalog
-- `skills/deep-review/references/oop-criteria.md` or `skills/deep-review/references/fp-criteria.md` — based on detected paradigm
-
-Use `fd 'simple-design-rules.md'` from the repo if the plugin path isn't
-obvious — the dispatching agent may have included the absolute plugin root in
-your initial prompt. Fall back to searching from `$HOME` if needed.
+- `simple-design-rules.md` — Kent Beck, four rules
+- `metz-heuristics.md` — Sandi Metz structural limits
+- `dhh-expressiveness.md` — DHH conceptual compression
+- `code-smells.md` — Kerievsky/Fowler smell catalog
+- `oop-criteria.md` or `fp-criteria.md` — based on detected paradigm
 
 Infer the paradigm from the code. Load both criteria files if the paradigm is mixed.
 
@@ -192,8 +190,8 @@ Must fix before merge: [blocking issues or "none"]
 Consider: [non-blocking improvements]
 Looks good: [specific things done well]
 Chain pointer: [if Red and fixable in scope → suggest design-constraints (refactor);
-               if structural problems beyond scope → suggest a new inbox issue;
-               if Green/Yellow → human can move issue to done]
+               if structural problems beyond scope → suggest a new issue (issue skill);
+               if Green/Yellow → human can archive the issue]
 ```
 
 ---

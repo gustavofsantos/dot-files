@@ -19,6 +19,12 @@ Entry point:
 - Raw idea → start at Phase 1
 - Story already exists (has As/I want/So that + criteria) → skip to Phase 3
 
+> **Which skill?** Use this skill for user-facing stories that decompose into a
+> task plan. For a technical problem/feature tracked as a local issue with BDD
+> `## Scenarios`, use the `issue` skill instead — `tdd` implements from that
+> issue's scenarios. The two are alternative front doors to implementation, not
+> a sequence; pick one per piece of work.
+
 Read [references/heuristics.md](references/heuristics.md) for quality signals and split heuristics.
 
 ---
