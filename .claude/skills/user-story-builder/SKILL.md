@@ -90,3 +90,13 @@ Template per task:
 Present all tasks and ask: "Does the breakdown make sense? Is any task too large, out of order, or missing?"
 
 Iterate until confirmed.
+
+---
+
+## Handoff map
+
+Once the story and tasks are confirmed, suggest the next skill explicitly:
+
+- Need Jira-ready formatting → `tickets`
+- Need issue guardrails for implementation or refactoring → `design-constraints`
+- Ready to implement an issue with scenarios → `tdd`

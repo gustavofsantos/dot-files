@@ -43,7 +43,8 @@ Agent(
 
 3. **Fact candidates.** For each entry in `## Fact candidates`, ask the human:
    > "Want to promote these N findings as facts?"
-   If yes, invoke the `knowledge` skill for each one.
+   If yes, promote only the validated, reusable findings as repository facts,
+   one fact at a time.
 
 4. **Contradictions.** If the report has `## Contradictions with knowledge base`,
    surface them explicitly before proceeding. These need resolution before the

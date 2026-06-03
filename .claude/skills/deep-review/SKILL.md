@@ -60,7 +60,7 @@ that's only useful for the review itself.
    - **Red, fixable in scope** → propose pasting the `design-constraints`
      `refactor` block into the issue Context for a constrained fix pass.
    - **Red, structural problems beyond scope** → propose creating a new
-     inbox issue via `workflow`.
+     follow-up bug or task via `tickets`.
 
 ## Why a subagent
 

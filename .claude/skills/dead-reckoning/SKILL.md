@@ -46,7 +46,8 @@ Agent(
    ```
 
 3. **Fact candidates.** If the report has a `## Fact candidates` section and the
-   human wants to promote findings, invoke the `knowledge` skill for each candidate.
+   human wants to promote findings, promote only the validated, reusable
+   findings as repository facts, one fact at a time.
 
 4. **Scope pointer.** If the report's `## Ignored scope` contains branches the
    human wants to investigate next, this skill can be dispatched again with a

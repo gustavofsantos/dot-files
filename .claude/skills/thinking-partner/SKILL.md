@@ -75,6 +75,16 @@ what it should *not* do.
 
 ---
 
+## Handoff map
+
+After the flush, suggest the next skill explicitly:
+
+- Need a scoped story or task breakdown → `user-story-builder`
+- Need interface or boundary design → `design`
+- Need to pressure-test a chosen approach → `pre-mortem`
+- Need to investigate existing behavior before deciding → `dead-reckoning`
+- Need to turn the result into a Jira artifact → `tickets`
+
 ## What this skill does not do
 
 - Does not write code or pseudocode during thinking

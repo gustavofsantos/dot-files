@@ -76,3 +76,10 @@ Summarize the pre-mortem as:
 - ...
 </template>
 
+## Handoff map
+
+After the pre-mortem, suggest the next skill explicitly:
+
+- Blocking unknown depends on current system behavior → `dead-reckoning`
+- Mitigations should become explicit build constraints → `design-constraints`
+- Risks are understood and the work now needs a scoped implementation story → `user-story-builder`
