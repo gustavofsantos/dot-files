@@ -45,9 +45,17 @@ Agent(
    Read(path)  — for each file in the list
    ```
 
-3. **Fact candidates.** If the report has a `## Fact candidates` section and the
-   human wants to promote findings, invoke the `knowledge` skill for each candidate.
+3. **Fact candidates.** If the report has a `## Fact candidates` section, surface
+   each candidate to the human. For any the human approves, invoke the `fact` skill
+   to record it (sourced, in `~/engineering/facts/`) and link it to the active issue.
+   Never promote unconfirmed claims.
 
 4. **Scope pointer.** If the report's `## Ignored scope` contains branches the
    human wants to investigate next, this skill can be dispatched again with a
    narrower entry point.
+
+5. **Next step.** This skill is the engine for `type: investigation` issues — its
+   answers close the issue's scenario-questions, and its durable findings become
+   facts (step 3). If the investigation reveals work to do, hand off to the `issue`
+   skill to shape an implementation issue, or to `design`/`design-constraints` if
+   the finding is primarily a design question.

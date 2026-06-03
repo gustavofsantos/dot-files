@@ -1,10 +1,12 @@
 ---
-description: Bruno Lang .bru instructions
+description: Bruno Lang .bru instructions (legacy format — see the `bruno` skill for current YAML/OpenCollection collections)
 ---
-# Bruno API Client - Cursor AI Rules
+# Bruno API Client — Legacy `.bru` Format
 
 ## What is Bruno?
 Bruno is an innovative API client that stores API collections directly in your filesystem using a plain text markup language called "Bru". It's designed as a Git-first, offline-only alternative to Postman, perfect for teams who want to version control their API tests alongside their code.
+
+> **Format note**: This skill covers the **legacy `.bru` markup** (collections with `bruno.json` + `.bru` request files). For collections created with Bruno v3.1+ (the current **YAML / OpenCollection** format — `opencollection.yml` + `.yml` files), use the **`bruno`** skill instead.
 
 ## Core Philosophy
 - **Offline-First**: No cloud sync, everything stored locally

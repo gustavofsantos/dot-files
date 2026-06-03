@@ -11,7 +11,10 @@ description: >
 Read [references/guide.md](references/guide.md) for slice definition, violation signals,
 flocking rules, safe moves, and characterization test guidance.
 
-Two modes. Each emits a constraint block to paste into the issue's `## Context`.
+Two modes. Each emits a constraint block to paste into the issue's `## Context`
+section (the issue is created by the `issue` skill, whose template reserves a spot
+for exactly this block). Once the block is in place, the `tdd` skill implements the
+scenarios under those constraints.
 
 | Mode | When | Block name |
 |---|---|---|

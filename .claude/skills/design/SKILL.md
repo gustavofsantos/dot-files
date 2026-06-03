@@ -59,3 +59,11 @@ Two sub-modes — identify from context:
 3. Output: checklist results + named anti-pattern + concrete refactoring suggestion with code.
 
 Present output after each sub-step. Wait for the human before proceeding.
+
+---
+
+## Next step
+
+When the design is settled and implementation is next, capture the decided
+boundary/interface as a `design-constraints` block in the issue's `## Context`
+(see the `issue` and `design-constraints` skills), then implement with `tdd`.

@@ -40,15 +40,15 @@ fd -t f '<entry-point-pattern>' . 2>/dev/null | head -10
 
 ## Step 2 — Load knowledge context
 
-Search the knowledge base for relevant facts before reading any code. Extract
+Search the facts base for relevant facts before reading any code. Extract
 3–5 key nouns or domain terms from the central question, then:
 
 ```bash
-rg -l --ignore-case "TERM1|TERM2|TERM3" ~/engineering/facts/ ~/engineering/terms/ \
-  2>/dev/null | head -8
+rg -l --ignore-case "TERM1|TERM2|TERM3" ~/engineering/facts/ 2>/dev/null | head -8
 ```
 
-Read any returned files. Note facts directly relevant to the question — they
+Read any returned files. Each is a `FACT-NNN` (see the `fact` skill); cite them as
+`[[FACT-NNN-slug]]`. Note facts directly relevant to the question — they
 become axioms for the traversal and are stated in the report rather than
 re-derived. This is a best-effort lexical search; paraphrased duplicates may
 not surface.
