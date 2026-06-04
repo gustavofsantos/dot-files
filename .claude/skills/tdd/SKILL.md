@@ -47,7 +47,8 @@ pass. Do not add untested behavior.
 **REFACTOR** — Improve structure. Run tests after every change. If a test breaks, undo
 and try smaller.
 
-Mark the task `[x]` with the short commit hash when all its scenarios are green.
+Run `verify-task`; record the returned hash on the task line — e.g. `[x] abc1234 verify:a3f9…`.
+If `verify-task` exits FAIL, do not mark complete.
 
 Move to the next task.
 
