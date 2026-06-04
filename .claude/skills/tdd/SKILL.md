@@ -7,6 +7,11 @@ description: >
   "let's build this", or when moving from planning to execution on a tracked issue.
 metadata:
   allowed-tools: Read Write Edit Bash(rg:*) Bash(fd:*) Bash(git:*)
+hooks:
+  Stop:
+    - hooks:
+        - type: command
+          command: "verify-task --branch || exit 2"
 ---
 
 # TDD
@@ -47,8 +52,8 @@ pass. Do not add untested behavior.
 **REFACTOR** — Improve structure. Run tests after every change. If a test breaks, undo
 and try smaller.
 
-Run `verify-task`; record the returned hash on the task line — e.g. `[x] abc1234 verify:a3f9…`.
-If `verify-task` exits FAIL, do not mark complete.
+Mark the task `[x]` when all its scenarios are green. The skill's Stop hook
+runs `verify-task --branch` automatically and blocks the turn if any tests are red.
 
 Move to the next task.
 
