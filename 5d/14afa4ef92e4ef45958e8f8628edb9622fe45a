@@ -1,0 +1,19 @@
+CLAUDE.md
+  s_e1657e49c6a8c8::t_f0c38f6f93ba63 1-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "5d14afa4ef92e4ef45958e8f8628edb9622fe45a",
+  "prompts": {},
+  "sessions": {
+    "s_e1657e49c6a8c8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "74289852-aebf-416e-9764-dd9fa1604abc",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
