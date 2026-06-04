@@ -28,7 +28,9 @@ require("lazy").setup({
     "tpope/vim-fugitive",
     "tpope/vim-rhubarb",
     "mbbill/undotree",
+    { "nvim-mini/mini.jump2d", enabled = not vim.pack },
     { import = "plugins" }
+
   },
   install = {
     colorscheme = { "nord" },
