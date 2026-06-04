@@ -17,3 +17,8 @@ for agent in "$DOTFILES_DIR"/.claude/agents/*; do
   ln -sf "$agent" "$HOME/.claude/agents/$name"
 done
 echo "Installing custom subagents... OK"
+
+echo "Installing user CLAUDE.md..."
+mkdir -p "$HOME/.claude"
+ln -sf "$DOTFILES_DIR/.claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
+echo "Installing user CLAUDE.md... OK"
