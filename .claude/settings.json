@@ -78,7 +78,8 @@
       "Bash(docker push *)",
       "Bash(npm publish *)"
     ],
-    "defaultMode": "auto"
+    "defaultMode": "auto",
+    "additionalDirectories": ["~/engineering"]
   },
   "statusLine": {
     "type": "command",
