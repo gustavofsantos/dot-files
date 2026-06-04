@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+usage() {
+    echo "Usage: verify-task [--branch | --staged | --working]"
+    echo ""
+    echo "Run changed tests and emit a deterministic PASS/FAIL token."
+    echo "The token is a SHA-256 hash of the test output; record it on"
+    echo "the completed task line in the issue file as proof tests ran."
+    echo ""
+    echo "Modes (passed through to testallchanged):"
+    echo "  --branch   Tests for files changed vs. main branch (default)"
+    echo "  --staged   Tests for staged files only"
+    echo "  --working  Tests for working-directory changes only"
+    echo ""
+    echo "Output:"
+    echo "  PASS <sha256>   — all tests green; record this token"
+    echo "  FAIL <sha256>   — one or more tests red; do not mark task complete"
+    echo ""
+    echo "Exit code: 0 on PASS, 1 on FAIL."
+}
+
+MODE="--branch"
+if [ $# -gt 0 ]; then
+    case "$1" in
+        --branch|--staged|--working)
+            MODE="$1"
+            ;;
+        --help|-h)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "Error: Unknown option '$1'" >&2
+            echo "" >&2
+            usage >&2
+            exit 1
+            ;;
+    esac
+fi
+
+# Capture output and exit code without triggering set -e
+output=$("$SCRIPT_DIR/testallchanged" "$MODE" 2>&1) || true
+test_exit=$?
+
+# Hash the output deterministically
+hash=$(printf '%s' "$output" | sha256sum | awk '{print $1}')
+
+# Echo the full output so the caller can see what ran
+printf '%s\n' "$output"
+echo ""
+
+if [ "$test_exit" -eq 0 ]; then
+    echo "PASS $hash"
+    exit 0
+else
+    echo "FAIL $hash"
+    exit 1
+fi
