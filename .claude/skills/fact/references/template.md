@@ -6,6 +6,10 @@ id: "FACT-{id}"
 subject: "{subject}"
 created: {today}
 updated: {today}
+provenance:
+  - repo: "{repo-name}"
+    path: "{relative-path}"
+    revision: "{git-commit-sha}"
 ---
 
 ## Statement

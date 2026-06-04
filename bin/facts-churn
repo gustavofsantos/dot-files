@@ -1,0 +1,213 @@
+#!/usr/bin/env python3
+"""
+facts-churn — Staleness checker for the engineering facts base. NO MODEL. NO DEPS.
+
+How it works:
+Every fact in ~/engineering/facts/ can record in its YAML frontmatter a `provenance`
+block. This script loads the repo mapping from ~/engineering/.metadata/sources.local.json,
+checks if the source files of the pinned facts have changed since their pinned revisions,
+and outputs a report.
+
+    git -C <repo> diff --quiet <revision> HEAD -- <path>
+
+Usage:
+    facts-churn                # Check all facts; prints details and returns exit code
+    facts-churn --fact N       # Check only FACT-N (e.g. FACT-001 or 001)
+    facts-churn --quiet        # JSON output only on stdout
+"""
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+ENGINEERING_DIR = Path(os.environ.get("ENGINEERING_DIR", "~/engineering")).expanduser()
+SOURCES_FILE = ENGINEERING_DIR / ".metadata" / "sources.local.json"
+FACTS_DIR = ENGINEERING_DIR / "facts"
+
+
+def log(msg):
+    sys.stderr.write(msg + "\n")
+
+
+def load_sources() -> dict:
+    if not SOURCES_FILE.exists():
+        log(f"Warning: no source resolution found at {SOURCES_FILE}")
+        return {}
+    try:
+        return json.loads(SOURCES_FILE.read_text())
+    except (OSError, json.JSONDecodeError) as e:
+        log(f"Warning: could not read sources file: {e}")
+        return {}
+
+
+def parse_provenance(content: str) -> list:
+    """Robust, simple parser to extract provenance list from YAML frontmatter without PyYAML."""
+    parts = content.split("---")
+    if len(parts) < 3:
+        return []
+    frontmatter = parts[1]
+
+    in_prov = False
+    prov_lines = []
+    for line in frontmatter.splitlines():
+        if line.strip().startswith("provenance:"):
+            in_prov = True
+            continue
+        if in_prov:
+            # Continue collecting as long as the line is indented or list element
+            if line.startswith(" ") or line.strip() == "" or line.strip().startswith("-"):
+                prov_lines.append(line)
+            else:
+                in_prov = False
+
+    if not prov_lines:
+        return []
+
+    entries = []
+    current_entry = {}
+    for line in prov_lines:
+        sline = line.strip()
+        if not sline:
+            continue
+        if sline.startswith("-"):
+            if current_entry:
+                entries.append(current_entry)
+                current_entry = {}
+            sline = sline.lstrip("- ").strip()
+
+        if ":" in sline:
+            key, val = sline.split(":", 1)
+            key = key.strip()
+            val = val.strip().strip('"').strip("'")
+            current_entry[key] = val
+
+    if current_entry:
+        entries.append(current_entry)
+
+    return entries
+
+
+def check_file_changed(repo_path: Path, revision: str, rel_path: str) -> str:
+    """Return 'fresh' | 'stale' | reason-string for unresolved/error."""
+    if not repo_path.exists():
+        return f"unresolved: repo path {repo_path} does not exist"
+    if not (repo_path / ".git").exists():
+        return f"unresolved: {repo_path} is not a git repository"
+
+    # Verify commit exists
+    rev_check = subprocess.run(
+        ["git", "-C", str(repo_path), "cat-file", "-e", f"{revision}^{{commit}}"],
+        capture_output=True
+    )
+    if rev_check.returncode != 0:
+        return f"unresolved: revision {revision[:12]} not found in {repo_path.name}"
+
+    # Check diff
+    diff = subprocess.run(
+        ["git", "-C", str(repo_path), "diff", "--quiet", revision, "HEAD", "--", rel_path],
+        capture_output=True
+    )
+    if diff.returncode == 0:
+        return "fresh"
+    if diff.returncode == 1:
+        return "stale"
+    return f"error: git diff failed ({diff.stderr.decode().strip()})"
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Check fact staleness against pinned git revisions.")
+    ap.add_argument("--fact", default=None, help="Check only this specific fact ID (e.g. FACT-001 or 001).")
+    ap.add_argument("--quiet", action="store_true", help="JSON only, no stderr summary.")
+    args = ap.parse_args()
+
+    sources = load_sources()
+    report = {"facts": [], "stale": 0, "unresolved": 0, "fresh": 0}
+
+    # Find matching fact files
+    if args.fact:
+        # Standardize fact prefix
+        fact_id = args.fact.upper()
+        if not fact_id.startswith("FACT-"):
+            # If it's just e.g. "001", make it "FACT-001"
+            try:
+                fact_id = f"FACT-{int(fact_id):03d}"
+            except ValueError:
+                fact_id = f"FACT-{fact_id}"
+        pattern = f"{fact_id}-*.md"
+    else:
+        pattern = "*.md"
+
+    if not FACTS_DIR.exists():
+        log(f"Error: Facts directory does not exist at {FACTS_DIR}")
+        return 1
+
+    fact_files = sorted(FACTS_DIR.glob(pattern))
+
+    if not fact_files:
+        if args.fact:
+            log(f"Error: Fact '{args.fact}' not found.")
+            return 1
+        else:
+            if not args.quiet:
+                log("No facts found to check.")
+            print(json.dumps(report))
+            return 0
+
+    for ff in fact_files:
+        fact_name = ff.stem
+        try:
+            content = ff.read_text()
+        except OSError as e:
+            log(f"  {fact_name}: skipping unreadable file ({e})")
+            continue
+
+        prov_entries = parse_provenance(content)
+        if not prov_entries:
+            # If a specific fact was requested but it has no provenance, list it as unresolved
+            if args.fact:
+                status = "unresolved: fact has no provenance information"
+                report["unresolved"] += 1
+                report["facts"].append({"fact": fact_name, "entries": [{"status": status}]})
+                if not args.quiet:
+                    log(f"  {fact_name}: [unresolved] — {status}")
+            continue
+
+        entries_out = []
+        for entry in prov_entries:
+            repo_name = entry.get("repo")
+            rel_path = entry.get("path")
+            revision = entry.get("revision")
+
+            if not (repo_name and rel_path and revision):
+                status = "unresolved: incomplete entry (need repo, path, revision)"
+            elif repo_name not in sources:
+                status = f"unresolved: source repo '{repo_name}' not mapped in sources.local.json"
+            else:
+                repo_path = Path(sources[repo_name]).expanduser()
+                status = check_file_changed(repo_path, revision, rel_path)
+
+            kind = "fresh" if status == "fresh" else ("stale" if status == "stale" else "unresolved")
+            report[kind] += 1
+            entries_out.append({"repo": repo_name, "path": rel_path, "revision": revision, "status": status})
+
+            if not args.quiet and kind != "fresh":
+                log(f"  {fact_name}: [{kind}] {repo_name}:{rel_path} — {status}")
+
+        report["facts"].append({"fact": fact_name, "entries": entries_out})
+
+    if not args.quiet:
+        total_checked = report["fresh"] + report["stale"] + report["unresolved"]
+        log(f"\nFact churn: {report['fresh']} fresh, {report['stale']} stale, "
+            f"{report['unresolved']} unresolved across {len(report['facts'])} fact(s) checked.")
+        if report["stale"]:
+            log("Stale facts detected: review the file changes and update or re-verify the facts.")
+
+    print(json.dumps(report))
+    return 1 if (report["stale"] or report["unresolved"]) else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

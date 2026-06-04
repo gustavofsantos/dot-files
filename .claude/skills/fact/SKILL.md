@@ -57,7 +57,26 @@ ID=$(printf 'FACT-%03d' $((${NEXT:-0} + 1)))
 Reject vague or speculative claims. A fact must be checkable; if it can't be sourced,
 it's an open question on an issue, not a fact.
 
-## Step 5 — Link issues (both directions)
+## Step 5 — Resolve provenance
+
+If the evidence is a file (or `file:line` anchor) located inside a repository:
+1. Load `~/engineering/.metadata/sources.local.json` to get the list of known repositories and their paths.
+2. Determine which repository the file belongs to (match the file's path against the values in `sources.local.json`).
+3. Get the relative path of the file from that repository root.
+4. Query git inside that repository to retrieve the current commit SHA of HEAD:
+   ```bash
+   git -C <repo-path> rev-parse HEAD
+   ```
+5. Structure this as a `provenance` block in the fact's frontmatter:
+   ```yaml
+   provenance:
+     - repo: <repo-name>
+       path: <relative-path>
+       revision: <commit-sha>
+   ```
+   If the file is untracked or outside any known repository, omit the `provenance` block.
+
+## Step 6 — Link issues (both directions)
 
 A fact and an issue reference each other **by ID**:
 
@@ -67,7 +86,7 @@ A fact and an issue reference each other **by ID**:
 When the fact was surfaced while working an issue, do both links now so the graph
 stays navigable from either side.
 
-## Step 6 — Write the fact
+## Step 7 — Write the fact
 
 Slugify the subject (lowercase, hyphens, max 5 words).
 Write `$FACTS_DIR/<NNN>-<slug>.md` (the numeric prefix only) using
@@ -75,3 +94,4 @@ Write `$FACTS_DIR/<NNN>-<slug>.md` (the numeric prefix only) using
 wiki link `[[FACT-<NNN>-<slug>]]` — the form survey and dead-reckoning emit.
 
 Confirm: "Recorded FACT-<NNN>: <subject> → $FACTS_DIR (linked to <issue-ids or none>)"
+
