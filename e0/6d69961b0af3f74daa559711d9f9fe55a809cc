@@ -1,0 +1,25 @@
+.claude/agents/dead-reckoning.md
+  s_c52aa89f5e3b28::t_81c35d3a396c2b 7-8
+.claude/skills/brulang/SKILL.md
+  s_c52aa89f5e3b28::t_5ede1de262eddc 2-6
+.claude/skills/bruno/SKILL.md
+  s_c52aa89f5e3b28::t_d4dd88354e3176 2-6
+.claude/agents/survey.md
+  s_c52aa89f5e3b28::t_a63f03dcf8e703 6-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "e06d69961b0af3f74daa559711d9f9fe55a809cc",
+  "prompts": {},
+  "sessions": {
+    "s_c52aa89f5e3b28": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "48170bb8-9d91-46a1-aefe-1bc6718c4478",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
