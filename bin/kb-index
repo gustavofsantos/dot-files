@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ENGINEERING_DIR="${ENGINEERING_DIR:-$HOME/engineering}"
+OUTPUT="$ENGINEERING_DIR/INDEX.md"
+
+# Extract a frontmatter field value (between --- delimiters)
+fm_field() {
+  awk -v field="$2:" '
+    /^---$/ { fm++; next }
+    fm == 1 && index($0, field) == 1 {
+      sub(/^[^:]+:[[:space:]]*/, "")
+      gsub(/^"|"$/, "")
+      print; exit
+    }
+  ' "$1"
+}
+
+# First non-blank line of a ## section
+section_first() {
+  awk -v sec="## $2" '
+    $0 == sec { found=1; next }
+    found && /^## / { exit }
+    found && NF { print; exit }
+  ' "$1"
+}
+
+capitalize() {
+  echo "$1" | awk '{ print toupper(substr($0,1,1)) substr($0,2) }'
+}
+
+{
+  echo "# Knowledge Base Index"
+  echo "_$(date '+%Y-%m-%d %H:%M')_"
+
+  for artifact in issues facts spikes; do
+    dir="$ENGINEERING_DIR/$artifact"
+    [[ -d "$dir" ]] || continue
+    files=("$dir"/*.md)
+    [[ -e "${files[0]}" ]] || continue
+
+    echo ""
+    echo "## $(capitalize "$artifact")"
+    echo ""
+
+    for f in "${files[@]}"; do
+      case "$artifact" in
+        issues)
+          id=$(fm_field "$f" "id")
+          title=$(fm_field "$f" "title")
+          type=$(fm_field "$f" "type")
+          signal=$(section_first "$f" "Objective")
+          echo "**$id** \`[$type]\` $title"
+          [[ -n "$signal" ]] && echo "> $signal"
+          ;;
+        facts)
+          id=$(fm_field "$f" "id")
+          subject=$(fm_field "$f" "subject")
+          signal=$(section_first "$f" "Statement")
+          echo "**$id** $subject"
+          [[ -n "$signal" ]] && echo "> $signal"
+          ;;
+        spikes)
+          id=$(fm_field "$f" "id")
+          cq=$(fm_field "$f" "central_question")
+          repo=$(fm_field "$f" "repo")
+          signal=$(section_first "$f" "Answer")
+          repo_short="${repo##*/}"
+          echo "**$id** \`[$repo_short]\` $cq"
+          [[ -n "$signal" ]] && echo "> $signal"
+          ;;
+      esac
+      echo ""
+    done
+  done
+
+} > "$OUTPUT"
+
+lines=$(wc -l < "$OUTPUT")
+echo "wrote $OUTPUT ($lines lines)"

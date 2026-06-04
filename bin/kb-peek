@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+[[ $# -lt 1 ]] && { echo "Usage: kb-peek <file>" >&2; exit 1; }
+
+file="$1"
+[[ ! -f "$file" ]] && { echo "kb-peek: not found: $file" >&2; exit 1; }
+
+# Non-blank lines of a ## section until the next heading or EOF
+section() {
+  awk -v sec="## $1" '
+    $0 == sec { found=1; next }
+    found && /^## / { exit }
+    found && NF { print }
+  ' "$file"
+}
+
+case "$file" in
+  */spikes/*)
+    echo "Answer:"
+    section "Answer" | head -5
+    ;;
+  */facts/*)
+    echo "Statement:"
+    section "Statement"
+    ;;
+  *)
+    echo "Objective:"
+    section "Objective"
+    summary=$(section "Executive Summary")
+    if [[ -n "$summary" ]]; then
+      echo ""
+      echo "Executive Summary:"
+      echo "$summary" | head -5
+    fi
+    ;;
+esac
