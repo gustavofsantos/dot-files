@@ -1,5 +1,9 @@
 ---
-description: Bruno API
+name: bruno
+description: >
+  Bruno API client using the YAML/OpenCollection format. Use when the repo
+  contains opencollection.yml and .yml request files. For bruno.json + .bru
+  files, use the brulang skill instead.
 ---
 
 # Bruno API Client — YAML / OpenCollection Format

@@ -3,7 +3,8 @@ description: >
   Read-only survey subagent. Systematically discovers an unfamiliar repository
   across Identity, Configuration, and Integration zones. Returns a structured
   report with findings, fact candidates, and high-signal files for the main agent.
-allowed-tools: Bash(rg:*) Bash(fd:*) Bash(git:*) Read
+model: sonnet
+tools: Bash(rg:*), Bash(fd:*), Bash(git:*), Read
 ---
 
 # Survey — Discovery Subagent

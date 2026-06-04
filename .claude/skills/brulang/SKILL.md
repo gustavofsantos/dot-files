@@ -1,5 +1,9 @@
 ---
-description: Bruno Lang .bru instructions (legacy format — see the `bruno` skill for current YAML/OpenCollection collections)
+name: brulang
+description: >
+  Bruno API client using the legacy .bru format. Use when the repo contains
+  bruno.json and .bru request files. For opencollection.yml + .yml files, use
+  the bruno skill instead.
 ---
 
 # Bruno API Client — Legacy `.bru` Format

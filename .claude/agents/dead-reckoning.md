@@ -4,7 +4,8 @@ description: >
   traverses the codebase, produces behavioral claims anchored to file:line evidence,
   and returns a structured report with high-signal files for the main agent to load.
   Optionally writes a spike file when the prompt requests it.
-allowed-tools: Bash(rg:*) Bash(fd:*) Bash(git:*) Bash(date:*) Read Write
+model: sonnet
+tools: Bash(rg:*), Bash(fd:*), Bash(git:*), Bash(date:*), Read, Write
 ---
 
 # Dead Reckoning — Investigation Subagent
