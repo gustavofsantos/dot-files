@@ -1,0 +1,20 @@
+scripts/install-skills.sh
+  s_c52aa89f5e3b28::t_423f0d0894d262 20,30-52
+  s_c52aa89f5e3b28::t_9a264dfcd2b19f 21-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "818a727d1ce2d6765eb7e454b24a8789dc8695b3",
+  "prompts": {},
+  "sessions": {
+    "s_c52aa89f5e3b28": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "48170bb8-9d91-46a1-aefe-1bc6718c4478",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
