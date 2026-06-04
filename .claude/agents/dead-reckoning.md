@@ -47,11 +47,11 @@ Search the facts base for relevant facts before reading any code. Extract
 rg -l --ignore-case "TERM1|TERM2|TERM3" ~/engineering/facts/ 2>/dev/null | head -8
 ```
 
-Read any returned files. Each is a `FACT-NNN` (see the `fact` skill); cite them as
-`[[FACT-NNN-slug]]`. Note facts directly relevant to the question — they
-become axioms for the traversal and are stated in the report rather than
-re-derived. This is a best-effort lexical search; paraphrased duplicates may
-not surface.
+Read any returned files. Cite as `[[FACT-NNN-slug]]` only the facts directly
+relevant to the central question — skip files that matched a term but address
+a different concern. Relevant facts become axioms and are stated in the report
+rather than re-derived. This is a best-effort lexical search; paraphrased
+duplicates may not surface.
 
 ---
 
