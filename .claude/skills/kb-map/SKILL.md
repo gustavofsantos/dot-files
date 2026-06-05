@@ -1,13 +1,15 @@
 ---
 name: kb-map
 description: >
-  Generates a compact domain map of the engineering knowledge base — a mind-map-style
-  DOMAIN_MAP.md that groups terms, facts, issues, and spikes by bounded context, shows
-  cross-domain relationships, and is small enough to be included in any LLM context.
-  Use when you want a structured overview of the KB, need to orient an LLM to the
-  domain landscape, or want to discover which domain owns a concept. Triggers on
-  "map the knowledge base", "domain map", "kb-map", "organize by domain",
-  "show me the domains", "what domains exist", "mapa de domínios", "organizar por domínio".
+  Maintains DOMAIN_MAP.md — a compact, domain-clustered mind map of the engineering
+  knowledge base that groups terms, facts, issues, and spikes by bounded context and
+  is small enough to fit in any LLM prompt. If a map already exists, asks the user
+  whether to enhance (preserve curated domains, sync new artifacts), rebuild from
+  scratch, or review-only. Use when you want a structured overview of the KB, need to
+  orient an LLM to the domain landscape, or want to discover which domain owns a
+  concept. Triggers on "map the knowledge base", "domain map", "kb-map", "organize by
+  domain", "show me the domains", "what domains exist", "mapa de domínios",
+  "organizar por domínio", "atualizar mapa de domínios".
 metadata:
   allowed-tools: Read Write Edit Bash(kb-index:*) Bash(kb-search:*) Bash(kb-peek:*) Bash(cat:*) Bash(grep:*) Bash(rg:*) Bash(ls:*) Bash(find:*)
 ---
@@ -34,17 +36,26 @@ MAP="$ENGINEERING_DIR/DOMAIN_MAP.md"
 
 If `INDEX.md` is missing or older than any artifact file, run `kb-index` first.
 
-## Step 2 — Extract domains from GLOSSARY
+## Step 2 — Check for an existing map and ask the user
 
-Read `GLOSSARY.md`. For each `## Term` entry, extract the `**Domain:**` line.
-Build the canonical domain list: a sorted, deduplicated set of domain names.
+If `$MAP` exists, read it and present it to the user. Then ask:
 
-Each domain will become one section in the map.
+> "A domain map already exists (shown above). How would you like to proceed?
+> 1. **Enhance** — keep your domain names and Concept lines as-is; only sync the artifact lists (Facts/Issues/Spikes) and Neighbors from the current KB state.
+> 2. **Rebuild** — discard the existing map and regenerate fully from GLOSSARY + artifact tags.
+> 3. **Review only** — show me what new artifacts are unclustered without touching the file."
 
-If GLOSSARY.md is empty or has no domain-tagged terms, note that and continue —
-the map will show only `_unclustered`.
+Wait for the user's answer before continuing. Default to **Enhance** if they say "yes", "go ahead", or similar without specifying.
 
-## Step 3 — Read all artifact metadata
+If `$MAP` does not exist, skip this step and proceed directly.
+
+## Step 3 — Determine the domain list
+
+**Enhance mode:** the existing map's `## <domain>` headings are the domain list — preserve their names and `**Concept:**` lines verbatim. Skip deriving new domains.
+
+**Rebuild mode / no existing map:** read `GLOSSARY.md`. For each `## Term` entry, extract the `**Domain:**` line. Build a sorted, deduplicated domain list. If GLOSSARY.md is empty or has no domain-tagged terms, treat the most common artifact tags as proto-domains (fallback documented in Step 4).
+
+## Step 4 — Read all artifact metadata
 
 For each artifact directory (`facts/`, `issues/`, `spikes/`):
 
@@ -56,20 +67,19 @@ Also extract `id:` and `title:` (or the filename as fallback) per artifact.
 
 Build a table: `artifact_id → [tag_list]`.
 
-## Step 4 — Assign artifacts to domains
+## Step 5 — Assign artifacts to domains
 
-**If GLOSSARY.md has domain-tagged terms:** match each artifact's tags against the
-domain list (case-insensitive substring — `gemini` matches `gemini-integration`).
-Multiple tags may match multiple domains — assign to all matches.
-No match → `_unclustered`.
+Match each artifact's tags against the domain list (case-insensitive substring —
+`gemini` matches `gemini-integration`). Multiple tags may match multiple domains —
+assign to all matches. No match → `_unclustered`.
 
-**Fallback — empty glossary or no domain-tagged terms:** treat the most common tags
-across all artifacts as proto-domains. Cluster each artifact under its most specific
-matching proto-domain tag. This lets the map be useful before the ubiquitous language
-is built out. Add a note to the output file:
-`_Domains derived from artifact tags — no domain-tagged terms in GLOSSARY.md yet._`
+**Enhance mode:** only process artifacts that are **not already listed** in the existing
+map — these are the new ones to slot in or flag as unclustered.
 
-## Step 5 — Extract cross-domain edges
+**Rebuild mode fallback:** if no domain-tagged terms exist in GLOSSARY.md, treat the
+most common artifact tags as proto-domains and note it at the top of the file.
+
+## Step 6 — Extract cross-domain edges
 
 Cross-domain edges exist when an artifact assigned to domain A references an artifact
 assigned to domain B. Detect them via the `refs:` frontmatter block:
@@ -82,7 +92,7 @@ Also look for `[[...]]` wiki links in issue bodies that resolve to terms in anot
 
 Represent edges as `DomainA → DomainB` (directed, deduplicated).
 
-## Step 6 — Build DOMAIN_MAP.md
+## Step 7 — Build DOMAIN_MAP.md
 
 Write the file with this structure:
 
@@ -118,9 +128,14 @@ Rules:
 - Neighbors list only domains, not artifact IDs.
 - The whole file should fit in ~100 lines.
 
-## Step 7 — Write and confirm
+## Step 8 — Write and confirm
 
-Write the file to `$MAP`. Then run `kb-index` so INDEX.md references the map.
+**Review only mode:** do not write the file. Present what would change as a diff-style
+summary: new artifacts found, which domain they'd slot into, and any that would land
+in `_unclustered`. Let the user decide whether to proceed.
+
+**Enhance / Rebuild mode:** write the file to `$MAP`. Then run `kb-index` so INDEX.md
+references the map.
 
 Confirm:
 ```
@@ -138,4 +153,5 @@ Re-run `kb-map` after:
 - Adding a new fact or issue (via `fact` or `issue` skill)
 - Manually adding a `domain:` tag to a fact/issue frontmatter
 
-The map is generated output — never edit it by hand.
+In Enhance mode the map is safe to re-run at any time — your curated domain names
+and Concept lines are never touched.
