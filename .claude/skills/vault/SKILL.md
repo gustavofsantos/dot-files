@@ -38,3 +38,7 @@ Protocol for operating in `~/engineering/`. Read this fully before touching any 
 - **Validator must pass** — never commit a fact that fails validation
 - **When in doubt, don't write** — propose the fact as a draft in the current issue instead
 - **150 words max** per fact — if it needs more, it's two facts
+
+## Reference files
+Load on demand — do not load preemptively:
+- `references/write-contracts.md` — schemas and examples for fact, issue, spike
