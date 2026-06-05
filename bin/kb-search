@@ -22,6 +22,26 @@ for artifact in issues facts spikes; do
   done < <(rg -l --ignore-case "$pattern" "$dir" 2>/dev/null)
 done
 
+# Glossary lives in one file; print each matching `## ` term block, not the whole file.
+glossary="$ENGINEERING_DIR/terms/GLOSSARY.md"
+if [[ -f "$glossary" ]]; then
+  match=$(awk -v pat="$pattern" '
+    BEGIN { IGNORECASE = 1 }
+    /^## / {
+      if (block != "" && hit) printf "%s", block
+      block = $0 "\n"; hit = ($0 ~ pat) ? 1 : 0
+      next
+    }
+    { block = block $0 "\n"; if ($0 ~ pat) hit = 1 }
+    END { if (block != "" && hit) printf "%s", block }
+  ' "$glossary")
+  if [[ -n "$match" ]]; then
+    echo "── $glossary"
+    echo "$match"
+    hits=$((hits + 1))
+  fi
+fi
+
 if [[ $hits -eq 0 ]]; then
   echo "(no matches for: $*)"
 fi

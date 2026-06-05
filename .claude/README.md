@@ -5,8 +5,10 @@ into a few pipelines that hand off to each other around two durable artifacts
 kept under `~/engineering/`:
 
 - **issues** (`~/engineering/issues/`) — the tracker for work to be done. Each
-  issue is `type: implementation` (code to build) or `type: investigation` (a
-  question to answer). Created by the `issue` skill; archived by hand when done.
+  issue has a `type` set by the framing skill that created it: `task`, `bug`,
+  `user-story`, `outcome`, `hypothesis`, or `epic`. The `issue` skill is a pure
+  storage layer; framing skills shape the content before handing off to it.
+  Issues are archived by hand when done.
 - **facts** (`~/engineering/facts/`) — a durable, sourced knowledge base. Each
   fact is `FACT-NNN`, created by the `fact` skill. Facts and issues cross-link
   by ID: an issue's `## Facts` lists the facts it relies on, and each fact's
@@ -42,12 +44,21 @@ flowchart TD
         design[design]
         dc[design-constraints]
         pm[pre-mortem]
-        usb[user-story-builder]
         tp <-->|applies one lens| tl
         design -->|decided boundary| dc
     end
 
-    issue[issue]
+    %% ---------- Framing skills ----------
+    subgraph framing["Frame the work"]
+        task_s[task]
+        bug_s[bug]
+        usb[user-story-builder]
+        ob[outcome-builder]
+        hyp[hypothesis]
+        epic_s[epic]
+    end
+
+    issue["issue<br/>(storage layer)"]
 
     %% ---------- Build & review ----------
     subgraph build["Build & review"]
@@ -72,25 +83,43 @@ flowchart TD
     survey -->|fact candidates| factskill
     dead -->|fact candidates| factskill
 
-    %% ---------- Plan -> issue ----------
-    tp -->|flush| issue
+    %% ---------- Plan -> framing ----------
+    tp -->|flush| task_s
     tp -->|flush| usb
+    tp -->|flush| ob
+    tp -->|flush| hyp
     tp -->|open design question| design
-    pm -->|blockers · off-limits| issue
-    dc -->|constraint block| issue
+    pm -->|blockers · off-limits| task_s
+    pm -->|blockers · off-limits| bug_s
+    dc -->|constraint block| usb
+    dc -->|constraint block| ob
+
+    %% ---------- Framing -> issue ----------
+    task_s -->|contract + boundary + done| issue
+    bug_s -->|repro + root cause + fix scope| issue
+    usb -->|story + criteria + tasks| issue
+    ob -->|anchor + narrative + tasks| issue
+    hyp -->|belief + questions + method| issue
+    epic_s -->|objective + child list| issue
+
+    %% ---------- Issue -> store ----------
+    issue -->|writes| issuestore
 
     %% ---------- Issue routing ----------
-    issue -->|writes| issuestore
-    issue -.->|type: investigation| dead
-    issue -->|type: implementation<br/>scenarios + tasks| tdd
-    usb -->|story + tasks| tdd
+    issuestore -.->|type: hypothesis| dead
+    issuestore -->|type: task · bug · user-story · outcome| tdd
+    issuestore -.->|type: epic| epic_s
+
+    %% ---------- Understand -> framing ----------
+    survey -.->|finding becomes work| task_s
+    dead -.->|finding becomes work| task_s
 
     %% ---------- Build & review flow ----------
     tdd -->|green branch| dr
     tdd --> deslop
     tdd --> readable
     dr -.->|Red, fixable in scope| dc
-    dr -.->|structural, out of scope| issue
+    dr -.->|structural, out of scope| task_s
 ```
 
 Solid arrows are the primary hand-off; dashed arrows are conditional or
@@ -102,28 +131,40 @@ feedback paths.
 the highest-signal questions; `dead-reckoning` traces a specific question to
 behavioral claims anchored in code. Both load facts as axioms before reading
 code, and route approved findings back through the `fact` skill. A finding that
-turns into work feeds the `issue` skill.
+turns into work spawns a `task` issue.
 
 **Facts & issues** — the `fact` skill records durable, sourced knowledge
-(`FACT-NNN`) and links it to the issues that depend on it. The `issue` skill
-shapes work into a tracked issue, classifies it as **investigation** (answered by
-`dead-reckoning`, completed by recording facts) or **implementation** (answered by
-`tdd`), and lists the facts it relies on. The two stores stay navigable from
-either side.
+(`FACT-NNN`) and links it to the issues that depend on it. The `issue` skill is
+a pure storage layer: it allocates an ID, links known facts, and writes the
+file. All framing happens upstream in a dedicated skill before `issue` is
+invoked.
+
+**Framing skills** — each skill shapes a raw problem into the right kind of
+tracked issue and then hands off to `issue` for storage:
+
+| Skill | Issue type | Use when |
+|---|---|---|
+| `task` | `task` | Work is concrete and well-understood — just needs bounding |
+| `bug` | `bug` | Something is broken; needs a reproduction path and fix scope |
+| `user-story-builder` | `user-story` | User-facing feature shaped from a persona perspective |
+| `outcome-builder` | `outcome` | Outcome matters more than mechanism; prevents LLM anchoring |
+| `hypothesis` | `hypothesis` | Something unknown must be found out before building |
+| `epic` | `epic` | Work is too large for one issue; decomposes into child issues |
 
 **Think & plan** — `thinking-partner` (optionally reaching for one
 `thinking-lenses` lens) explores a problem and produces a *flush*. The flush
-hands off to `issue` (technical work with scenarios) or `user-story-builder`
-(user-facing stories). `design` settles boundaries/interfaces and feeds
-`design-constraints`, which emits a constraint block into the issue's
-`## Context`. `pre-mortem` projects failure modes into the issue's open
-questions, context, and off-limits.
+hands off to the appropriate framing skill. `design` settles
+boundaries/interfaces and feeds `design-constraints`, which emits a constraint
+block into the framing skill's context. `pre-mortem` projects failure modes
+into off-limits entries before framing begins.
 
-**Build & review** — `tdd` reads an active implementation issue and implements
-its scenarios test-first, treating its `## Facts` as established ground. When the
-branch is green it goes to `deep-review` (architecture, any language) and, by
-language, `deslop` (Clojure) or `readable` (Kotlin). A `Red` review loops back
-through `design-constraints` + `tdd`, or spawns a fresh `issue`.
+**Build & review** — `tdd` reads an active `task`, `bug`, `user-story`, or
+`outcome` issue and implements it test-first, treating `## Facts` as
+established ground. `hypothesis` issues route to `dead-reckoning` instead;
+findings become facts via the `fact` skill. When a branch is green it goes to
+`deep-review` (architecture, any language) and, by language, `deslop`
+(Clojure) or `readable` (Kotlin). A `Red` review loops back through
+`design-constraints` + `tdd`, or spawns a fresh `task`.
 
 **Bruno API collections** — `bruno` handles the current YAML / OpenCollection
 format; `brulang` handles the legacy `.bru` markup. Pick by detecting the

@@ -13,17 +13,11 @@ metadata:
 
 # User Story
 
-Two phases in sequence: **shape** a raw idea into a story, then **plan** it into tasks.
+Three phases in sequence: **shape** a raw idea into a story, **plan** it into tasks, then **store** it as a tracked issue.
 
 Entry point:
 - Raw idea → start at Phase 1
 - Story already exists (has As/I want/So that + criteria) → skip to Phase 3
-
-> **Which skill?** Use this skill for user-facing stories that decompose into a
-> task plan. For a technical problem/feature tracked as a local issue with BDD
-> `## Scenarios`, use the `issue` skill instead — `tdd` implements from that
-> issue's scenarios. The two are alternative front doors to implementation, not
-> a sequence; pick one per piece of work.
 
 Read [references/heuristics.md](references/heuristics.md) for quality signals and split heuristics.
 
@@ -96,3 +90,16 @@ Template per task:
 Present all tasks and ask: "Does the breakdown make sense? Is any task too large, out of order, or missing?"
 
 Iterate until confirmed.
+
+---
+
+## Phase 4 — Store as issue
+
+Once tasks are confirmed, store the work using the `issue` skill.
+
+Read [references/issue-template.md](references/issue-template.md) and fill it with:
+- `{title}` — slugified story title
+- `{id}` and `{today}` — resolved by the issue skill
+- Story, acceptance criteria, out-of-scope items, and confirmed tasks
+
+Then invoke the `issue` skill to allocate an ID, link facts, and write the file.

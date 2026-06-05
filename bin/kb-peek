@@ -16,6 +16,10 @@ section() {
 }
 
 case "$file" in
+  *GLOSSARY.md)
+    echo "Glossary terms:"
+    grep '^## ' "$file" | sed 's/^## /  - /'
+    ;;
   */spikes/*)
     echo "Answer:"
     section "Answer" | head -5

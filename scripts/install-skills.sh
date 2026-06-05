@@ -37,7 +37,7 @@ elif [ ! -f "$GLOBAL_SETTINGS" ]; then
   cp "$DOTFILES_SETTINGS" "$GLOBAL_SETTINGS"
   echo "Merging Claude settings... OK (installed fresh)"
 else
-  # Global wins on scalar/object conflicts; permission arrays are unioned.
+  # Global wins on scalar/object conflicts; permission and hooks arrays are unioned.
   # .[0] = global (machine-specific), .[1] = dotfiles (baseline defaults).
   merged=$(jq -s '
     .[0] as $g |
@@ -45,7 +45,14 @@ else
     $d * $g |
     .permissions.allow = (($g.permissions.allow // []) + ($d.permissions.allow // []) | unique | sort) |
     .permissions.deny  = (($g.permissions.deny  // []) + ($d.permissions.deny  // []) | unique | sort) |
-    .permissions.ask   = (($g.permissions.ask   // []) + ($d.permissions.ask   // []) | unique | sort)
+    .permissions.ask   = (($g.permissions.ask   // []) + ($d.permissions.ask   // []) | unique | sort) |
+    .hooks = (
+      ($g.hooks // {}) as $gh |
+      ($d.hooks // {}) as $dh |
+      (($gh | keys_unsorted) + ($dh | keys_unsorted) | unique) |
+      map(. as $ev | {($ev): ((($gh[$ev] // []) + ($dh[$ev] // [])) | unique)}) |
+      add // {}
+    )
   ' "$GLOBAL_SETTINGS" "$DOTFILES_SETTINGS")
   echo "$merged" > "$GLOBAL_SETTINGS"
   echo "Merging Claude settings... OK"

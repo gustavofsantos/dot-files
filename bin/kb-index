@@ -74,6 +74,21 @@ capitalize() {
     done
   done
 
+  glossary="$ENGINEERING_DIR/terms/GLOSSARY.md"
+  if [[ -f "$glossary" ]] && grep -q '^## ' "$glossary"; then
+    echo ""
+    echo "## Glossary"
+    echo ""
+    awk '
+      /^## / { term=substr($0, 4); next }
+      /^\*\*Definition:\*\*/ && term != "" {
+        def=$0; sub(/^\*\*Definition:\*\*[[:space:]]*/, "", def)
+        printf "**%s** — %s\n\n", term, def
+        term=""
+      }
+    ' "$glossary"
+  fi
+
 } > "$OUTPUT"
 
 lines=$(wc -l < "$OUTPUT")

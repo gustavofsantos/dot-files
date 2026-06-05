@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# Counts reads of ~/engineering/facts/ files. Called as a PostToolUse hook.
+# Captures three paths:
+#   Read tool   → direct fact file read
+#   kb-peek     → command string contains a facts/ path
+#   kb-search   → parses tool_response output for "── .../facts/..." lines
+set -euo pipefail
+
+METADATA_DIR="${ENGINEERING_DIR:-$HOME/engineering}/.metadata"
+READS_FILE="$METADATA_DIR/fact-reads.json"
+
+event=$(cat)
+tool_name=$(echo "$event" | jq -r '.tool_name // empty')
+
+facts=()
+
+if [[ "$tool_name" == "Read" ]]; then
+  file_path=$(echo "$event" | jq -r '.tool_input.file_path // empty')
+  if [[ "$file_path" == */engineering/facts/*.md ]]; then
+    facts+=("$file_path")
+  fi
+
+elif [[ "$tool_name" == "Bash" ]]; then
+  command=$(echo "$event" | jq -r '.tool_input.command // empty')
+
+  if echo "$command" | grep -qE '\bkb-search\b'; then
+    # Parse the command output for fact file paths printed by kb-search
+    output=$(echo "$event" | jq -r '
+      if (.tool_response | type) == "string" then .tool_response
+      elif .tool_response.content then
+        [.tool_response.content[] | select(.type == "text") | .text] | join("")
+      else "" end
+    ' 2>/dev/null)
+    while IFS= read -r path; do
+      [[ -n "$path" ]] && facts+=("$path")
+    done < <(echo "$output" | grep -oE '[^ ]+/engineering/facts/[^ ]+\.md' || true)
+
+  elif echo "$command" | grep -qE '\bkb-peek\b'; then
+    fact_path=$(echo "$command" | grep -oE '[^ ]+/engineering/facts/[^ ]+\.md' | head -1 || true)
+    [[ -n "$fact_path" ]] && facts+=("$fact_path")
+  fi
+fi
+
+[[ ${#facts[@]} -eq 0 ]] && exit 0
+
+mkdir -p "$METADATA_DIR"
+[[ -f "$READS_FILE" ]] || echo '{}' > "$READS_FILE"
+
+ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+for fact_path in "${facts[@]}"; do
+  fact_id=$(basename "$fact_path" .md)
+  tmp=$(mktemp)
+  jq --arg id "$fact_id" --arg ts "$ts" '
+    .[$id] = {
+      count: ((.[$id].count // 0) + 1),
+      last_read: $ts
+    }
+  ' "$READS_FILE" > "$tmp" && mv "$tmp" "$READS_FILE"
+done

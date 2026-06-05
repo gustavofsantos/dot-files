@@ -1,18 +1,17 @@
 ---
 name: issue
 description: >
-  Co-authors a new issue with BDD scenarios from a problem description, then writes the
-  issue file. Use when the user has a new problem, feature, or task to track. Triggers on
-  "new issue", "nova issue", "create issue for", "criar issue para", "let's work on X",
-  "vamos trabalhar em X", or any raw problem description that needs to be shaped before
-  execution.
+  Storage layer for tracked issues. Allocates an ID, links known facts, and writes the
+  issue file. Called as the final step by framing skills (user-story-builder, outcome-builder,
+  bug, epic, hypothesis). Use directly only when you have pre-formed content ready to store.
+  Triggers on "store issue", "save issue", "write issue", or as the last step of any framing skill.
 metadata:
-  allowed-tools: Read Write Edit Bash(fd:*) Bash(git:*) Bash(grep:*) Bash(mkdir:*)
+  allowed-tools: Read Write Edit Bash(fd:*) Bash(git:*) Bash(grep:*) Bash(mkdir:*) Bash(rg:*)
 ---
 
 # Issue
 
-Turns a problem description into a tracked issue with co-authored BDD scenarios.
+Pure storage layer. Receives pre-formed issue content and persists it to the engineering KB.
 
 ## Step 1 — Resolve storage
 
@@ -35,55 +34,20 @@ NEXT=$(fd -t f -e md . "$ISSUES_DIR" -d 1 2>/dev/null \
 ID=$(printf '%03d' $((${NEXT:-0} + 1)))
 ```
 
-## Step 3 — Get the objective
+## Step 3 — Link known facts
 
-If not stated in the request: "What's the objective — one sentence describing what done looks like?"
-
-## Step 4 — Classify the work
-
-Set `type` on the issue:
-
-- **`implementation`** — code is to be written or changed. Scenarios are BDD
-  (Given/When/Then); the `tdd` skill implements them; done = scenarios green.
-- **`investigation`** — a question must be answered before (or instead of) building.
-  Scenarios are the questions to resolve and the findings expected; the
-  `dead-reckoning` skill is the engine; done = the questions are answered and the
-  durable answers are recorded as facts via the `fact` skill.
-
-If unsure, ask: "Is this work to build something, or to find something out?"
-
-## Step 5 — Co-author scenarios
-
-Propose scenarios one at a time. Start with the happy path, then edge cases, then
-error and limitation cases. For an `investigation` issue, frame each scenario as a
-question to answer and the observation that would settle it.
-
-For each proposal:
-- State it in Given/When/Then form (or Question/Expected-finding for investigation)
-- Wait for confirmation, reframe, or rejection before the next
-- Rejected or out-of-scope proposals become **Off-limits** entries
-
-When the list feels complete: "Anything missing, or anything to remove?"
-
-Assign stable IDs: S1, S2, S3, …
-
-## Step 6 — Link known facts
-
-Search the facts base for anything this issue already depends on:
+Search the facts base for key terms from the issue content:
 
 ```bash
 FACTS_DIR="${FACTS_DIR:-$HOME/engineering/facts}"
 rg -l --ignore-case "KEY_TERM" "$FACTS_DIR" 2>/dev/null | head -5
 ```
 
-List any relevant fact IDs in the issue's `## Facts` section, and add this issue's ID
-to each of those facts' `## Issues` section (the link is bidirectional — see the
-`fact` skill). New facts discovered while working the issue are promoted the same way.
+List relevant fact IDs in the issue's `## Facts` section. Add this issue's ID to each fact's `## Issues` section (bidirectional — see the `fact` skill).
 
-## Step 7 — Write the issue
+## Step 4 — Write the issue
 
 Slugify the title (lowercase, hyphens, max 5 words).
-Write `$ISSUES_DIR/<ID>-<slug>.md` using `references/template.md`.
-Derive tasks from scenario groupings.
+Write `$ISSUES_DIR/<ID>-<slug>.md` with the pre-formed content, filling in `{id}` and `{today}`.
 
-Confirm: "Created issue <ID> (<type>): <title> — N scenarios → $ISSUES_DIR"
+Confirm: "Created issue <ID> (<type>): <title> — $ISSUES_DIR"
