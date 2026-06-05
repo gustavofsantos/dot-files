@@ -1,107 +1,134 @@
 # Write contracts
 
-## Fact
+## Note (fact, term, concept — same thing)
 
-**Location:** `~/engineering/<claim>.md` — root only, never in subdirectories
+**Location:** `~/engineering/<slug>.md`
 
-**Filename rules:**
-- Must be a claim, not a topic noun
-- Must contain a verb
-- ✅ `event-sourcing-decouples-write-from-read-models.md`
-- ✅ `clojure-atoms-serialize-concurrent-state-updates.md`
-- ❌ `event-sourcing.md`
-- ❌ `clojure-atoms.md`
+**Filename:** lowercase, hyphenated slug. This is the canonical link target — `[[slug]]` resolves here. Make it specific enough to be unambiguous: prefer `refund-authorization` over `refund`, `event-sourcing-write-read-decoupling` over `event-sourcing`.
 
 **Body structure:**
 ```
-<First sentence restates the claim as a full statement.>
+<First sentence: the claim or definition. One sentence, present tense.>
 
-<Supporting sentences: evidence, context, tradeoffs. Prose only — no bullets,
-no headers. Stay under 150 words total.>
+<Context, evidence, nuance. 1–4 sentences. Prose only — no bullets, no headers.>
 
-[[link-to-related-fact]] [[another-related-fact]]
-
-source: <optional — author, paper, or codebase>
+parent: [[parent-note]]
+[[related-1]] [[related-2]]
 ```
 
 **Constraints:**
-- ≤ 150 words (body + links + source)
-- At least one `[[wikilink]]`
-- No markdown headers (`#`)
-- No bullet points
-- No code blocks unless the code IS the claim
+- 150 words max — if it needs more, it's two notes
+- At least one `[[wikilink]]` to an existing note
+- `parent:` line only when this note branches from or continues another — the Folgezettel link
+- No markdown headers (`#`) — the filename is the title
+- No bullet points; no code blocks unless the code IS the claim
+
+**Folgezettel:** A note that refines, qualifies, or branches from another ends with
+`parent: [[parent-slug]]`. This is the only structural link that expresses sequencing;
+all other connections are flat wikilinks.
 
 **Example:**
 ```
-Clojure atoms serialize concurrent state updates by applying functions
-inside a compare-and-swap loop, retrying if another thread changed the
-value first. This means update functions must be pure and free of side
-effects — they may run more than once. Atoms are appropriate for
-independent, uncoordinated state; use refs for coordinated changes across
-multiple identities.
+Refund authorization is the merchant-initiated approval that releases funds back to
+a customer once the refund request passes internal validation. It is distinct from a
+chargeback, which is bank-initiated and contested rather than agreed. The authorization
+step is what triggers the actual funds movement in the payment processor.
 
-[[clojure-refs-coordinate-multiple-identity-updates]]
-[[pure-functions-enable-safe-retry-semantics]]
-
-source: clojure.org/reference/atoms
+parent: [[payment-lifecycle]]
+[[chargeback]] [[funds-settlement]]
 ```
 
 ---
 
 ## Issue
 
-**Location:** `~/engineering/issues/<id>-<short-title>.md`
+**Location:** `~/engineering/issues/NNN-<slug>.md`
 
-**ID format:** sequential integer, zero-padded to 3 digits (`001`, `002`, …)
+**ID format:** 3-digit integer, zero-padded (`007`, `042`).
+
+**type values:** `implementation` | `bug` | `investigation`
 
 **Body structure:**
 ```markdown
-# <id>: <Short problem statement>
+---
+id: "NNN"
+title: "<Short problem or objective statement>"
+type: implementation
+status: active
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+---
+
+## Objective
+One sentence. What done looks like.
 
 ## Context
-<What situation or observation created this issue. 2–4 sentences.>
+What situation or observation created this issue. 2–4 sentences.
 
-## Problem
-<The specific, scoped problem. What is wrong or unknown. Be precise.>
+## Scope
+**In:** what will be touched
+**Off-limits:** what will not change and why
 
-## Status
-open | in-progress | resolved
+## Scenarios
+- S1. Given ... When ... Then ...
 
-## Resolution
-<If resolved: what was done or decided. Otherwise omit this section.>
+## Open questions
+- [ ] ?
+```
 
-## Links
-- [[fact-that-led-to-this-issue]]
-- spikes/001-related-investigation.md
+**For type: bug** — replace Scenarios with:
+```markdown
+## Reproduction
+Steps to reproduce:
+1. {step}
+
+**Expected:** {what should happen}
+**Actual:** {what happens instead}
+
+## Root Cause
+Hypothesis or confirmed cause.
+
+## Acceptance Criteria
+- [ ] Reproduction steps no longer exhibit the broken behavior
+```
+
+**For type: investigation** — replace Scenarios with:
+```markdown
+## Questions
+- Q1: {specific unknown} → Confirming: {signal} | Falsifying: {signal}
+
+## Method
+How to investigate and what each approach will reveal.
+
+## Done when
+Conditions that close this issue.
 ```
 
 ---
 
 ## Spike
 
-**Location:** `~/engineering/spikes/<id>-<short-title>.md`
+**Location:** `~/engineering/spikes/NNN-<slug>.md`
 
-**ID format:** sequential integer, zero-padded to 3 digits
+**ID format:** 3-digit integer, zero-padded
 
 **Body structure:**
 ```markdown
-# <id>: <Investigation question>
+---
+id: "NNN"
+central_question: "<The specific unknown being investigated>"
+repo: "<repo path or name>"
+status: resolved | inconclusive | deferred
+created: YYYY-MM-DD
+---
 
-## Question
-<The specific unknown being investigated. One sentence.>
-
-## Approach
-<How the investigation was conducted. Optional — omit if trivial.>
+## Answer
+One sentence summary of the conclusion.
 
 ## Findings
-<What was discovered. Can be longer than a fact — this is a research artifact.>
-
-## Conclusion
-resolved | inconclusive | deferred
-
-<One sentence summary of the conclusion.>
+What was discovered.
 
 ## Links
-- issues/001-related-issue.md
-- [[fact-produced-by-this-spike]]
+- issues/NNN-related-issue.md
+- [[note-produced-by-spike]]
 ```
