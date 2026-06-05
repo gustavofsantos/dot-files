@@ -91,6 +91,15 @@
             "command": "kb-fact-track"
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-hook-vault-lint"
+          }
+        ]
       }
     ]
   },
