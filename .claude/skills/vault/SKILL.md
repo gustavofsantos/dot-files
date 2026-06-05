@@ -17,11 +17,11 @@ Unified protocol for `~/engineering/`. Read this fully before touching any file.
 
 ```
 ~/engineering/
-  <slug>.md         ← atomic knowledge notes — facts, terms, concepts all live here
+  Title Case Name.md   ← atomic knowledge notes — facts, terms, concepts all live here
   issues/
-    NNN-<slug>.md   ← tracked work items
+    NNN-Title Case.md  ← tracked work items
   spikes/
-    NNN-<slug>.md   ← research artifacts
+    NNN-Title Case.md  ← research artifacts
 ```
 
 Notes at root are the living glossary. A term definition and a factual claim are the
@@ -43,7 +43,7 @@ same kind of artifact — one concept, one file. No `facts/` dir. No `GLOSSARY.m
 
 1. **Search first** — `rg -l <term> ~/engineering/*.md` + `kb-search <term>` before writing
 2. **Dedup** — if a note covering this concept already exists, update it; never create a duplicate
-3. **Folgezettel check** — does this idea branch from or continue an existing note? If yes, link with `parent: [[existing-note]]`
+3. **Folgezettel check** — does this idea branch from or continue an existing note? If yes, link with `Parent: [[Existing Note]]`
 4. **Ask only what's missing** — don't interrogate; fill gaps conversationally and write
 5. **Write** — follow the contract in `references/write-contracts.md`
 

@@ -2,9 +2,9 @@
 
 ## Note (fact, term, concept — same thing)
 
-**Location:** `~/engineering/<slug>.md`
+**Location:** `~/engineering/Title Case Name.md`
 
-**Filename:** lowercase, hyphenated slug. This is the canonical link target — `[[slug]]` resolves here. Make it specific enough to be unambiguous: prefer `refund-authorization` over `refund`, `event-sourcing-write-read-decoupling` over `event-sourcing`.
+**Filename:** Title Case, spaces. This is the canonical link target — `[[Title Case Name]]` resolves here. Make it specific enough to be unambiguous: prefer `Refund Authorization` over `Refund`, `Event Sourcing Write Read Decoupling` over `Event Sourcing`.
 
 **Body structure:**
 ```
@@ -12,19 +12,19 @@
 
 <Context, evidence, nuance. 1–4 sentences. Prose only — no bullets, no headers.>
 
-parent: [[parent-note]]
-[[related-1]] [[related-2]]
+Parent: [[Parent Note]]
+[[Related One]] [[Related Two]]
 ```
 
 **Constraints:**
 - 150 words max — if it needs more, it's two notes
 - At least one `[[wikilink]]` to an existing note
-- `parent:` line only when this note branches from or continues another — the Folgezettel link
+- `Parent:` line only when this note branches from or continues another — the Folgezettel link
 - No markdown headers (`#`) — the filename is the title
 - No bullet points; no code blocks unless the code IS the claim
 
 **Folgezettel:** A note that refines, qualifies, or branches from another ends with
-`parent: [[parent-slug]]`. This is the only structural link that expresses sequencing;
+`Parent: [[Parent Note]]`. This is the only structural link that expresses sequencing;
 all other connections are flat wikilinks.
 
 **Example:**
@@ -34,15 +34,15 @@ a customer once the refund request passes internal validation. It is distinct fr
 chargeback, which is bank-initiated and contested rather than agreed. The authorization
 step is what triggers the actual funds movement in the payment processor.
 
-parent: [[payment-lifecycle]]
-[[chargeback]] [[funds-settlement]]
+Parent: [[Payment Lifecycle]]
+[[Chargeback]] [[Funds Settlement]]
 ```
 
 ---
 
 ## Issue
 
-**Location:** `~/engineering/issues/NNN-<slug>.md`
+**Location:** `~/engineering/issues/NNN-Title Case.md`
 
 **ID format:** 3-digit integer, zero-padded (`007`, `042`).
 
@@ -50,14 +50,9 @@ parent: [[payment-lifecycle]]
 
 **Body structure:**
 ```markdown
----
-id: "NNN"
-title: "<Short problem or objective statement>"
-type: implementation
-status: active
-created: YYYY-MM-DD
-updated: YYYY-MM-DD
----
+Type: implementation
+Status: active
+Created: YYYY-MM-DD
 
 ## Objective
 One sentence. What done looks like.
@@ -108,19 +103,15 @@ Conditions that close this issue.
 
 ## Spike
 
-**Location:** `~/engineering/spikes/NNN-<slug>.md`
+**Location:** `~/engineering/spikes/NNN-Title Case.md`
 
 **ID format:** 3-digit integer, zero-padded
 
 **Body structure:**
 ```markdown
----
-id: "NNN"
-central_question: "<The specific unknown being investigated>"
-repo: "<repo path or name>"
-status: resolved | inconclusive | deferred
-created: YYYY-MM-DD
----
+Status: resolved | inconclusive | deferred
+Created: YYYY-MM-DD
+Repo: <repo path or name>
 
 ## Answer
 One sentence summary of the conclusion.
@@ -129,6 +120,6 @@ One sentence summary of the conclusion.
 What was discovered.
 
 ## Links
-- issues/NNN-related-issue.md
-- [[note-produced-by-spike]]
+- issues/NNN-Related Issue.md
+- [[Note Produced By Spike]]
 ```
