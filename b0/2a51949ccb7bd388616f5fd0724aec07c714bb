@@ -1,0 +1,81 @@
+bin/kb-peek
+  s_b97b5a133f77ad::t_f0103015f6e59a 19-22
+.claude/skills/term/references/glossary-entry.md
+  s_b97b5a133f77ad::t_b6bce2254e7088 1-36
+.claude/skills/epic/references/issue-template.md
+  s_cc3e4c913a73b8::t_dad17a120b9f6c 1-35
+.claude/skills/hypothesis/references/issue-template.md
+  s_cc3e4c913a73b8::t_1bbf3810995023 1-41
+.claude/skills/task/SKILL.md
+  s_cc3e4c913a73b8::t_36e6b689574235 1-50
+.claude/README.md
+  s_cc3e4c913a73b8::t_6e9f86d0f282e2 8-11,51-61,86-87,89-90,92-106,109-115,122,134,137-152,156-167
+bin/kb-index
+  s_b97b5a133f77ad::t_78a01aad5ed7af 77-91
+.claude/skills/user-story-builder/SKILL.md
+  s_cc3e4c913a73b8::t_37e8da1585ffe6 93-105
+  s_cc3e4c913a73b8::t_a7f7c5f8088c1b 16
+.claude/skills/outcome-builder/SKILL.md
+  s_cc3e4c913a73b8::t_c6d83f2d8ece39 7-8
+  s_cc3e4c913a73b8::t_cbeda6049d110f 81-93
+.claude/skills/outcome-builder/references/issue-template.md
+  s_cc3e4c913a73b8::t_9ff1ff99e3f4bf 1-38
+.claude/skills/bug/references/issue-template.md
+  s_cc3e4c913a73b8::t_babd1ddece68fd 1-44
+.claude/skills/bug/SKILL.md
+  s_cc3e4c913a73b8::t_e41c82a97b1286 1-60
+.claude/skills/hypothesis/SKILL.md
+  s_cc3e4c913a73b8::t_5c85768365579a 1-65
+scripts/install-skills.sh
+  s_6ee42373999505::t_4753b9defa2c3e 40,48-55
+.claude/skills/task/references/issue-template.md
+  s_cc3e4c913a73b8::t_eba15128359c69 1-28
+bin/kb-fact-track
+  s_6ee42373999505::t_e1b168e6ffd781 1-60
+.claude/skills/issue/SKILL.md
+  s_cc3e4c913a73b8::t_cd510628c15b65 4-7,9,14,37,39,46,48,51,53
+.claude/skills/term/SKILL.md
+  s_b97b5a133f77ad::t_77017fa0d2b9fd 1-129
+.claude/settings.json
+  s_6ee42373999505::t_4a1897a759b697 84-96
+.claude/skills/user-story-builder/references/issue-template.md
+  s_cc3e4c913a73b8::t_da2679a7bfc024 1-35
+.claude/skills/term/references/glossary-header.md
+  s_b97b5a133f77ad::t_bc550f6380e9da 1-5
+bin/kb-search
+  s_b97b5a133f77ad::t_8b2bc7826fed75 25-44
+.claude/skills/epic/SKILL.md
+  s_cc3e4c913a73b8::t_b974fc7c471ec6 1-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "b02a51949ccb7bd388616f5fd0724aec07c714bb",
+  "prompts": {},
+  "sessions": {
+    "s_6ee42373999505": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "52777c13-f40d-430b-94e9-14dbbc185ba2",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    },
+    "s_b97b5a133f77ad": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5c581222-b034-42e4-8017-a5d0f3b4acac",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    },
+    "s_cc3e4c913a73b8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d868bd80-7838-479a-9456-89ff858ad503",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
