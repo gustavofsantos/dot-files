@@ -11,7 +11,19 @@ pattern=$(printf '%s|' "$@")
 pattern="${pattern%|}"
 
 hits=0
-for artifact in issues facts spikes; do
+
+# Root notes (exclude generated files)
+while IFS= read -r f; do
+  base=$(basename "$f")
+  [[ "$base" == "INDEX.md" || "$base" == "DOMAIN_MAP.md" ]] && continue
+  echo "── $f"
+  "$KB_PEEK" "$f"
+  echo ""
+  hits=$((hits + 1))
+done < <(rg -l --ignore-case "$pattern" "$ENGINEERING_DIR"/*.md 2>/dev/null || true)
+
+# Subdirectory artifacts
+for artifact in issues spikes; do
   dir="$ENGINEERING_DIR/$artifact"
   [[ -d "$dir" ]] || continue
   while IFS= read -r f; do
@@ -21,26 +33,6 @@ for artifact in issues facts spikes; do
     hits=$((hits + 1))
   done < <(rg -l --ignore-case "$pattern" "$dir" 2>/dev/null)
 done
-
-# Glossary lives in one file; print each matching `## ` term block, not the whole file.
-glossary="$ENGINEERING_DIR/terms/GLOSSARY.md"
-if [[ -f "$glossary" ]]; then
-  match=$(awk -v pat="$pattern" '
-    BEGIN { IGNORECASE = 1 }
-    /^## / {
-      if (block != "" && hit) printf "%s", block
-      block = $0 "\n"; hit = ($0 ~ pat) ? 1 : 0
-      next
-    }
-    { block = block $0 "\n"; if ($0 ~ pat) hit = 1 }
-    END { if (block != "" && hit) printf "%s", block }
-  ' "$glossary")
-  if [[ -n "$match" ]]; then
-    echo "── $glossary"
-    echo "$match"
-    hits=$((hits + 1))
-  fi
-fi
 
 if [[ $hits -eq 0 ]]; then
   echo "(no matches for: $*)"

@@ -18,6 +18,15 @@ for agent in "$DOTFILES_DIR"/.claude/agents/*; do
 done
 echo "Installing custom subagents... OK"
 
+echo "Installing custom commands..."
+mkdir -p "$HOME/.claude/commands"
+for cmd in "$DOTFILES_DIR"/.claude/commands/*.md; do
+  [ -f "$cmd" ] || continue
+  name=$(basename "$cmd")
+  ln -sf "$cmd" "$HOME/.claude/commands/$name"
+done
+echo "Installing custom commands... OK"
+
 echo "Installing custom themes..."
 mkdir -p "$HOME/.claude/themes"
 for theme in "$DOTFILES_DIR"/.claude/themes/*.json; do

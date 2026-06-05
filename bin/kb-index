@@ -25,6 +25,15 @@ section_first() {
   ' "$1"
 }
 
+# First meaningful line of a root note (skip frontmatter, parent:, wikilinks)
+note_first_line() {
+  awk '
+    /^---$/ { fm++; next }
+    fm == 1 { next }
+    NF && !/^parent:/ && !/^\[\[/ { print; exit }
+  ' "$1"
+}
+
 capitalize() {
   echo "$1" | awk '{ print toupper(substr($0,1,1)) substr($0,2) }'
 }
@@ -33,7 +42,28 @@ capitalize() {
   echo "# Knowledge Base Index"
   echo "_$(date '+%Y-%m-%d %H:%M')_"
 
-  for artifact in issues facts spikes; do
+  # Root notes — atomic knowledge notes (facts, terms, concepts)
+  note_files=()
+  while IFS= read -r f; do
+    base=$(basename "$f")
+    [[ "$base" == "INDEX.md" || "$base" == "DOMAIN_MAP.md" ]] && continue
+    note_files+=("$f")
+  done < <(find "$ENGINEERING_DIR" -maxdepth 1 -name "*.md" | sort)
+
+  if [[ ${#note_files[@]} -gt 0 ]]; then
+    echo ""
+    echo "## Notes"
+    echo ""
+    for f in "${note_files[@]}"; do
+      slug=$(basename "$f" .md)
+      signal=$(note_first_line "$f")
+      echo "**[[${slug}]]**"
+      [[ -n "$signal" ]] && echo "> $signal"
+      echo ""
+    done
+  fi
+
+  for artifact in issues spikes; do
     dir="$ENGINEERING_DIR/$artifact"
     [[ -d "$dir" ]] || continue
     files=("$dir"/*.md)
@@ -53,13 +83,6 @@ capitalize() {
           echo "**$id** \`[$type]\` $title"
           [[ -n "$signal" ]] && echo "> $signal"
           ;;
-        facts)
-          id=$(fm_field "$f" "id")
-          subject=$(fm_field "$f" "subject")
-          signal=$(section_first "$f" "Statement")
-          echo "**$id** $subject"
-          [[ -n "$signal" ]] && echo "> $signal"
-          ;;
         spikes)
           id=$(fm_field "$f" "id")
           cq=$(fm_field "$f" "central_question")
@@ -73,21 +96,6 @@ capitalize() {
       echo ""
     done
   done
-
-  glossary="$ENGINEERING_DIR/terms/GLOSSARY.md"
-  if [[ -f "$glossary" ]] && grep -q '^## ' "$glossary"; then
-    echo ""
-    echo "## Glossary"
-    echo ""
-    awk '
-      /^## / { term=substr($0, 4); next }
-      /^\*\*Definition:\*\*/ && term != "" {
-        def=$0; sub(/^\*\*Definition:\*\*[[:space:]]*/, "", def)
-        printf "**%s** — %s\n\n", term, def
-        term=""
-      }
-    ' "$glossary"
-  fi
 
 } > "$OUTPUT"
 

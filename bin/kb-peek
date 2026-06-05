@@ -16,19 +16,11 @@ section() {
 }
 
 case "$file" in
-  *GLOSSARY.md)
-    echo "Glossary terms:"
-    grep '^## ' "$file" | sed 's/^## /  - /'
-    ;;
   */spikes/*)
     echo "Answer:"
     section "Answer" | head -5
     ;;
-  */facts/*)
-    echo "Statement:"
-    section "Statement"
-    ;;
-  *)
+  */issues/*)
     echo "Objective:"
     section "Objective"
     summary=$(section "Executive Summary")
@@ -37,5 +29,13 @@ case "$file" in
       echo "Executive Summary:"
       echo "$summary" | head -5
     fi
+    ;;
+  *)
+    # Root note — plain prose, skip frontmatter, print body
+    awk '
+      /^---$/ { fm++; next }
+      fm == 1 { next }
+      NF { print }
+    ' "$file" | head -6
     ;;
 esac
