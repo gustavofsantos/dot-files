@@ -1,0 +1,38 @@
+bin/kb-peek
+  s_b6f1e5920f7fe5::t_d5e2f3020712e7 23,33-39
+.claude/commands/migrate-facts.md
+  s_b6f1e5920f7fe5::t_73cca21da74082 1-85
+scripts/install-skills.sh
+  s_b6f1e5920f7fe5::t_6db30f9d363573 21-29
+bin/kb-search
+  s_b6f1e5920f7fe5::t_00005bc8fb3449 14-26
+.claude/skills/kb-map/SKILL.md
+  s_b6f1e5920f7fe5::t_dfbe299eac9f8c 108,116-117,119
+  s_b6f1e5920f7fe5::t_5e01fad4fca5c9 141,144-145
+  s_b6f1e5920f7fe5::t_06d6a59c059a68 23-27
+  s_b6f1e5920f7fe5::t_c89ef86f74cbb9 60,62-63,65,67-71
+  s_b6f1e5920f7fe5::t_fc7eb7288a5ff4 150-152,154-155
+  s_b6f1e5920f7fe5::t_7a085efc4ecb25 85-86,89
+  s_b6f1e5920f7fe5::t_34bad1ec6c5d92 75-76,78-79,81
+  s_b6f1e5920f7fe5::t_ce9132fbd7e6b0 56
+bin/kb-fact-track
+  s_b6f1e5920f7fe5::t_d8f598361bd104 2,4-6,9-11,16-28,32,45-46,49-50,54,61-62,64
+bin/kb-index
+  s_b6f1e5920f7fe5::t_53a5bd10ad2ff4 28-36,45-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "e23c3c40b99ec129a05fec9e009611545ee7c49e",
+  "prompts": {},
+  "sessions": {
+    "s_b6f1e5920f7fe5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ea5a62a8-61b0-43fc-84b5-dd1fe1638e34",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
