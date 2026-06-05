@@ -1,0 +1,28 @@
+.claude/skills/vault/SKILL.md
+  s_394e8551a3dc48::t_f883602b0b6892 20,22,24
+  s_394e8551a3dc48::t_4a50266e1ae507 46
+.claude/skills/vault/references/write-contracts.md
+  s_394e8551a3dc48::t_202eaab41ee3e3 15,22,27,37,53-55,112-114
+  s_394e8551a3dc48::t_bb7817dd92c049 45
+  s_394e8551a3dc48::t_a35479ddbbea7c 123-124
+  s_394e8551a3dc48::t_489ca2f55a1fe8 106
+  s_394e8551a3dc48::t_aff5802d5c2970 38
+  s_394e8551a3dc48::t_419f5092b543d4 16
+  s_394e8551a3dc48::t_7ecaeeb818e921 5,7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "ded567d334df14c1ae1471956085c6ce6305afef",
+  "prompts": {},
+  "sessions": {
+    "s_394e8551a3dc48": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1632f04b-4e13-40cf-8c71-669026cbfc0c",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
