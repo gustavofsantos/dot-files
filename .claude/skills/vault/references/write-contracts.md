@@ -113,10 +113,16 @@ Status: resolved | inconclusive | deferred
 Created: YYYY-MM-DD
 Repo: <repo path or name>
 
+## Question
+The question the spike is intended to answer.
+
+## Context
+The context regarding the question.
+
 ## Answer
 One sentence summary of the conclusion.
 
-## Findings
+## Evidences
 What was discovered.
 
 ## Links
