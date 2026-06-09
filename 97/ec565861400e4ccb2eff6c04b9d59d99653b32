@@ -1,0 +1,19 @@
+bin/claude-statusline
+  s_368071401b8f7a::t_0d9117ba170a62 3-4,16,19,26-27,31,39,41-43,46-53,56-61,63-64,74-75,79,100,103,138-139,180-181,186-187,192,194
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "97ec565861400e4ccb2eff6c04b9d59d99653b32",
+  "prompts": {},
+  "sessions": {
+    "s_368071401b8f7a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1edd006c-3cb4-486c-b42d-5b961e938575",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
