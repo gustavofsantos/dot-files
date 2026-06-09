@@ -1,0 +1,93 @@
+.claude/agents/vault-scout.md
+  s_fc6a7f51948880::t_cf1654e5d86b11 1-84
+.claude/skills/deep-review/references/simple-design-rules.md
+  s_fc6a7f51948880::t_f4028f5905d27e 3,5-8,10
+.claude/skills/deep-review/SKILL.md
+  s_fc6a7f51948880::t_124f18c6136f55 51-53
+  s_fc6a7f51948880::t_6b41a5b91c0846 15
+.claude/skills/deep-review/references/dhh-expressiveness.md
+  s_fc6a7f51948880::t_1b167c2b77fd40 3-5,7,9,11-12
+.claude/skills/deep-review/references/code-smells.md
+  s_fc6a7f51948880::t_6184fb4a0505bb 3-11
+.claude/skills/user-story-builder/references/issue-template.md
+  s_fc6a7f51948880::t_af24642c2f7508 30
+.claude/skills/readable/references/heuristics.md
+  s_fc6a7f51948880::t_3d27fc3d6aecf8 3,7-10,14-16,20-21,23,25-28
+.claude/skills/readable/references/syntax-sugar.md
+  s_fc6a7f51948880::t_2cf3d5be01743a 3,5,7,11-20
+.claude/skills/kb-map/SKILL.md
+  s_fc6a7f51948880::t_8193138371f0ad 45
+  s_fc6a7f51948880::t_6cbf47202a4d3c 100
+.claude/skills/deep-review/references/fp-criteria.md
+  s_fc6a7f51948880::t_9ca1fbee155c2b 3-9
+.claude/skills/deslop/SKILL.md
+  s_fc6a7f51948880::t_1776177ac0280f 8,14,16-21,25-27
+  s_fc6a7f51948880::t_e3fdaec7568b7e 12
+.claude/agents/dead-reckoning.md
+  s_fc6a7f51948880::t_c9038737c65c55 13,17,27,33,35,37,48,52,55-56,59-60,63,65,67,71,81,93,99,102-103
+  s_fc6a7f51948880::t_9af0b97a7888d8 109,116,118,135
+.claude/skills/design-constraints/SKILL.md
+  s_fc6a7f51948880::t_8e0909d65b0551 27
+  s_fc6a7f51948880::t_f0f6b582b43fb2 47
+  s_fc6a7f51948880::t_e547cfeee5f839 15-16
+.claude/skills/thinking-partner/SKILL.md
+  s_fc6a7f51948880::t_b7fa7697cb0d3d 76-79,81,83
+.claude/skills/canvas/SKILL.md
+  s_fc6a7f51948880::t_2e2973323ff8a2 8,11,14,16,20,22,24-29,32-33,38-46,49-50,55,57,59
+.claude/skills/deep-review/references/oop-criteria.md
+  s_fc6a7f51948880::t_7b7bba60170fbf 3,5-9,13,15,17,19,21
+.claude/agents/survey.md
+  s_fc6a7f51948880::t_f4bb5bd6de28fd 12,16,24,30,32,40,42,48,50,55,59,65,76,81,84,90
+.claude/skills/outcome-builder/references/issue-template.md
+  s_fc6a7f51948880::t_1d0b5035dea989 33
+.claude/skills/pre-mortem/SKILL.md
+  s_fc6a7f51948880::t_a07cc162e7837c 8,12-17,19,21-22,29,31,33
+.claude/skills/tdd/SKILL.md
+  s_fc6a7f51948880::t_9faa05ac479e8e 19,21,33,35,37-39,41,43,45,47
+.claude/skills/survey/SKILL.md
+  s_fc6a7f51948880::t_a7c4b6b616d8c9 16,22-23,30-33
+.claude/skills/handoff/SKILL.md
+  s_fc6a7f51948880::t_e6b78015d4525f 12-13,16-23,30-32,34-35,37-38,43,47,51-53,60,62
+  s_fc6a7f51948880::t_2da799727481d2 8,14-15
+  s_fc6a7f51948880::t_a9272f4fc537cd 3
+  s_fc6a7f51948880::t_4e886c04ed5885 56,58
+.claude/skills/dead-reckoning/SKILL.md
+  s_fc6a7f51948880::t_37ca1a0b08a0f5 16,22-24,31-34
+.claude/skills/design-constraints/references/guide.md
+  s_fc6a7f51948880::t_03eaf8d709c203 3,5,7-11,13,15,17,19-22,24
+.claude/skills/user-story-builder/SKILL.md
+  s_fc6a7f51948880::t_13d1e020770e18 98
+.claude/skills/deep-review/references/metz-heuristics.md
+  s_fc6a7f51948880::t_8b22663273d250 3,5,7-10,12,14,16,18
+.claude/skills/humanize/SKILL.md
+  s_fc6a7f51948880::t_f90fa3be084806 14,16,18,20-22,24,26-28
+.claude/skills/vault-scout/SKILL.md
+  s_fc6a7f51948880::t_524a5a6c96feef 1-35
+.claude/skills/design/SKILL.md
+  s_fc6a7f51948880::t_be60c9b028abad 11,13,18,22-23,25-26,28,32,34,36,40
+.claude/skills/design/references/design-principles.md
+  s_fc6a7f51948880::t_046ce7c0afcb92 47-49
+.claude/agents/deep-review.md
+  s_fc6a7f51948880::t_664c2eecd12c1d 10,12,24,26,30,37,42,44,46,48-49,51-54,56,62-63,65-66,68,70-73,79-82
+.claude/skills/outcome-builder/SKILL.md
+  s_fc6a7f51948880::t_886f3443937acb 77
+  s_fc6a7f51948880::t_a09fda732780e6 13,17,19-21,25
+.claude/skills/tickets/SKILL.md
+  s_fc6a7f51948880::t_7673d800a97f62 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "de912f9f53e6a38fc46de6ec4fce5c85b31827c0",
+  "prompts": {},
+  "sessions": {
+    "s_fc6a7f51948880": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d0041348-f15a-4128-89bb-26afdc5360f0",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
