@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# claude-run — start a tracked Claude Code session in a tmux session
+# Usage: claude-run [OPTIONS] [TASK]
+#
+# Options:
+#   -t, --task TEXT   What Claude will work on (also accepted as plain first arg)
+#   -n, --name NAME   Tmux session name; auto-generated from task + timestamp if omitted
+#   -d, --dir PATH    Working directory (default: current directory)
+#   --auto            Pass --dangerously-skip-permissions (unattended mode)
+#   --no-attach       Create session but don't switch to it
+#   -- ARGS           Extra args forwarded verbatim to claude
+#
+# Session state is written to ~/.claude-sessions/ by claude-hook-notify
+# when the Stop or Notification hook fires inside the new session.
+#
+# The session name is also used as the tmux session name; it is exported
+# as $CLAUDE_TRACK_NAME so hooks can correlate back to it.
+
+set -euo pipefail
+
+SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
+TASK="" NAME="" DIR="$PWD" AUTO=false ATTACH=true
+EXTRA=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -t|--task)    TASK="$2";  shift 2 ;;
+    -n|--name)    NAME="$2";  shift 2 ;;
+    -d|--dir)     DIR="$2";   shift 2 ;;
+    --auto)       AUTO=true;  shift ;;
+    --no-attach)  ATTACH=false; shift ;;
+    -h|--help)    grep '^#' "$0" | sed '1d;s/^# \?//'; exit 0 ;;
+    --)           shift; EXTRA=("$@"); break ;;
+    -*)           echo "claude-run: unknown option: $1" >&2; exit 1 ;;
+    *)            [[ -z "$TASK" ]] && TASK="$1" || EXTRA+=("$1"); shift ;;
+  esac
+done
+
+# Auto-generate session name: task-slug + HHMMSS
+if [[ -z "$NAME" ]]; then
+  ts=$(date +%H%M%S)
+  if [[ -n "$TASK" ]]; then
+    slug=$(printf '%s' "$TASK" \
+      | tr '[:upper:]' '[:lower:]' \
+      | tr -cs 'a-z0-9' '-' \
+      | sed 's/^-//;s/-$//' \
+      | cut -c1-24)
+    NAME="claude-${slug}-${ts}"
+  else
+    NAME="claude-${ts}"
+  fi
+fi
+
+# Deduplicate if a session with this name already exists
+orig="$NAME"
+i=2
+while tmux has-session -t "$NAME" 2>/dev/null; do
+  NAME="${orig}-${i}"
+  (( i++ ))
+done
+
+mkdir -p "$SESSIONS_DIR"
+
+# Build the command string sent to tmux:
+#   1. Export tracking env vars (consumed by hooks inside the session)
+#   2. cd to working dir
+#   3. exec claude (so Ctrl-C kills the session cleanly)
+q() { printf '%q' "$1"; }
+
+CLAUDE_CMD="claude"
+$AUTO && CLAUDE_CMD+=" --dangerously-skip-permissions"
+[[ ${#EXTRA[@]} -gt 0 ]] && CLAUDE_CMD+=" ${EXTRA[*]}"
+
+TMUX_CMD=""
+TMUX_CMD+="export CLAUDE_TRACK_NAME=$(q "$NAME")"
+TMUX_CMD+=" CLAUDE_TRACK_TASK=$(q "$TASK")"
+TMUX_CMD+=" CLAUDE_TRACK_DIR=$(q "$DIR")"
+TMUX_CMD+=" CLAUDE_SESSIONS_DIR=$(q "$SESSIONS_DIR")"
+TMUX_CMD+="; cd $(q "$DIR") && exec $CLAUDE_CMD"
+
+tmux new-session -d -s "$NAME" -c "$DIR"
+tmux send-keys -t "$NAME" "$TMUX_CMD" Enter
+
+if $ATTACH; then
+  if [[ -n "${TMUX:-}" ]]; then
+    tmux switch-client -t "$NAME"
+  else
+    exec tmux attach-session -t "$NAME"
+  fi
+else
+  printf 'session: %s\nattach:  tmux attach-session -t %s\n' "$NAME" "$NAME"
+fi

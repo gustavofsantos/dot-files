@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# claude-hook-session-track — UserPromptSubmit hook: mark session as running
+#
+# Wire in .claude/settings.json:
+#   "UserPromptSubmit": [{"type":"command","command":"claude-hook-session-track"}]
+#
+# On each user prompt:
+#   - Updates status → "running" and last_activity in the state file
+#   - Restores the tmux window name (removes the ⊡ waiting prefix)
+
+set -euo pipefail
+
+SESSION_ID="${CLAUDE_SESSION_ID:-}"
+SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
+
+[[ -z "$SESSION_ID" ]] && exit 0
+
+STATE="${SESSIONS_DIR}/${SESSION_ID}.json"
+[[ -f "$STATE" ]] || exit 0
+command -v jq &>/dev/null || exit 0
+
+NOW=$(date +%s)
+TMP=$(mktemp)
+jq --argjson ts "$NOW" '.status = "running" | .last_activity = $ts' \
+  "$STATE" > "$TMP" && mv "$TMP" "$STATE"
+
+# Restore window name to bare track name (drop ⊡ prefix)
+if [[ -n "${TMUX_PANE:-}" ]]; then
+  TRACK_NAME=$(jq -r '.track_name // ""' "$STATE")
+  [[ -n "$TRACK_NAME" ]] \
+    && tmux rename-window -t "$TMUX_PANE" "$TRACK_NAME" 2>/dev/null || true
+fi
+
+exit 0
