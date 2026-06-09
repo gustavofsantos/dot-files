@@ -107,20 +107,35 @@
     ],
     "Stop": [
       {
-        "type": "command",
-        "command": "claude-hook-notify"
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-hook-notify"
+          }
+        ]
       }
     ],
     "Notification": [
       {
-        "type": "command",
-        "command": "claude-hook-notify"
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-hook-notify"
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
       {
-        "type": "command",
-        "command": "claude-hook-session-track"
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-hook-session-track"
+          }
+        ]
       }
     ]
   },
