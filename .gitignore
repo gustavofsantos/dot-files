@@ -1,0 +1,6 @@
+# Machine-specific checks overlay (never committed)
+.checks.local.yml
+
+# Python bytecode
+__pycache__/
+*.pyc

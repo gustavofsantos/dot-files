@@ -1,0 +1,22 @@
+# .checks.yml — checks that run after each agent turn in this repo.
+#
+# Each check is a name + a command (modeled on Claude Code hooks). After the
+# agent stops, checks-snapshot hashes the changed tracked files and fires
+# checks-runner, which runs these and stores results in
+#   ~/.checks/<session>/<hash>/results.json
+#
+# Machine-specific or secret checks go in .checks.local.yml (gitignored),
+# which overlays this file by name.
+checks:
+  - name: shellcheck
+    command: |
+      files=$(git diff --name-only HEAD -- 'bin/*' 'scripts/*')
+      [ -z "$files" ] && exit 0
+      command -v shellcheck >/dev/null || exit 0
+      shellcheck -S warning $files
+
+  - name: settings-json
+    command: jq -e . .claude/settings.json >/dev/null
+
+  - name: checks-yml
+    command: yq '.checks' .checks.yml >/dev/null

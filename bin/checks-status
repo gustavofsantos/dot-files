@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# checks-status — show the latest checks result for a session, repo, or pane.
+#
+# Usage:
+#   checks-status                 # current session ($CLAUDE_SESSION_ID) or $PWD
+#   checks-status <session-id>    # explicit checks session id
+#   checks-status <tmux-name>     # resolve via ~/.claude-sessions state
+#   checks-status --json          # emit the raw results.json
+#   checks-status --oneline       # single-line summary (for status bars)
+#
+# Reads ~/.checks/<session>/latest → that hash's results.json and renders a
+# ✓/✗ line per named check. Exit 0 if all pass, 1 if any fail, 2 if unknown.
+
+set -euo pipefail
+
+CHECKS_DIR="${CHECKS_DIR:-${HOME}/.checks}"
+SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
+
+GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[0;33m'; DIM='\033[2m'; RESET='\033[0m'
+
+MODE="human"; KEY=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --json)    MODE="json";    shift ;;
+    --oneline) MODE="oneline"; shift ;;
+    -h|--help) grep '^#' "$0" | sed '1d;s/^# \?//'; exit 0 ;;
+    *)         KEY="$1";       shift ;;
+  esac
+done
+
+command -v jq &>/dev/null || { echo "checks-status: jq required" >&2; exit 2; }
+
+# Resolve a checks session directory from KEY (or current context).
+resolve_session() {
+  local key="$1"
+  # 1. direct session id
+  if [[ -n "$key" && -d "${CHECKS_DIR}/${key}" ]]; then echo "$key"; return; fi
+  # 2. tmux session name → ~/.claude-sessions state → session_id
+  if [[ -n "$key" && -d "$SESSIONS_DIR" ]]; then
+    for f in "$SESSIONS_DIR"/*.json; do
+      [[ -f "$f" ]] || continue
+      [[ "$(jq -r '.track_name // ""' "$f" 2>/dev/null)" == "$key" ]] || continue
+      jq -r '.session_id // ""' "$f"; return
+    done
+  fi
+  # 3. no key → current session env
+  if [[ -z "$key" && -n "${CLAUDE_SESSION_ID:-}" && -d "${CHECKS_DIR}/${CLAUDE_SESSION_ID}" ]]; then
+    echo "$CLAUDE_SESSION_ID"; return
+  fi
+  # 4. no key → newest checks session touching $PWD
+  if [[ -z "$key" && -d "$CHECKS_DIR" ]]; then
+    local newest=""
+    while IFS= read -r snap; do
+      [[ "$(jq -r '.dir // ""' "$snap" 2>/dev/null)" == "$PWD" ]] || continue
+      newest="$snap"; break
+    done < <(find "$CHECKS_DIR" -mindepth 3 -maxdepth 3 -name snapshot.json -print 2>/dev/null \
+             | xargs -r ls -t 2>/dev/null)
+    [[ -n "$newest" ]] && basename "$(dirname "$(dirname "$newest")")"
+  fi
+}
+
+SESSION=$(resolve_session "$KEY")
+[[ -z "$SESSION" ]] && { [[ "$MODE" == "json" ]] && echo '{}'; echo "no checks for: ${KEY:-current context}" >&2; exit 2; }
+
+LATEST_FILE="${CHECKS_DIR}/${SESSION}/latest"
+[[ -f "$LATEST_FILE" ]] || { echo "no snapshots for session ${SESSION}" >&2; exit 2; }
+HASH=$(cat "$LATEST_FILE")
+RESULTS="${CHECKS_DIR}/${SESSION}/${HASH}/results.json"
+
+if [[ ! -f "$RESULTS" ]]; then
+  [[ "$MODE" == "json" ]] && { echo '{"summary":{"status":"pending"}}'; exit 2; }
+  echo -e "${YELLOW}● checks pending${RESET} ${DIM}(${HASH})${RESET}"; exit 2
+fi
+
+if [[ "$MODE" == "json" ]]; then cat "$RESULTS"; exit 0; fi
+
+STATUS=$(jq -r '.summary.status' "$RESULTS")
+PASSED=$(jq -r '.summary.passed' "$RESULTS")
+TOTAL=$(jq -r '.summary.total' "$RESULTS")
+
+if [[ "$MODE" == "oneline" ]]; then
+  case "$STATUS" in
+    pass)    echo -e "${GREEN}✓ ${PASSED}/${TOTAL}${RESET}" ;;
+    fail)    echo -e "${RED}✗ ${PASSED}/${TOTAL}${RESET}" ;;
+    running) echo -e "${YELLOW}● ${PASSED}/${TOTAL}${RESET}" ;;
+    empty)   echo -e "${DIM}— no checks${RESET}" ;;
+    *)       echo -e "${DIM}?${RESET}" ;;
+  esac
+  exit 0
+fi
+
+# Human view: header + per-check line.
+case "$STATUS" in
+  pass)  echo -e "${GREEN}✓ checks passed${RESET} ${DIM}(${PASSED}/${TOTAL}, ${HASH})${RESET}" ;;
+  fail)  echo -e "${RED}✗ checks failed${RESET} ${DIM}(${PASSED}/${TOTAL}, ${HASH})${RESET}" ;;
+  *)     echo -e "${YELLOW}● checks ${STATUS}${RESET} ${DIM}(${PASSED}/${TOTAL}, ${HASH})${RESET}" ;;
+esac
+
+jq -r '.checks[] | "\(.status)\t\(.name)\t\(.command)"' "$RESULTS" | while IFS=$'\t' read -r st name cmd; do
+  case "$st" in
+    pass)    echo -e "  ${GREEN}✓${RESET} ${name}  ${DIM}${cmd}${RESET}" ;;
+    fail)    echo -e "  ${RED}✗${RESET} ${name}  ${DIM}${cmd}${RESET}" ;;
+    running) echo -e "  ${YELLOW}●${RESET} ${name}  ${DIM}${cmd}${RESET}" ;;
+    *)       echo -e "  ${DIM}?${RESET} ${name}" ;;
+  esac
+done
+
+[[ "$STATUS" == "pass" || "$STATUS" == "empty" ]] && exit 0 || exit 1

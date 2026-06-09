@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# checks-snapshot — Stop-hook entry: version the agent's changes, fire the runner.
+#
+# Wire in .claude/settings.json:
+#   "Stop": [{"type":"command","command":"checks-snapshot"}]
+#
+# On every agent turn end this:
+#   1. hashes the tracked working-dir changes (checks-hash)
+#   2. writes ~/.checks/<session>/<hash>/snapshot.json + updates `latest`
+#   3. records the agent's tmux pane into the ~/.claude-sessions state
+#   4. spawns checks-runner detached so the hook returns instantly
+#
+# No-ops (fast) when the hash is unchanged since the last turn, so idle
+# "stop" events never re-run the checks.
+
+set -euo pipefail
+
+# Hook JSON arrives on stdin; we don't need its body, just drain it.
+cat >/dev/null 2>&1 || true
+
+SESSION_ID="${CLAUDE_SESSION_ID:-}"
+DIR="${CLAUDE_TRACK_DIR:-$PWD}"
+CHECKS_DIR="${CHECKS_DIR:-${HOME}/.checks}"
+SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
+
+[[ -z "$SESSION_ID" ]] && exit 0
+command -v jq &>/dev/null || exit 0
+git -C "$DIR" rev-parse --is-inside-work-tree &>/dev/null || exit 0
+
+HASH=$(checks-hash "$DIR" 2>/dev/null) || exit 0
+[[ -z "$HASH" ]] && exit 0
+
+SESSION_ROOT="${CHECKS_DIR}/${SESSION_ID}"
+HASH_DIR="${SESSION_ROOT}/${HASH}"
+LATEST="${SESSION_ROOT}/latest"
+
+# Unchanged tree since last turn — nothing new to check.
+[[ -f "$LATEST" && "$(cat "$LATEST" 2>/dev/null)" == "$HASH" ]] && exit 0
+
+mkdir -p "$HASH_DIR"
+
+REPO_ROOT=$(git -C "$DIR" rev-parse --show-toplevel 2>/dev/null || echo "$DIR")
+REPO=$(basename "$REPO_ROOT")
+BRANCH=$(git -C "$DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")
+HEAD=$(git -C "$DIR" rev-parse HEAD 2>/dev/null || echo "")
+PANE="${TMUX_PANE:-}"
+NOW=$(date +%s)
+
+# git-tracked files changed vs HEAD (staged + unstaged).
+FILES_JSON=$(git -C "$DIR" diff --name-only HEAD 2>/dev/null \
+  | jq -R . | jq -s . 2>/dev/null || echo '[]')
+
+jq -n \
+  --arg sid    "$SESSION_ID" \
+  --arg repo   "$REPO" \
+  --arg root   "$REPO_ROOT" \
+  --arg dir    "$DIR" \
+  --arg branch "$BRANCH" \
+  --arg head   "$HEAD" \
+  --arg hash   "$HASH" \
+  --arg pane   "$PANE" \
+  --argjson files "$FILES_JSON" \
+  --argjson ts "$NOW" \
+  '{session:$sid, repo:$repo, repo_root:$root, dir:$dir, branch:$branch,
+    head:$head, hash:$hash, pane:$pane, files:$files, created_at:$ts}' \
+  > "${HASH_DIR}/snapshot.json"
+
+# Update pointers: `latest` + append-only history.
+printf '%s' "$HASH" > "$LATEST"
+printf '%s %s %s\n' "$NOW" "$HASH" "$BRANCH" >> "${SESSION_ROOT}/versions.jsonl"
+
+# Record the agent's pane into the session state so navigation can jump to it.
+STATE="${SESSIONS_DIR}/${SESSION_ID}.json"
+if [[ -n "$PANE" && -f "$STATE" ]]; then
+  TMP=$(mktemp)
+  jq --arg pane "$PANE" '.pane = $pane' "$STATE" > "$TMP" 2>/dev/null \
+    && mv "$TMP" "$STATE" || rm -f "$TMP"
+fi
+
+# Fire the runner without blocking the hook. Prefer setsid (Linux); fall back
+# to nohup+disown (macOS) so the child outlives this short-lived hook process.
+if command -v setsid &>/dev/null; then
+  setsid checks-runner "$SESSION_ID" "$HASH" </dev/null >/dev/null 2>&1 &
+else
+  ( nohup checks-runner "$SESSION_ID" "$HASH" </dev/null >/dev/null 2>&1 & ) &
+fi
+
+exit 0

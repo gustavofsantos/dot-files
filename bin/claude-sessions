@@ -65,6 +65,18 @@ def age(ts: float) -> str:
     return f"{delta // 86400}d"
 
 
+def checks_summary(track_name: str) -> str:
+    """Latest checks result as a short colored token (✓/✗/●), or ''."""
+    try:
+        r = subprocess.run(
+            ["checks-status", track_name, "--oneline"],
+            capture_output=True, text=True, timeout=3,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return ""
+    return r.stdout.strip()
+
+
 def load_tracked(live: set[str]) -> list[dict]:
     if not SESSIONS_DIR.exists():
         return []
@@ -84,6 +96,8 @@ def load_tracked(live: set[str]) -> list[dict]:
             "task":          data.get("task", ""),
             "status":        status,
             "alive":         is_alive,
+            "pane":          data.get("pane", ""),
+            "checks":        checks_summary(track_name),
             "last_ts":       float(data.get("last_activity") or data.get("started_at") or 0),
             "notifications": data.get("notifications", 0),
             "tracked":       True,
@@ -103,6 +117,8 @@ def load_untracked(live: set[str], tracked_names: set[str]) -> list[dict]:
             "task":          "",
             "status":        "running",
             "alive":         True,
+            "pane":          "",
+            "checks":        checks_summary(name),
             "last_ts":       0.0,
             "notifications": 0,
             "tracked":       False,
@@ -111,23 +127,30 @@ def load_untracked(live: set[str], tracked_names: set[str]) -> list[dict]:
 
 
 def render_line(s: dict) -> str:
+    """Render the visible columns (the hidden track_name key is prepended in run_fzf)."""
     dot        = ALIVE if s["alive"] else DEAD
     name       = s["track_name"][:36]
     status_str = STATUS_COLOR.get(s["status"], s["status"])
+    checks_str = s.get("checks") or f"{DIM}—{RESET}"
     age_str    = age(s["last_ts"]) if s["last_ts"] else "?"
-    task_str   = (s["task"][:44] if s["task"] else f"{DIM}(untracked){RESET}") if not s["tracked"] \
-                 else s["task"][:44]
-    return f"{dot}  {name:<38}  {status_str:<24}  {age_str:<5}  {task_str}"
+    task_str   = (s["task"][:40] if s["task"] else f"{DIM}(untracked){RESET}") if not s["tracked"] \
+                 else s["task"][:40]
+    return f"{dot}  {name:<38}  {status_str:<24}  {checks_str:<16}  {age_str:<5}  {task_str}"
 
 
-def run_fzf(sessions: list[dict]) -> str | None:
-    lines    = [render_line(s) for s in sessions]
-    name_map = {render_line(s): s["track_name"] for s in sessions}
+def run_fzf(sessions: list[dict]) -> dict | None:
+    # Each line is "<track_name>\t<rendered>"; fzf shows fields 2.. and uses
+    # field 1 for the preview command, so selection carries the name unambiguously.
+    by_name = {s["track_name"]: s for s in sessions}
+    lines   = [f"{s['track_name']}\t{render_line(s)}" for s in sessions]
     try:
         r = subprocess.run(
             ["fzf", "--ansi", "--no-sort", "--reverse", "--border=rounded",
-             "--prompt=  claude › ", "--header=Enter: attach   Esc: dismiss",
-             "--height=100%", "--margin=1,2"],
+             "--delimiter=\t", "--with-nth=2..",
+             "--prompt=  claude › ", "--header=Enter: jump to agent   Esc: dismiss",
+             "--height=100%", "--margin=1,2",
+             "--preview", "claude-session-preview {1}",
+             "--preview-window", "right:50%:wrap"],
             input="\n".join(lines).encode(),
             capture_output=True,
         )
@@ -136,16 +159,29 @@ def run_fzf(sessions: list[dict]) -> str | None:
         sys.exit(1)
     if r.returncode != 0:
         return None
-    return name_map.get(r.stdout.decode().strip())
+    name = r.stdout.decode().split("\t", 1)[0].strip()
+    return by_name.get(name)
 
 
-def attach(track_name: str, live: set[str]) -> None:
+def attach(s: dict, live: set[str]) -> None:
+    track_name, pane = s["track_name"], s.get("pane", "")
     if track_name not in live:
         print(f"Session '{track_name}' is no longer active.", file=sys.stderr)
         sys.exit(1)
+
+    # Jump straight to the agent's pane when we recorded one; otherwise the session.
+    def select_pane() -> None:
+        if pane:
+            subprocess.run(["tmux", "select-window", "-t", pane],
+                           stderr=subprocess.DEVNULL)
+            subprocess.run(["tmux", "select-pane", "-t", pane],
+                           stderr=subprocess.DEVNULL)
+
     if os.environ.get("TMUX"):
-        os.execvp("tmux", ["tmux", "switch-client", "-t", track_name])
+        subprocess.run(["tmux", "switch-client", "-t", track_name])
+        select_pane()
     else:
+        select_pane()
         os.execvp("tmux", ["tmux", "attach-session", "-t", track_name])
 
 
@@ -166,9 +202,9 @@ def main() -> None:
             print(render_line(s))
         sys.exit(0)
 
-    track_name = run_fzf(sessions)
-    if track_name:
-        attach(track_name, live)
+    selected = run_fzf(sessions)
+    if selected:
+        attach(selected, live)
 
 
 if __name__ == "__main__":

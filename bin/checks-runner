@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+# checks-runner — run a repository's named checks against a snapshot.
+#
+# Usage:
+#   checks-runner <session> <hash>   # run checks for one snapshot
+#   checks-runner --watch            # daemon: poll for un-run snapshots
+#
+# Reads the snapshot written by checks-snapshot, loads the repo's checks
+# from `.checks.yml` (+ optional `.checks.local.yml` overlay), runs each
+# named check as a command, and writes results incrementally to
+#   ~/.checks/<session>/<hash>/results.json
+#
+# .checks.yml shape (modeled on Claude Code hooks — a name + a command):
+#   checks:
+#     - name: typecheck
+#       command: npm run typecheck
+#     - name: lint
+#       command: lintchanged
+
+set -euo pipefail
+
+CHECKS_DIR="${CHECKS_DIR:-${HOME}/.checks}"
+
+need() { command -v "$1" &>/dev/null || { echo "checks-runner: missing $1" >&2; exit 1; }; }
+need jq
+need yq
+
+# ── config loading ────────────────────────────────────────────────────────────
+
+# Read a jq filter against a YAML file, emitting JSON. Works with both yq
+# flavors: mikefarah (needs -o=json) and python/kislyuk (jq wrapper, JSON by
+# default). Returns the first invocation that yields valid JSON.
+yaml_to_json() {
+  local filter="$1" file="$2" out
+  if out=$(yq -o=json "$filter" "$file" 2>/dev/null) && jq -e . <<<"$out" &>/dev/null; then
+    printf '%s' "$out"; return 0
+  fi
+  if out=$(yq "$filter" "$file" 2>/dev/null) && jq -e . <<<"$out" &>/dev/null; then
+    printf '%s' "$out"; return 0
+  fi
+  return 1
+}
+
+# Echo the merged checks config (as JSON) for a repo dir, or nothing if absent.
+# A check in .checks.local.yml with the same name overrides the committed one;
+# local-only checks are appended.
+load_checks() {
+  local dir="$1" base="" local=""
+  [[ -f "$dir/.checks.yml" ]]       && base=$(yaml_to_json '.checks // []' "$dir/.checks.yml")
+  [[ -f "$dir/.checks.local.yml" ]] && local=$(yaml_to_json '.checks // []' "$dir/.checks.local.yml")
+  base="${base:-[]}"; local="${local:-[]}"
+  jq -n --argjson b "$base" --argjson l "$local" '
+    ($l | map(.name)) as $ln
+    | ($b | map(select(.name as $n | ($ln | index($n)) | not))) + $l
+  '
+}
+
+# ── single snapshot run ───────────────────────────────────────────────────────
+
+run_one() {
+  local session="$1" hash="$2"
+  local hash_dir="${CHECKS_DIR}/${session}/${hash}"
+  local snapshot="${hash_dir}/snapshot.json"
+  local results="${hash_dir}/results.json"
+  local lock="${hash_dir}/.lock"
+
+  [[ -f "$snapshot" ]] || { echo "checks-runner: no snapshot for ${session}/${hash}" >&2; return 1; }
+
+  # Per-hash lock (mkdir is atomic + portable). Stale-free for our short runs.
+  if ! mkdir "$lock" 2>/dev/null; then
+    return 0  # another runner owns this hash
+  fi
+  trap 'rmdir "$lock" 2>/dev/null || true' RETURN
+
+  local dir; dir=$(jq -r '.dir // empty' "$snapshot")
+  [[ -d "$dir" ]] || dir=$(jq -r '.repo_root // empty' "$snapshot")
+  local checks; checks=$(load_checks "$dir")
+  local n; n=$(jq 'length' <<<"$checks")
+
+  local started; started=$(date +%s)
+
+  if [[ "$n" -eq 0 ]]; then
+    jq -n --arg h "$hash" --argjson ts "$started" \
+      '{hash:$h, started_at:$ts, finished_at:$ts, checks:[],
+        summary:{total:0, passed:0, failed:0, status:"empty"}}' > "$results"
+    return 0
+  fi
+
+  # Seed results with every check marked "running".
+  jq -n --arg h "$hash" --argjson ts "$started" --argjson cs "$checks" \
+    '{hash:$h, started_at:$ts, finished_at:null,
+      checks:($cs | map({name, command, status:"running",
+                         exit_code:null, duration_ms:null, output_tail:null})),
+      summary:{total:($cs|length), passed:0, failed:0, status:"running"}}' \
+    > "$results"
+
+  local passed=0 failed=0
+  for i in $(seq 0 $((n - 1))); do
+    local name cmd; name=$(jq -r ".[$i].name" <<<"$checks")
+    cmd=$(jq -r ".[$i].command" <<<"$checks")
+
+    local t0; t0=$(date +%s%3N 2>/dev/null || date +%s000)
+    local out ec
+    out=$(cd "$dir" && bash -lc "$cmd" 2>&1) && ec=0 || ec=$?
+    local t1; t1=$(date +%s%3N 2>/dev/null || date +%s000)
+    local dur=$((t1 - t0))
+    local status
+    if [[ $ec -eq 0 ]]; then status="pass"; passed=$((passed + 1)); else status="fail"; failed=$((failed + 1)); fi
+    local tail; tail=$(printf '%s' "$out" | tail -n 20)
+
+    local tmp; tmp=$(mktemp)
+    jq --argjson i "$i" --arg st "$status" --argjson ec "$ec" \
+       --argjson dur "$dur" --arg tail "$tail" \
+       --argjson passed "$passed" --argjson failed "$failed" \
+       '.checks[$i].status = $st
+        | .checks[$i].exit_code = $ec
+        | .checks[$i].duration_ms = $dur
+        | .checks[$i].output_tail = $tail
+        | .summary.passed = $passed
+        | .summary.failed = $failed' \
+       "$results" > "$tmp" && mv "$tmp" "$results"
+  done
+
+  local finished; finished=$(date +%s)
+  local overall; [[ $failed -eq 0 ]] && overall="pass" || overall="fail"
+  local tmp; tmp=$(mktemp)
+  jq --argjson ts "$finished" --arg st "$overall" \
+     '.finished_at = $ts | .summary.status = $st' \
+     "$results" > "$tmp" && mv "$tmp" "$results"
+}
+
+# ── watch mode ────────────────────────────────────────────────────────────────
+
+watch_loop() {
+  echo "checks-runner: watching ${CHECKS_DIR} (Ctrl-C to stop)" >&2
+  while true; do
+    if [[ -d "$CHECKS_DIR" ]]; then
+      while IFS= read -r snap; do
+        local hd; hd=$(dirname "$snap")
+        [[ -f "$hd/results.json" ]] && continue
+        local hash; hash=$(basename "$hd")
+        local session; session=$(basename "$(dirname "$hd")")
+        run_one "$session" "$hash" || true
+      done < <(find "$CHECKS_DIR" -mindepth 3 -maxdepth 3 -name snapshot.json 2>/dev/null)
+    fi
+    sleep 2
+  done
+}
+
+# ── entry ─────────────────────────────────────────────────────────────────────
+
+case "${1:-}" in
+  --watch) watch_loop ;;
+  -h|--help) grep '^#' "$0" | sed '1d;s/^# \?//'; exit 0 ;;
+  "") echo "usage: checks-runner <session> <hash> | --watch" >&2; exit 2 ;;
+  *)  run_one "$1" "${2:?hash required}" ;;
+esac
