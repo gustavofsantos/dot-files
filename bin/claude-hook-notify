@@ -44,10 +44,13 @@ if [[ -n "$SESSION_ID" ]]; then
   mkdir -p "$SESSIONS_DIR"
   STATE="${SESSIONS_DIR}/${SESSION_ID}.json"
 
+  PANE="${TMUX_PANE:-}"
   if [[ -f "$STATE" ]]; then
     TMP=$(mktemp)
-    jq --arg s "waiting" --argjson ts "$NOW" \
-      '.status = $s | .last_activity = $ts | .notifications = ((.notifications // 0) + 1)' \
+    jq --arg s "waiting" --arg pane "$PANE" --argjson ts "$NOW" \
+      '.status = $s | .last_activity = $ts
+       | .notifications = ((.notifications // 0) + 1)
+       | (if $pane != "" then .pane = $pane else . end)' \
       "$STATE" > "$TMP" && mv "$TMP" "$STATE"
   else
     # First hook fire for this session — seed from env vars + tmux context
@@ -57,8 +60,9 @@ if [[ -n "$SESSION_ID" ]]; then
       --arg  name "${TRACK_NAME:-$WINDOW}" \
       --arg  task "$TRACK_TASK" \
       --arg  dir  "$TRACK_DIR" \
+      --arg  pane "$PANE" \
       --argjson ts "$NOW" \
-      '{session_id:$sid, track_name:$name, task:$task, dir:$dir,
+      '{session_id:$sid, track_name:$name, task:$task, dir:$dir, pane:$pane,
         status:"waiting", started_at:$ts, last_activity:$ts, notifications:1}' \
       > "$STATE"
   fi

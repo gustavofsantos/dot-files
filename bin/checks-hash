@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# checks-hash — stable content hash of the working-directory changes.
+#
+# Usage:
+#   checks-hash [DIR] [--with-untracked]
+#
+# Prints a short hex digest identifying the current set of changes to
+# git-tracked files in DIR (default: $PWD). The same change always yields
+# the same hash, so an unchanged tree never re-triggers checks.
+#
+# The hash folds in:
+#   - HEAD sha           (so a commit/rebase produces a new version)
+#   - git diff HEAD      (staged + unstaged changes to tracked files)
+#   - optionally, the contents of untracked files (--with-untracked)
+#
+# Output: 12-char hex on stdout. Exits non-zero if DIR is not a git repo.
+
+set -euo pipefail
+
+DIR="$PWD"
+WITH_UNTRACKED=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --with-untracked) WITH_UNTRACKED=true; shift ;;
+    -h|--help) grep '^#' "$0" | sed '1d;s/^# \?//'; exit 0 ;;
+    -*) echo "checks-hash: unknown option: $1" >&2; exit 2 ;;
+    *)  DIR="$1"; shift ;;
+  esac
+done
+
+git -C "$DIR" rev-parse --is-inside-work-tree &>/dev/null \
+  || { echo "checks-hash: not a git repo: $DIR" >&2; exit 1; }
+
+# Pick an available digest tool (sha256sum on Linux, shasum on macOS).
+digest() {
+  if command -v sha256sum &>/dev/null; then sha256sum
+  else shasum -a 256
+  fi
+}
+
+{
+  git -C "$DIR" rev-parse HEAD 2>/dev/null || echo "no-head"
+  git -C "$DIR" diff HEAD 2>/dev/null || git -C "$DIR" diff
+  if $WITH_UNTRACKED; then
+    # Append each untracked file's path + contents so new files change the hash.
+    while IFS= read -r -d '' f; do
+      printf '\0untracked\0%s\0' "$f"
+      cat -- "$DIR/$f" 2>/dev/null || true
+    done < <(git -C "$DIR" ls-files --others --exclude-standard -z)
+  fi
+} | digest | cut -c1-12

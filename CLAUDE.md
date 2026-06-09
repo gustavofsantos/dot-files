@@ -41,6 +41,19 @@ Skills live in `.claude/skills/<name>/` and agents in `.claude/agents/`. `instal
 
 The `.claude/settings.json` merges into the global `~/.claude/settings.json` on install. Global settings win on scalar/object conflicts; `permissions.allow/deny/ask` arrays are unioned.
 
+## Agent checks
+
+A repo can carry a `.checks.yml` (root, committed) defining named checks — each a `name` + a `command`, modeled on the hooks shape. After every agent turn the `Stop` hook fires `checks-snapshot`, which hashes the changed tracked files (`checks-hash`), versions them under `~/.checks/<session>/<hash>/`, and spawns `checks-runner` detached to run the checks and write `results.json`. The agent reads them via `checks-status` (taught by the `checks` skill). `.checks.local.yml` (gitignored) overlays by name for machine-specific checks; worktrees inherit both via `git-add-worktree`.
+
+| Script | What it does |
+|--------|--------------|
+| `checks-hash` | Stable content hash of tracked working-dir changes vs `HEAD` |
+| `checks-snapshot` | `Stop` hook: version changes, fire the runner (no-op if unchanged) |
+| `checks-runner` | Run `.checks.yml` checks for a snapshot; `--watch` for daemon mode |
+| `checks-status` | Show the latest result for a session/repo (`--json`, `--oneline`) |
+
+Session navigation (`claude-sessions`, `bind a` in tmux) lists running agent sessions with their last checks result, previews the live agent pane, and jumps straight to the pane running the agent.
+
 ## Neovim config
 
 Entry point: `config/nvim/init.lua` → loads `config/options`, `pack`, `config/keymaps`, `config/autocmds`, `config/lazy`.
