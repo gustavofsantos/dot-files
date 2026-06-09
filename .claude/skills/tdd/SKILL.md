@@ -16,13 +16,9 @@ hooks:
 
 # TDD
 
-Read the active issue, then find the first task with unchecked scenarios and
-implement them test-first, in order.
+Drives `type: implementation` issues only — an `investigation` issue is answered with `dead-reckoning`, not tested into existence.
 
-This skill drives `type: implementation` issues. An `investigation` issue is
-answered with `dead-reckoning`, not tested into existence — skip it here.
-
-**Locate the active issue** the same way the `issue` skill stores it:
+Locate the active issue (same resolution the `vault` skill uses):
 
 ```bash
 _ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
@@ -34,46 +30,18 @@ fi
 ISSUES_DIR="${ISSUES_DIR:-$HOME/engineering/issues}"
 ```
 
-Each `## Tasks` entry references the scenarios (`S1, S2 — label`) it covers; the
-`## Scenarios` section holds the Given/When/Then those tasks implement. If the
-issue's `## Context` carries a `design-constraints` block, treat it as binding, and
-treat the facts in `## Facts` (`FACT-NNN`) as established ground.
+Each `## Tasks` entry names the scenarios (`S1, S2 — label`) it covers; `## Scenarios` holds their Given/When/Then. A `design-constraints` block in `## Context` is binding; `## Facts` (`FACT-NNN`) are established ground.
 
-## Cycle
+## Cycle (per scenario, in order)
 
-For each scenario Sn:
+- **RED** — one failing test expressing the Given/When/Then exactly. No more than the scenario says.
+- **GREEN** — minimum code to pass; hardcoding is valid. No untested behavior.
+- **REFACTOR** — improve structure, tests green after every change; if one breaks, undo and go smaller.
 
-**RED** — Write a failing test that directly expresses the Given/When/Then.
-Given → setup. When → action. Then → assertion. No more than what the scenario says.
+Mark the task `[x]` when its scenarios are green (the Stop hook runs `verify-task --branch` and blocks if anything is red), then move on.
 
-**GREEN** — Write the minimum code to pass. Hardcoding is valid if it makes the test
-pass. Do not add untested behavior.
+When all tasks are checked, hand the branch to `deep-review` before merge, plus `deslop`/`readable` for language cleanup. Archiving the issue is the human's call.
 
-**REFACTOR** — Improve structure. Run tests after every change. If a test breaks, undo
-and try smaller.
+## Discipline
 
-Mark the task `[x]` when all its scenarios are green. The skill's Stop hook
-runs `verify-task --branch` automatically and blocks the turn if any tests are red.
-
-Move to the next task.
-
-When every task is checked, hand the branch to `deep-review` before merge (and to
-`deslop` / `readable` for language-specific cleanup). Archiving the issue is the
-human's call, per the `issue` skill.
-
-## Test friction is design signal
-
-| Friction | Problem |
-|---|---|
-| Hard to instantiate the subject | Too many dependencies |
-| Many mocks needed | High coupling |
-| Setup longer than assertion | Wrong responsibility boundary |
-| Can't assert without side effects | Logic mixed with I/O |
-
-When friction appears, stop and redesign before continuing.
-
-## Rules
-
-- One failing test at a time.
-- Never test private methods — they surface through public interface failures.
-- No conditionals or loops in test code to reduce duplication.
+Follow the test philosophy in `.claude/rules/tests.md` — one failing test at a time, never test private methods, no conditionals/loops in tests. When test friction appears (hard to instantiate, many mocks, setup > assertion), stop and redesign before continuing.

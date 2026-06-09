@@ -95,11 +95,4 @@ Iterate until confirmed.
 
 ## Phase 4 — Store as issue
 
-Once tasks are confirmed, store the work using the `issue` skill.
-
-Read [references/issue-template.md](references/issue-template.md) and fill it with:
-- `{title}` — slugified story title
-- `{id}` and `{today}` — resolved by the issue skill
-- Story, acceptance criteria, out-of-scope items, and confirmed tasks
-
-Then invoke the `issue` skill to allocate an ID, link facts, and write the file.
+Read [references/issue-template.md](references/issue-template.md), fill it (`{title}` slugified; `{id}`/`{today}` resolved by the skill; story, criteria, out-of-scope, confirmed tasks), then invoke the `vault` skill to allocate an ID, link facts, and write the file.

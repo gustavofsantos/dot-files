@@ -10,28 +10,19 @@ metadata:
 
 # Outcome Builder
 
-This skill shapes ideas and requirements into **Outcome-Driven Stories** centered around a strict logical assertion (the **Outcome Anchor**). This keeps LLMs in pairing environments aligned on the *value/outcome* rather than getting stuck on a pre-determined *mechanism/implementation*.
-
----
+Shapes ideas into **Outcome-Driven Stories** anchored on a strict logical assertion (the **Outcome Anchor**) — keeping a pairing LLM aligned on the *value/outcome* instead of fixating on a pre-decided *mechanism*.
 
 ## Phase 1 — Uncover the Outcome
 
-Do not draft the story yet. Ask up to 3 surgical questions to decouple the **Desired Outcome** from the **Proposed Mechanism**. We must identify:
+Don't draft yet. Ask up to 3 questions to decouple the **outcome** from the **mechanism**, identifying:
 
-1. **Outcome:** What new capability or state transition is achieved? (The *value*)
-2. **Verification:** What concrete, testable signal proves we succeeded? (The *proof*)
-3. **Proposed Path:** What was the initial implementation idea? (The *mechanism*)
-
-*Example prompt to the user:*
-> "Let's capture the outcome. What is the core capability we need to enable, how will we prove it works, and what is your initial idea for how to build it?"
-
----
+1. **Outcome** — what capability or state transition is achieved (the *value*)
+2. **Verification** — the concrete, testable signal that proves success (the *proof*)
+3. **Proposed Path** — the initial implementation idea (the *mechanism*)
 
 ## Phase 2 — Draft the Outcome Story and Anchor
 
-Once the outcome, verification, and path are clear, draft the story. It must lead with the high-contrast **Outcome Anchor** to serve as a logical constraint for subsequent prompts.
-
-Format:
+Lead with the high-contrast **Outcome Anchor** so it constrains later prompts.
 
 ```markdown
 # Outcome Story: [Short Title]
@@ -83,11 +74,4 @@ Present the tasks and ask: *"Does this breakdown make sense? Are we over-enginee
 
 ## Phase 4 — Store as issue
 
-Once tasks are confirmed, store the work using the `issue` skill.
-
-Read [references/issue-template.md](references/issue-template.md) and fill it with:
-- `{title}` — slugified story title
-- `{id}` and `{today}` — resolved by the issue skill
-- Outcome anchor, narrative, acceptance criteria, and confirmed tasks
-
-Then invoke the `issue` skill to allocate an ID, link facts, and write the file.
+Read [references/issue-template.md](references/issue-template.md), fill it (`{title}` slugified; `{id}`/`{today}` resolved by the skill; outcome anchor, narrative, criteria, confirmed tasks), then invoke the `vault` skill to allocate an ID, link facts, and write the file.

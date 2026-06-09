@@ -1,62 +1,21 @@
 # OOP Evaluation Criteria
 
-## SOLID — Priority Checks
+## SOLID
 
-### Single Responsibility
-- Does the class have more than one reason to change?
-- Does its name accurately describe everything it does?
-- If you can't name it without using "and" or "or", it has multiple responsibilities.
-
-### Open-Closed
-- Can new behavior be added without modifying existing classes?
-- Are conditionals dispatching on type the primary extension mechanism? If yes — polymorphism is missing.
-
-### Liskov Substitution
-- Can subclasses be used anywhere the parent is used without breaking behavior?
-- Do subclasses throw exceptions the parent doesn't? Override methods with incompatible contracts?
-
-### Interface Segregation
-- Are classes forced to implement methods they don't use?
-- Are interfaces too broad — serving multiple unrelated consumers?
-
-### Dependency Inversion
-- Do high-level modules depend on concrete implementations?
-- Are dependencies injected or constructed internally? (Internal construction = hidden coupling)
-
----
+- **SRP** — more than one reason to change? If you can't name the class without "and"/"or", it does too much.
+- **Open-Closed** — can new behavior be added without editing existing classes? Type-dispatching conditionals as the extension mechanism = missing polymorphism.
+- **Liskov** — is every subclass substitutable for its parent (no new exceptions, no incompatible contracts)?
+- **Interface Segregation** — are classes forced to implement methods they don't use, or interfaces serving unrelated consumers?
+- **Dependency Inversion** — do high-level modules depend on concretes? Internally constructed dependencies = hidden coupling; prefer injection.
 
 ## Law of Demeter
 
-A method should only call methods on:
-- `self`
-- Objects it created
-- Objects passed as parameters
-- Objects held as instance variables
+Call methods only on: `self`, objects you created, parameters, instance variables. Violation signal: more than one `.` crossing object boundaries (fluent builders excepted). Fix: Tell, Don't Ask — move behavior to the data, or add a delegation method.
 
-**Violation signal:** More than one `.` in a chain that traverses object boundaries (not fluent builder APIs).
+## Encapsulation
 
-**Fix:** Apply Tell, Don't Ask. Move the behavior to where the data lives, or introduce a delegation method.
+Minimal public surface; constructors enforce valid initial state; mutation only through meaningful domain methods. Flag unrestricted setters and public interfaces that leak implementation rather than expose capabilities.
 
----
+## Inheritance vs. composition
 
-## Encapsulation Audit
-
-- Are instance variables exposed via unrestricted setters?
-- Can external code reconstruct or modify internal state without going through domain methods?
-- Does the public interface reveal implementation details, or just capabilities?
-
-**Target:** Minimal public surface. Constructors enforce valid initial state. Mutation only through meaningful domain methods.
-
----
-
-## Inheritance vs. Composition
-
-Inheritance is appropriate when:
-- The "is-a" relationship is genuine and stable
-- The subclass extends behavior without replacing it
-- The hierarchy is shallow (≤ 2 levels)
-
-Prefer composition when:
-- Behavior needs to vary independently along multiple axes
-- The hierarchy is growing to accommodate variation
-- You find yourself overriding methods to neutralize parent behavior
+Inheritance only when "is-a" is genuine and stable, the subclass extends (not replaces) behavior, and the hierarchy is ≤2 levels deep. Prefer composition when behavior varies along multiple axes, the hierarchy grows to absorb variation, or you override methods to neutralize the parent.

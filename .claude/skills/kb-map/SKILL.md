@@ -42,7 +42,7 @@ If `$MAP` exists, read it and present it to the user. Then ask:
 
 > "A domain map already exists (shown above). How would you like to proceed?
 > 1. **Enhance** — keep your domain names and Concept lines as-is; only sync the artifact lists (Facts/Issues/Spikes) and Neighbors from the current KB state.
-> 2. **Rebuild** — discard the existing map and regenerate fully from GLOSSARY + artifact tags.
+> 2. **Rebuild** — discard the existing map and regenerate fully from root-note `parent:` clusters + artifact tags.
 > 3. **Review only** — show me what new artifacts are unclustered without touching the file."
 
 Wait for the user's answer before continuing. Default to **Enhance** if they say "yes", "go ahead", or similar without specifying.
@@ -97,7 +97,7 @@ Write the file with this structure:
 
 ```markdown
 # KB Domain Map
-_Generated <date>. Source of truth: GLOSSARY.md (terms/domains) + artifact tags._
+_Generated <date>. Source of truth: root notes (`parent:` clusters) + artifact tags._
 _Read this before INDEX.md when you want domain context, not a flat artifact list._
 
 ---

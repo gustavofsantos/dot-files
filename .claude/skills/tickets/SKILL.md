@@ -11,15 +11,7 @@ description: >
 
 # Tickets
 
-Turns context into well-structured Jira tickets, following the team's conventions.
-
-## References
-
-| File | When to read |
-|---|---|
-| `references/templates.md` | Always — read before drafting any ticket. Contains the full template for each type (epic, story, task, bug). |
-
----
+Turns context into well-structured Jira tickets following the team's conventions. Read `references/templates.md` before drafting — it has the full template per type (epic, story, task, bug).
 
 ## Principles
 

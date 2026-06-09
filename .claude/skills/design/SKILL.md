@@ -8,62 +8,33 @@ description: >
 
 # Design
 
-Read [references/design-principles.md](references/design-principles.md) for coupling/cohesion
-signals, the 8 abstraction principles, the design checklist, and the anti-pattern gallery.
-Read [references/idioms.md](references/idioms.md) when producing or reviewing code.
+Read [references/design-principles.md](references/design-principles.md) for the coupling/cohesion signals, the 8 abstraction principles, the design checklist, and the anti-pattern gallery. Read [references/idioms.md](references/idioms.md) when producing or reviewing code.
 
-Two modes:
-
-| Mode | Question it answers | Output |
+| Mode | Question | Output |
 |---|---|---|
 | `boundary` | Where should this live, and how should it talk to the rest? | Boundary diagnosis + minimal contract proposal |
 | `abstraction` | What should this interface look like? | Interface definition + rationale + checklist results |
 
----
+Present each step and wait for the human before proceeding.
 
 ## Mode: boundary
 
-Two principles: high cohesion (things that change together belong together), loose coupling
-(things that change for different reasons should not know each other's internals).
-
-Before adding any dependency between two modules, ask:
-
-1. Does A really need to know about B, or does a *result* B can provide suffice?
+Before adding any dependency A→B, answer:
+1. Does A need B, or just a *result* B provides?
 2. What is the minimal contract between them?
-3. Who owns the contract definition?
-4. If B changes internally, should A be affected?
+3. Who owns the contract?
+4. If B changes internally, should A be affected? If "no", the contract must prevent that coupling.
 
-If the answer to (4) is "no", make sure the contract prevents that coupling.
-
-Present the diagnosis and proposed contract. Wait for the human to confirm before proceeding
-to `abstraction` mode.
-
----
+Present the diagnosis and proposed contract; confirm before moving to `abstraction`.
 
 ## Mode: abstraction
 
-Two sub-modes — identify from context:
-- "design", "create", "model", "define" → DESIGN
-- "review", "is this good", "critique" → REVIEW
-- ambiguous → ask.
+Sub-mode from context — "design/create/model/define" → DESIGN; "review/is this good/critique" → REVIEW; ambiguous → ask.
 
-**DESIGN:**
-1. Establish consumer context — who is the consumer, what's the minimum behavior they need to swap, do we have two implementations in mind?
-2. Draft the minimal interface — start with one method, name by behavior, place in consumer's namespace.
-3. Run the design checklist from [references/design-principles.md](references/design-principles.md).
-4. Output: interface definition + one-paragraph rationale + flagged trade-offs.
+**DESIGN:** establish consumer context (who consumes, minimum behavior to swap, two implementations in mind?) → draft the minimal interface (one method, named by behavior, in the consumer's namespace) → run the design checklist → output interface + one-paragraph rationale + flagged trade-offs.
 
-**REVIEW:**
-1. Run the design checklist — note passes and failures.
-2. Identify the dominant anti-pattern if any.
-3. Output: checklist results + named anti-pattern + concrete refactoring suggestion with code.
-
-Present output after each sub-step. Wait for the human before proceeding.
-
----
+**REVIEW:** run the design checklist (passes/failures) → name the dominant anti-pattern if any → output checklist results + named anti-pattern + concrete refactor with code.
 
 ## Next step
 
-When the design is settled and implementation is next, capture the decided
-boundary/interface as a `design-constraints` block in the issue's `## Context`
-(see the `issue` and `design-constraints` skills), then implement with `tdd`.
+When design is settled, capture the decided boundary/interface as a `design-constraints` block in the issue's `## Context` (see `vault` and `design-constraints`), then implement with `tdd`.

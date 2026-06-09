@@ -42,24 +42,11 @@ Context A  →  [contract/interface]  →  Context B
 
 ---
 
-## Abstraction mode — the eight principles
-
-> An interface should emerge from the **consumer's need to swap implementations**, not from the implementor's desire to declare a contract.
-
-1. **Define at the point of use (consumer side).** The consumer owns the interface.
-2. **Keep the surface minimal.** One or two methods is the ideal. Every extra method burdens every future implementor.
-3. **Name by behavior, not by role.** `Reader`, `Notifier`, `Validator` — not `UserService`, `Manager`, `Handler`.
-4. **No premature abstraction.** Don't create an interface before you have two concrete implementations or a clear substitution need.
-5. **Model behavior, not data.** Getters and setters in an interface are a smell.
-6. **Compose, don't inherit.** Build larger contracts by composing smaller ones.
-7. **Avoid `any` / `Object` / untyped escape hatches.** Use generics or discriminated unions.
-8. **Concrete return types, abstract parameter types.** Accept interfaces (broad), return concrete types (specific).
-
----
-
 ## Abstraction mode — design checklist
 
-Run before finalizing any interface.
+> An interface should emerge from the **consumer's need to swap implementations**, not from the implementor's desire to declare a contract. (Accept interfaces broad, return concrete types specific.)
+
+Run before finalizing any interface — each row is also the principle:
 
 | # | Check | Signal to look for |
 |---|---|---|

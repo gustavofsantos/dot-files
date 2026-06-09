@@ -5,81 +5,29 @@ description: Activate this skill when designing a new feature or system componen
 
 # Pre-Mortem
 
-## Purpose
-Before implementing any non-trivial solution, mentally project into the future
-where the implementation has already failed. Work backwards to identify the
-causes, then proactively mitigate them before writing a line of code.
-
-## When to trigger
-Activate this skill when:
-- Designing a new feature or system component
-- Proposing a significant refactor
-- Choosing between two or more implementation approaches
-- Estimating effort or timelines
-- About to write code that touches critical paths (auth, data integrity, payments, etc.)
+Before implementing a non-trivial solution, project into a future where it has **already failed**, work backward to the causes, and mitigate them before writing code.
 
 ## Procedure
 
-### Step 1 — Zoom out (2 min)
-State the goal of the implementation in one sentence.
-Ask: "What does success look like? How would we measure it?"
+1. **Goal** — state it in one sentence; name what success looks like and how you'd measure it.
+2. **Assume failure** — "It's 4 weeks out. This failed." Don't ask *if* it might; assume it did.
+3. **Enumerate ≥5 specific failure modes** across: technical (races, edge cases, perf cliffs, wrong abstractions), behavioral (misread requirements/assumptions), operational (deploy, observability, rollback), integration (broken upstream/downstream contracts), time (scope creep, underestimation, missing deps).
+4. **Score** each by likelihood × impact; focus on high/high.
+5. **Mitigate** each top item with one concrete action — a design change, an upfront test, a guard/constraint, or a question to answer first.
+6. **Pre-flight** — top 2–3 modes have a mitigation, blocking unknowns are assigned, a rollback/recovery path exists.
 
-### Step 2 — Assume failure
-Say: "It is 4 weeks from now. This implementation has failed."
-Do NOT ask why it might fail — assume it already has.
+## Output
 
-### Step 3 — Enumerate failure modes
-List at least 5 specific reasons the implementation failed. Think across:
-- **Technical**: race conditions, edge cases, performance cliffs, wrong abstractions
-- **Behavioral**: misunderstood requirements, wrong assumptions about user/system behavior
-- **Operational**: deployment issues, missing observability, rollback difficulty
-- **Integration**: broken contracts with upstream/downstream services or clients
-- **Time**: scope creep, underestimated complexity, missing dependencies
-
-### Step 4 — Score and prioritize
-For each failure mode, estimate:
-- **Likelihood**: low / medium / high
-- **Impact**: low / medium / high
-
-Focus discussion on HIGH likelihood + HIGH impact items first.
-
-### Step 5 — Define mitigations
-For each top-priority failure mode, define one concrete mitigation:
-- A design change
-- A test to write upfront
-- A constraint or guard to add
-- A question to answer before proceeding
-
-### Step 6 — Pre-flight checklist
-Before moving to implementation, confirm:
-- [ ] The top 2-3 failure modes have a mitigation plan
-- [ ] Any blocking unknowns are identified and assigned
-- [ ] Rollback or recovery path exists if this goes wrong in production
-
-## Output format
-Summarize the pre-mortem as:
-
-<template>
-## Pre-Mortem: <feature/task name>
-
+```
+## Pre-Mortem: <name>
 **Goal:** <one sentence>
-
 **Top failure modes:**
 | Failure mode | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| ... | high | high | ... |
-
 **Blockers to resolve before coding:**
-- ...
-
 **Rollback plan:**
-- ...
-</template>
+```
 
-## Feeding the result back
+## Feeding back
 
-If the work is tracked as an issue (see the `issue` skill): unresolved blockers
-become `## Open questions`, mitigations that constrain the approach go into the
-`## Context` (alongside any `design-constraints` block), and failure modes that
-define what must *not* break become `## Off-limits` entries.
-
+If tracked as an issue (`vault`): unresolved blockers → `## Open questions`; approach-constraining mitigations → `## Context` (with any `design-constraints` block); must-not-break modes → `## Off-limits`.

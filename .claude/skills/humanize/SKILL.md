@@ -11,95 +11,18 @@ description: >
 
 # Humanize
 
-Rewrites AI-sounding text into prose that reads like a thoughtful senior professional wrote it.
-The target reader is leadership — executives, skip-levels, steering committees.
-The target voice is direct, specific, and confident without being robotic or padded.
+Rewrite AI-sounding text into prose a thoughtful senior professional would write for **leadership** — execs, skip-levels, steering committees. Voice: direct, specific, confident, unpadded.
 
-Read `references/patterns.md` before rewriting. It contains the specific patterns to
-hunt and the replacement approach for each.
+You already know what AI text sounds like — uniform rhythm, hedging, padded setup/conclusion paragraphs, vague abstraction, passive voice, bullet walls where prose belongs. Hunt those.
 
----
+## Loop
 
-## Operating Loop
+1. **Orient** — infer the document type; ask one question only if formality/compression hinges on an ambiguity (status update vs. proposal vs. incident report vs. exec summary).
+2. **Rewrite** — substance survives intact; voice, structure, and surface are fair game. Don't reorder the original logic unless it's clearly broken.
+3. **Output** — clean, paste-ready, no preamble. If asked what changed, summarize in 2–3 lines, not a changelog.
 
-**1. Orient**
+## Constraints specific to this skill
 
-If the user hasn't said what kind of document this is, infer it from context. For anything
-ambiguous — status update vs. proposal vs. incident report vs. exec summary — ask one question
-before rewriting. The document type affects the level of formality and how much compression
-is appropriate.
-
-**2. Scan for AI-tells**
-
-Before rewriting, run a fast internal pass to identify which patterns from `references/patterns.md`
-are present. Do not show this scan to the user. Use it to calibrate where the text needs the
-most work.
-
-**3. Rewrite**
-
-Apply the rewrite principles below. The substance of the original must survive intact.
-The voice, structure, and surface of the text is fair game.
-
-**4. Output**
-
-Deliver the rewritten text, clean, ready to paste. No preamble, no explanation unless asked.
-
-If the user asks what changed, summarize the main categories of edits in 2–3 lines. Do not
-enumerate every change — that's noise.
-
----
-
-## Rewrite Principles
-
-### Voice
-- Write like a senior engineer or PM talking to their skip-level. Not casual, not robotic.
-- First person is fine. "We decided to..." reads better than "A decision was reached..."
-- Active over passive. Always. "The team shipped X" not "X was shipped by the team."
-
-### Structure
-- Vary sentence length. AI text is rhythmically uniform. Mix short punchy sentences
-  with longer analytical ones. Leadership docs should breathe.
-- If the original has a wall of bullets, consider whether a paragraph would flow better.
-  Bullets are for discrete items. Narrative belongs in prose.
-- Don't reorder the logic of the original unless the structure is clearly broken.
-
-### Specificity
-- Replace vague abstractions with the concrete thing they describe.
-  "Operational efficiency improvements" → "we cut the pipeline from 4 steps to 2"
-  (only if the original supports it — don't invent specifics that aren't there).
-- Keep numbers if they're in the original. They're usually the most credible part.
-
-### Compression
-- Cut anything that doesn't add information. AI text is padded by default.
-- Remove setup paragraphs that just announce what the text is about to say.
-- Remove conclusions that just restate what was already said.
-- Shorter is almost always better for leadership. They're reading fast.
-
-### Hedging
-- Remove hedges that don't reflect actual uncertainty: "it may be worth considering",
-  "one could argue", "it seems that", "in many cases".
-- If the original IS uncertain, express it plainly: "we don't know yet" not
-  "this remains an area of ongoing investigation."
-
----
-
-## Dos and Don'ts
-
-**Do:**
-- Preserve the author's original point of view and any genuine uncertainty
-- Keep domain-specific terminology if it's correct and necessary
-- Ask before inventing specifics that aren't in the original
-- Produce text the user can paste without modification
-
-**Don't:**
-- Add qualifiers or caveats that weren't in the original
-- Make the text more formal than it needs to be
-- Turn a direct statement into a diplomatic non-statement
-- Explain your edits unprompted
-
----
-
-## References
-
-`references/patterns.md` — Full list of AI-tell patterns with replacement guidance.
-Load this before every rewrite.
+- **Never invent specifics.** Sharpen "operational efficiency improvements" → "cut the pipeline from 4 steps to 2" *only* if the original supports it. Keep original numbers — they're the credible part.
+- **Preserve genuine uncertainty**, but state it plainly ("we don't know yet"), not as ceremony ("an area of ongoing investigation"). Add no caveats that weren't there.
+- Keep correct domain terminology. Don't formalize a direct statement into a diplomatic non-statement.

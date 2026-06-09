@@ -13,43 +13,21 @@ metadata:
 
 # Survey — dispatch shim
 
-Dispatches the discovery to the **`survey` subagent** (see `agents/survey.md`).
-The subagent reads the repository across three zones (Identity, Config,
-Integration), correlates findings with the existing knowledge base, and returns
-a structured report with findings and high-signal files. Running it in a
-subagent keeps the zone reads and rg searches out of the main session context.
-
-Two survey subagents can be dispatched concurrently for orthogonal focus areas
-(e.g., one on config/infra, one on integration/entrypoints).
-
-## Dispatch
+Dispatches discovery to the **`survey` subagent** (`agents/survey.md`), which reads the repo across three zones (Identity, Config, Integration) and correlates with the KB. Two subagents can run concurrently on orthogonal focuses (e.g. config/infra vs. integration/entrypoints).
 
 ```
 Agent(
   subagent_type: "survey",
   description: "Survey: <project name or focus>",
-  prompt: "Repo root: <current working directory or git root>.
-           Focus: <$ARGUMENTS if provided, otherwise 'general'>.
+  prompt: "Repo root: <cwd or git root>.
+           Focus: <$ARGUMENTS or 'general'>.
            Return the structured survey report."
 )
 ```
 
 ## After the report arrives
 
-1. **Surface the report** to the human.
-
-2. **Read high-signal files.** The report's `## High-signal files` section lists
-   files worth loading in full. Read each one now.
-
-3. **Fact candidates.** For each entry in `## Fact candidates`, ask the human:
-   > "Want to promote these N findings as facts?"
-   For any the human approves, invoke the `fact` skill to record it in
-   `~/engineering/facts/` so later `survey`/`dead-reckoning` runs can load it.
-
-4. **Contradictions.** If the report has `## Contradictions with knowledge base`,
-   surface them explicitly before proceeding. These need resolution before the
-   facts can be trusted.
-
-5. **Next step.** The report's `## Entry points for dead-reckoning` names the
-   highest-signal questions for follow-up investigation. Suggest the top one as
-   the next `dead-reckoning` dispatch.
+1. Surface the report, then read every file in its `## High-signal files`.
+2. **Fact candidates** — ask "promote these N findings as facts?"; record approved ones via the `vault` skill so later runs can load them.
+3. **Contradictions** — surface `## Contradictions with knowledge base` explicitly; resolve before trusting the facts.
+4. **Next step** — suggest the top `## Entry points for dead-reckoning` as the next `dead-reckoning` dispatch.

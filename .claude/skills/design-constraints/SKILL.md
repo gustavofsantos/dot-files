@@ -12,9 +12,8 @@ Read [references/guide.md](references/guide.md) for slice definition, violation 
 flocking rules, safe moves, and characterization test guidance.
 
 Two modes. Each emits a constraint block to paste into the issue's `## Context`
-section (the issue is created by the `issue` skill, whose template reserves a spot
-for exactly this block). Once the block is in place, the `tdd` skill implements the
-scenarios under those constraints.
+section (the issue is created by the `vault` skill, whose template reserves a spot
+for it). Once the block is in place, `tdd` implements the scenarios under those constraints.
 
 | Mode | When | Block name |
 |---|---|---|
@@ -25,11 +24,7 @@ scenarios under those constraints.
 
 ## Mode: evolutionary
 
-Build the thinnest vertical slice that integrates all major layers and delivers one piece
-of real behavior. Then grow it. Never design the full system upfront.
-
-A tracer bullet is not a prototype — it is production code, deliberately incomplete,
-that proves the path works end-to-end.
+A tracer bullet is production code, deliberately incomplete, that proves the path works end-to-end — not a prototype. Build the thinnest slice, then grow it; never design the whole system upfront.
 
 ```
 ## Design constraints — evolutionary design
@@ -49,8 +44,7 @@ that proves the path works end-to-end.
 
 ## Mode: refactor
 
-Refactoring is changing structure without changing behavior. The safety net is the test
-suite. If tests aren't green before you start, fix that first.
+Structure changes, behavior doesn't; the test suite is the safety net. If tests aren't green before you start, fix that first.
 
 ```
 ## Design constraints — incremental refactoring
