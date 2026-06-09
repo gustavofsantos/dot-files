@@ -1,0 +1,46 @@
+.claude/skills/user-story-builder/SKILL.md
+  s_94ed569f590b08::t_792bd1347c44f0 28,35,50,56,58
+.claude/skills/deep-review/SKILL.md
+  s_94ed569f590b08::t_4dcf1d0b10b19c 15-33
+.claude/CLAUDE.md
+  s_94ed569f590b08::t_418576f002c98a 31
+  s_94ed569f590b08::t_45e04b6ba9c739 6-12,16,18-29,35-36
+.claude/skills/vault/SKILL.md
+  s_94ed569f590b08::t_3fdab41f2408da 44
+.claude/skills/design-constraints/SKILL.md
+  s_94ed569f590b08::t_b18d52792e1fb8 15,19-20
+.claude/skills/handoff/SKILL.md
+  s_94ed569f590b08::t_75a89cbe9b623a 14-15,52,56
+.claude/settings.json
+  s_94ed569f590b08::t_ec6dd10b536ffa 55-62
+.claude/agents/dead-reckoning.md
+  s_94ed569f590b08::t_0d7d35290a44f3 78
+  s_94ed569f590b08::t_d1e0e231ce1033 27,30,33
+  s_94ed569f590b08::t_447e942c941b24 57
+.claude/skills/tdd/SKILL.md
+  s_94ed569f590b08::t_113b2732612d7f 47
+.claude/skills/outcome-builder/SKILL.md
+  s_94ed569f590b08::t_095212f71216a3 45,51
+CLAUDE.md
+  s_94ed569f590b08::t_60533c8d3291a8 62
+.claude/skills/vault-scout/SKILL.md
+  s_94ed569f590b08::t_18f8be2a89d3c3 13
+.claude/agents/vault-scout.md
+  s_94ed569f590b08::t_6eb48f8e71bab1 9,14,16,24,28-32,35-40,43,47,56-57,61,70,75,80,83,86,89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "717a0742bcea8b843369a65cd1df139b3dd41480",
+  "prompts": {},
+  "sessions": {
+    "s_94ed569f590b08": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "59ffdaaf-7699-48fb-8b27-25fe50e5c500",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
