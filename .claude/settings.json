@@ -93,6 +93,28 @@
     "additionalDirectories": ["~/engineering"]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-hook-session-track"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-hook-session-end"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "",

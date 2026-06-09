@@ -1,52 +1,47 @@
 #!/usr/bin/env bash
-# claude-session-preview — rich fzf preview for claude-* tmux sessions
-# Usage: claude-session-preview <session-name>
-# Called from tmux-sessionizer's --preview hook and from claude-sessions.
+# claude-session-preview — rich fzf preview for a Claude Code session.
+# Usage: claude-session-preview <session-id>
+# Called from claude-sessions' fzf --preview hook.
 #
-# Shows: task/status/dir, the latest checks result for the session, and a
-# live capture of the agent's pane (the pane recorded by the Stop hook).
+# Shows: task/status/dir, the latest checks result for the session (if any),
+# and a live capture of the agent's pane.
 
-SESSION="${1:-}"
-[[ -z "$SESSION" ]] && exit 0
+SID="${1:-}"
+[[ -z "$SID" ]] && exit 0
 
 SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
+STATE="${SESSIONS_DIR}/${SID}.json"
 
 DIM='\033[2m'; BOLD='\033[1m'; RESET='\033[0m'
 
 PANE=""
-if [[ -d "$SESSIONS_DIR" ]] && command -v jq &>/dev/null; then
-  for f in "$SESSIONS_DIR"/*.json; do
-    [[ -f "$f" ]] || continue
-    name=$(jq -r '.track_name // ""' "$f" 2>/dev/null) || continue
-    [[ "$name" == "$SESSION" ]] || continue
+if [[ -f "$STATE" ]] && command -v jq &>/dev/null; then
+  name=$(jq -r '.track_name // ""' "$STATE")
+  task=$(jq -r '.task // ""' "$STATE")
+  status=$(jq -r '.status // "unknown"' "$STATE")
+  dir=$(jq -r '.dir // ""' "$STATE")
+  notifs=$(jq -r '.notifications // 0' "$STATE")
+  PANE=$(jq -r '.pane // ""' "$STATE")
 
-    task=$(jq -r '.task // ""' "$f")
-    status=$(jq -r '.status // "unknown"' "$f")
-    dir=$(jq -r '.dir // ""' "$f")
-    notifs=$(jq -r '.notifications // 0' "$f")
-    PANE=$(jq -r '.pane // ""' "$f")
-
-    [[ -n "$task" ]]   && printf "task    %s\n" "$task"
-    printf "status  %s\n" "$status"
-    [[ -n "$dir" ]]    && printf "dir     %s\n" "$dir"
-    (( notifs > 0 ))   && printf "notifs  %d\n" "$notifs"
-    break
-  done
+  [[ -n "$name" ]]   && printf "name    %s\n" "$name"
+  [[ -n "$task" ]]   && printf "task    %s\n" "$task"
+  printf "status  %s\n" "$status"
+  [[ -n "$dir" ]]    && printf "dir     %s\n" "$dir"
+  (( notifs > 0 ))   && printf "notifs  %d\n" "$notifs"
 fi
 
-# Latest checks result for this session.
+# Latest checks result for this session (best-effort — blank if none).
 if command -v checks-status &>/dev/null; then
-  out=$(checks-status "$SESSION" 2>/dev/null)
+  out=$(checks-status "$SID" 2>/dev/null)
   if [[ -n "$out" ]]; then
     printf "\n${BOLD}checks${RESET}\n"
     printf "%s\n" "$out" | sed 's/^/  /'
   fi
 fi
 
-# Live capture of the agent pane (falls back to a window list).
+# Live capture of the agent pane.
 printf "\n${DIM}── agent pane ──${RESET}\n"
-if [[ -n "$PANE" ]] && tmux has-session -t "$SESSION" 2>/dev/null; then
-  tmux capture-pane -p -t "$PANE" 2>/dev/null | tail -n 30
-else
-  tmux list-windows -t "$SESSION" -F "  #{window_index}  #{window_name}" 2>/dev/null
+if [[ -n "$PANE" ]]; then
+  tmux capture-pane -p -t "$PANE" 2>/dev/null | tail -n 30 \
+    || printf "${DIM}(pane %s no longer exists)${RESET}\n" "$PANE"
 fi
