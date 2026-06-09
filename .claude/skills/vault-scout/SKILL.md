@@ -10,7 +10,7 @@ metadata:
   effort: low
   argument-hint: "[topic]"
   arguments: [topic]
-  allowed-tools: Read Bash(kb-search:*) Bash(kb-peek:*)
+  allowed-tools: Read Bash(rg:*) Bash(fd:*) Bash(awk:*)
 ---
 
 # Vault Scout — dispatch shim

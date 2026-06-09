@@ -41,7 +41,7 @@ same kind of artifact — one concept, one file. No `facts/` dir. No `GLOSSARY.m
 
 ## Operating loop
 
-1. **Search first** — `rg -l <term> ~/engineering/*.md` + `kb-search <term>` before writing
+1. **Search first** — `rg -il 'term' ~/engineering/ --include='*.md' -l` before writing
 2. **Dedup** — if a note covering this concept already exists, update it; never create a duplicate
 3. **Folgezettel check** — does this idea branch from or continue an existing note? If yes, link with `Parent: [[Existing Note]]`
 4. **Ask only what's missing** — don't interrogate; fill gaps conversationally and write

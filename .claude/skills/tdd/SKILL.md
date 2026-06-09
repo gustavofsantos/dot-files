@@ -44,4 +44,4 @@ When all tasks are checked, hand the branch to `deep-review` before merge, plus 
 
 ## Discipline
 
-Follow the test philosophy in `.claude/rules/tests.md` — one failing test at a time, never test private methods, no conditionals/loops in tests. When test friction appears (hard to instantiate, many mocks, setup > assertion), stop and redesign before continuing.
+When test friction appears (hard to instantiate, many mocks, setup > assertion), stop and redesign per `.claude/rules/tests.md`.

@@ -59,4 +59,4 @@ Plugin configs live in `config/nvim/lua/plugins/*.config.lua`. Leader is `<Space
 
 ## Engineering knowledge base
 
-See `.claude/CLAUDE.md` (already loaded as project instructions) for the `~/engineering/` KB retrieval protocol — `kb-index`, `kb-search`, `kb-peek`.
+See `.claude/CLAUDE.md` (already loaded as project instructions) for the `~/engineering/` KB retrieval protocol.

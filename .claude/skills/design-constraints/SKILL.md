@@ -12,19 +12,16 @@ Read [references/guide.md](references/guide.md) for slice definition, violation 
 flocking rules, safe moves, and characterization test guidance.
 
 Two modes. Each emits a constraint block to paste into the issue's `## Context`
-section (the issue is created by the `vault` skill, whose template reserves a spot
-for it). Once the block is in place, `tdd` implements the scenarios under those constraints.
+section. Once placed, `tdd` implements the scenarios under those constraints.
 
 | Mode | When | Block name |
 |---|---|---|
-| `evolutionary` | New feature, module, or integration. Path through layers is unproven. | `## Design constraints — evolutionary design` |
-| `refactor` | Code is being restructured without changing behavior. Tests are the safety net. | `## Design constraints — incremental refactoring` |
+| `evolutionary` | New feature, module, or integration | `## Design constraints — evolutionary design` |
+| `refactor` | Restructuring without changing behavior | `## Design constraints — incremental refactoring` |
 
 ---
 
 ## Mode: evolutionary
-
-A tracer bullet is production code, deliberately incomplete, that proves the path works end-to-end — not a prototype. Build the thinnest slice, then grow it; never design the whole system upfront.
 
 ```
 ## Design constraints — evolutionary design
@@ -43,8 +40,6 @@ A tracer bullet is production code, deliberately incomplete, that proves the pat
 ---
 
 ## Mode: refactor
-
-Structure changes, behavior doesn't; the test suite is the safety net. If tests aren't green before you start, fix that first.
 
 ```
 ## Design constraints — incremental refactoring

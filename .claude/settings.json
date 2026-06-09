@@ -52,6 +52,14 @@
       "Bash(mkdir *)",
       "Bash(wget *)",
       "Bash(which *)",
+      "Bash(rg *)",
+      "Bash(fd *)",
+      "Bash(find *)",
+      "Bash(awk *)",
+      "Bash(grep *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(sed *)",
       "ExitPlanMode(*)",
       "WebFetch(domain:*)",
       "WebSearch"
@@ -85,26 +93,6 @@
     "additionalDirectories": ["~/engineering"]
   },
   "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Read|Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "kb-fact-track"
-          }
-        ]
-      },
-      {
-        "matcher": "Write|Edit|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "claude-hook-vault-lint"
-          }
-        ]
-      }
-    ],
     "Stop": [
       {
         "matcher": "",

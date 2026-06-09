@@ -24,13 +24,13 @@ fd -t f '<entry-point-pattern>' . 2>/dev/null | head -10
 
 ## Step 2 — Load knowledge context
 
-Before reading code, search facts for 3–5 key nouns from the question (best-effort lexical; paraphrases may not surface):
+Before reading code, search root notes for 3–5 key nouns from the question:
 
 ```bash
-rg -l --ignore-case "TERM1|TERM2|TERM3" ~/engineering/facts/ 2>/dev/null | head -8
+rg -il "TERM1|TERM2|TERM3" ~/engineering/*.md 2>/dev/null | head -8
 ```
 
-Cite only directly-relevant facts as `[[FACT-NNN-slug]]`. They become axioms — stated, not re-derived.
+Cite only directly-relevant notes as `[[Note Title]]`. They become axioms — stated, not re-derived.
 
 ## Step 3 — Load git context
 
@@ -54,7 +54,7 @@ Read code for behavior. Follow the call chain at most **5 levels** from each ent
 ```
 [A{n}] <Behavioral claim in domain/architecture terms>
        ↳ Anchored at: <file:line or function>
-       ↳ Depends on: <[[FACT-NNN-slug]] or prior claim — omit if none>
+       ↳ Depends on: <[[Note Title]] or prior claim — omit if none>
 
 [SCOPE-{n}] Did not traverse: <branch> — <out of scope | depth limit | separate question>
 [DYNAMIC-{n}] Dynamic dispatch at <location> — cannot resolve statically.
@@ -75,7 +75,7 @@ Return exactly this. No preamble. Omit `Ignored scope`, `Dynamic paths`, `Fact c
 
 **Central question:** <one sentence>
 **Entry points:** <comma-separated>
-**Axioms loaded:** <[[FACT-NNN-slug]] list, or "(none)">
+**Axioms loaded:** <[[Note Title]] list, or "(none)">
 
 ## Answer
 <Direct answer, referencing claim IDs and fact links. "Cannot determine" is valid if a genuine edge was reached — explain why.>

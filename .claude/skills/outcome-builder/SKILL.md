@@ -42,19 +42,13 @@ Lead with the high-contrast **Outcome Anchor** so it constrains later prompts.
 - [ ] [Boundary Condition/Constraint] (Max 4 total)
 ```
 
-### Rules for Drafting
-* **Mechanism-Agnostic Criteria:** Do not include implementation steps in the criteria (e.g., use "User receives confirmation" instead of "Database writes status to active and sends SendGrid webhook").
-* **Anchor Rigor:** Ensure the `ASSERT` line is clean, single-line, and clearly distinguishes the outcome from the path.
-
-Present the draft and ask: *"Does this outcome assertion and verification define success accurately? Can we find a simpler path?"*
+Rules: criteria must be mechanism-agnostic (use "User receives confirmation", not "Database writes status"). The `ASSERT` line must be single-line and clearly separate outcome from path.
 
 ---
 
 ## Phase 3 — Decompose into Outcome-Aligned Tasks
 
-Decompose the story into atomic tasks (max 7). Each task must focus on building towards the assertion, leaving room for path adjustment if friction is met.
-
-Template per task:
+Decompose into atomic tasks (max 7). Each must focus on the assertion, leaving room for path adjustment.
 
 ```markdown
 ### Task [N]: [Short Title]
@@ -67,8 +61,6 @@ Template per task:
 **Done when:**
 - [ ] [Verifiable condition — max 2]
 ```
-
-Present the tasks and ask: *"Does this breakdown make sense? Are we over-engineering any step?"*
 
 ---
 
