@@ -15,11 +15,11 @@ metadata:
 
 # Vault Scout — dispatch shim
 
-Dispatches knowledge recall to the **`vault-scout` subagent** (`agents/vault-scout.md`, runs on a cheap model), keeping the vault search and note reads out of the main session. Complements `dead-reckoning`: that one investigates code behavior, this one recalls stored knowledge.
+Dispatches knowledge recall to **Mira** (`agents/mira.md`, runs on a cheap model), keeping the vault search and note reads out of the main session. Complements Finn (dead-reckoning): that one investigates code behavior, this one recalls stored knowledge.
 
 ```
 Agent(
-  subagent_type: "vault-scout",
+  subagent_type: "mira",
   description: "Scout vault: <topic>",
   prompt: "Topic/scope: <from $ARGUMENTS or the current investigation>.
            Context: <what the planning session is trying to figure out — verbatim>.
@@ -31,5 +31,5 @@ Agent(
 
 1. Surface the report, then read any artifact in its `## Highest-signal artifacts to read in full` worth loading.
 2. **Known** items become established ground for the plan — cite the notes/issues rather than re-deriving them.
-3. **Unknown** items are the planning targets: feed open questions into the issue's `## Open questions` (via `vault`), and route a genuine code-behavior unknown to `dead-reckoning`.
+3. **Unknown** items are the planning targets: feed open questions into the issue's `## Open questions` (via `vault`), and route a genuine code-behavior unknown to Finn (dead-reckoning).
 4. Concepts the scout found named but unwritten are candidates for new `vault` notes once confirmed.

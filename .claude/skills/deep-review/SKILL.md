@@ -17,7 +17,7 @@ Identify the target from `$ARGUMENTS` or conversation: branch range, file path, 
 Dispatch:
 ```
 Agent(
-  subagent_type: "deep-review",
+  subagent_type: "victor",
   description: "Deep review of <target>",
   prompt: "Run the two-phase deep review on: **<target>**.
            References in the `deep-review` skill's `references/` dir — locate with

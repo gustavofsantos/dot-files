@@ -13,11 +13,11 @@ metadata:
 
 # Survey — dispatch shim
 
-Dispatches discovery to the **`survey` subagent** (`agents/survey.md`), which reads the repo across three zones (Identity, Config, Integration) and correlates with the KB. Two subagents can run concurrently on orthogonal focuses (e.g. config/infra vs. integration/entrypoints).
+Dispatches discovery to **Robin** (`agents/robin.md`), which reads the repo across three zones (Identity, Config, Integration) and correlates with the KB. Two subagents can run concurrently on orthogonal focuses (e.g. config/infra vs. integration/entrypoints).
 
 ```
 Agent(
-  subagent_type: "survey",
+  subagent_type: "robin",
   description: "Survey: <project name or focus>",
   prompt: "Repo root: <cwd or git root>.
            Focus: <$ARGUMENTS or 'general'>.
@@ -30,4 +30,4 @@ Agent(
 1. Surface the report, then read every file in its `## High-signal files`.
 2. **Fact candidates** — ask "promote these N findings as facts?"; record approved ones via the `vault` skill so later runs can load them.
 3. **Contradictions** — surface `## Contradictions with knowledge base` explicitly; resolve before trusting the facts.
-4. **Next step** — suggest the top `## Entry points for dead-reckoning` as the next `dead-reckoning` dispatch.
+4. **Next step** — suggest the top `## Entry points for dead-reckoning` as the next Finn (dead-reckoning) dispatch.

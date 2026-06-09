@@ -13,11 +13,11 @@ metadata:
 
 # Dead Reckoning — dispatch shim
 
-Dispatches investigation to the **`dead-reckoning` subagent** (`agents/dead-reckoning.md`), keeping the file reads and rg searches out of the main session.
+Dispatches investigation to **Finn** (`agents/finn.md`), keeping the file reads and rg searches out of the main session.
 
 ```
 Agent(
-  subagent_type: "dead-reckoning",
+  subagent_type: "finn",
   description: "Investigate: <central question>",
   prompt: "Central question: <from $ARGUMENTS or inferred>.
            Entry points: <files, functions, or symbols if provided>.
