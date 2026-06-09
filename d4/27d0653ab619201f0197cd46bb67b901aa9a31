@@ -1,0 +1,23 @@
+.claude/rules/tests.md
+  s_942c2397626df6::t_10c963c6e20198 1-28
+.claude/rules/design.md
+  s_942c2397626df6::t_3dd4884834a517 1-11
+scripts/install-skills.sh
+  s_942c2397626df6::t_835c3443cd74d3 39-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "d427d0653ab619201f0197cd46bb67b901aa9a31",
+  "prompts": {},
+  "sessions": {
+    "s_942c2397626df6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d0608637-b18b-48c2-b691-7d95e140076b",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
