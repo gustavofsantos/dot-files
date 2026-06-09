@@ -15,10 +15,20 @@ fi
 if [[ $# -eq 1 ]]; then
     selected=$1
 else
+    _preview='if tmux has-session -t {} 2>/dev/null; then
+                if [[ {} == claude-* ]]; then
+                  claude-session-preview {}
+                else
+                  tmux list-windows -t {} -F "  #{window_index}  #{window_name}"
+                fi
+              elif [[ -d {} ]]; then
+                ls -1 {} | head -20
+              fi'
+
     if [[ "$sessions_only" == true ]]; then
         selected=$(tmux ls -F "#{session_name}" 2>/dev/null | fzf --height 100% --prompt='→ ' --select-1 --exit-0 \
               --preview-window 'right:40%' \
-              --preview 'tmux list-windows -t {} -F "#{window_index} #{window_name}" 2>/dev/null')
+              --preview "$_preview")
     else
         selected=$( (
             tmux ls -F "#{session_name}"
@@ -30,11 +40,7 @@ else
             find ~/Workplace/backend-services/applications -mindepth 1 -maxdepth 1 -type d
         ) | fzf --height 100% --prompt='→ ' --select-1 --exit-0 \
               --preview-window 'right:40%' \
-              --preview 'if tmux has-session -t {} 2>/dev/null; then
-                           tmux list-windows -t {} -F "#{window_index} #{window_name}"
-                         elif [[ -d {} ]]; then
-                           ls -1 {} | head -20
-                         fi')
+              --preview "$_preview")
     fi
 fi
 
