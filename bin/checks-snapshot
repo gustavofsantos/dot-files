@@ -27,6 +27,9 @@ SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
 command -v jq &>/dev/null || exit 0
 git -C "$DIR" rev-parse --is-inside-work-tree &>/dev/null || exit 0
 
+# Only repos enrolled in the global registry (~/.checks.yml) run checks.
+checks-config --registered "$DIR" 2>/dev/null || exit 0
+
 HASH=$(checks-hash "$DIR" 2>/dev/null) || exit 0
 [[ -z "$HASH" ]] && exit 0
 

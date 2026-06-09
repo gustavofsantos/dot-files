@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# checks-config — resolve the checks for the repository owning a directory.
+#
+# Usage:
+#   checks-config [DIR]        # emit that repo's checks as JSON; exit 1 if the
+#                              # repo is not registered in ~/.checks.yml
+#   checks-config --registered [DIR]   # exit 0/1 only, no output
+#
+# The single global registry ~/.checks.yml enumerates which repositories run
+# checks and what those checks are:
+#
+#   repositories:
+#     - path: ~/dot-files
+#       checks:
+#         - name: settings-json
+#           command: jq -e . .claude/settings.json >/dev/null
+#
+# A repo is matched by path against either its main working tree or the current
+# working tree, so every worktree of a registered repo is covered automatically.
+# ~/.checks.local.yml (same shape) overlays by check name for machine-specific
+# checks.
+
+set -euo pipefail
+
+CHECKS_CONFIG="${CHECKS_CONFIG:-${HOME}/.checks.yml}"
+CHECKS_CONFIG_LOCAL="${CHECKS_CONFIG_LOCAL:-${HOME}/.checks.local.yml}"
+
+QUIET=false
+DIR="$PWD"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --registered) QUIET=true; shift ;;
+    -h|--help) grep '^#' "$0" | sed '1d;s/^# \?//'; exit 0 ;;
+    *) DIR="$1"; shift ;;
+  esac
+done
+
+command -v jq &>/dev/null || { echo "checks-config: jq required" >&2; exit 2; }
+
+# Read a jq filter against a YAML file, emitting JSON. Works with both yq
+# flavors: mikefarah (needs -o=json) and python/kislyuk (jq wrapper, JSON by
+# default). Returns the first invocation that yields valid JSON.
+yaml_to_json() {
+  local filter="$1" file="$2" out
+  if out=$(yq -o=json "$filter" "$file" 2>/dev/null) && jq -e . <<<"$out" &>/dev/null; then
+    printf '%s' "$out"; return 0
+  fi
+  if out=$(yq "$filter" "$file" 2>/dev/null) && jq -e . <<<"$out" &>/dev/null; then
+    printf '%s' "$out"; return 0
+  fi
+  return 1
+}
+
+# Canonical paths identifying the repo that owns DIR: the current working tree
+# and, for worktrees, the main working tree (parent of the shared git dir).
+git -C "$DIR" rev-parse --is-inside-work-tree &>/dev/null || exit 1
+REPO_ROOT=$(git -C "$DIR" rev-parse --show-toplevel 2>/dev/null || true)
+COMMON=$(git -C "$DIR" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)
+[[ -z "$COMMON" ]] && COMMON=$(git -C "$DIR" rev-parse --git-common-dir 2>/dev/null || true)
+MAIN_ROOT=""
+[[ -n "$COMMON" ]] && MAIN_ROOT=$(cd "$(dirname "$COMMON")" 2>/dev/null && pwd || true)
+
+norm() { [[ -z "$1" ]] && return; ( cd "${1/#\~/$HOME}" 2>/dev/null && pwd ) || echo "${1/#\~/$HOME}"; }
+REPO_ROOT=$(norm "$REPO_ROOT")
+MAIN_ROOT=$(norm "$MAIN_ROOT")
+
+[[ -f "$CHECKS_CONFIG" ]] || exit 1
+
+# Find the registry entry whose normalized path matches either root, emit its checks.
+entry_checks() {
+  local file="$1" repos
+  repos=$(yaml_to_json '.repositories // []' "$file") || return 1
+  [[ -z "$repos" || "$repos" == "null" ]] && return 1
+  local n i p
+  n=$(jq 'length' <<<"$repos")
+  for ((i = 0; i < n; i++)); do
+    p=$(norm "$(jq -r ".[$i].path // empty" <<<"$repos")")
+    [[ -z "$p" ]] && continue
+    if [[ "$p" == "$REPO_ROOT" || ( -n "$MAIN_ROOT" && "$p" == "$MAIN_ROOT" ) ]]; then
+      jq -c ".[$i].checks // []" <<<"$repos"; return 0
+    fi
+  done
+  return 1
+}
+
+BASE=$(entry_checks "$CHECKS_CONFIG") || { $QUIET && exit 1; echo "checks-config: ${REPO_ROOT:-$DIR} not registered in $CHECKS_CONFIG" >&2; exit 1; }
+$QUIET && exit 0
+
+LOCAL="[]"
+[[ -f "$CHECKS_CONFIG_LOCAL" ]] && LOCAL=$(entry_checks "$CHECKS_CONFIG_LOCAL" || echo "[]")
+
+# Merge: a local check overrides the base check of the same name; new ones append.
+jq -n --argjson b "${BASE:-[]}" --argjson l "${LOCAL:-[]}" '
+  ($l | map(.name)) as $ln
+  | ($b | map(select(.name as $n | ($ln | index($n)) | not))) + $l
+'

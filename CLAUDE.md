@@ -43,13 +43,14 @@ The `.claude/settings.json` merges into the global `~/.claude/settings.json` on 
 
 ## Agent checks
 
-A repo can carry a `.checks.yml` (root, committed) defining named checks — each a `name` + a `command`, modeled on the hooks shape. After every agent turn the `Stop` hook fires `checks-snapshot`, which hashes the changed tracked files (`checks-hash`), versions them under `~/.checks/<session>/<hash>/`, and spawns `checks-runner` detached to run the checks and write `results.json`. The agent reads them via `checks-status` (taught by the `checks` skill). `.checks.local.yml` (gitignored) overlays by name for machine-specific checks; worktrees inherit both via `git-add-worktree`.
+A single global registry, `~/.checks.yml`, enrolls the repositories that run checks after each agent turn and defines them — each check a `name` + a `command`, modeled on the hooks shape. Repos are matched by `path` (main working tree), so every worktree is covered; unregistered repos are skipped. After every agent turn the `Stop` hook fires `checks-snapshot`, which (for enrolled repos) hashes the changed tracked files (`checks-hash`), versions them under `~/.checks/<session>/<hash>/`, and spawns `checks-runner` detached to run the checks and write `results.json`. The agent reads them via `checks-status` (taught by the `checks` skill). `~/.checks.local.yml` (same shape) overlays a repo's checks by name for machine-specific checks. `create-local-files.sh` seeds an empty `~/.checks.yml`.
 
 | Script | What it does |
 |--------|--------------|
 | `checks-hash` | Stable content hash of tracked working-dir changes vs `HEAD` |
-| `checks-snapshot` | `Stop` hook: version changes, fire the runner (no-op if unchanged) |
-| `checks-runner` | Run `.checks.yml` checks for a snapshot; `--watch` for daemon mode |
+| `checks-config` | Resolve a repo's checks from `~/.checks.yml` (handles worktrees); `--registered` for an enrolment check |
+| `checks-snapshot` | `Stop` hook: version changes for enrolled repos, fire the runner (no-op if unchanged) |
+| `checks-runner` | Run a snapshot's checks; `--watch` for daemon mode |
 | `checks-status` | Show the latest result for a session/repo (`--json`, `--oneline`) |
 
 Session navigation (`claude-sessions`, `bind a` in tmux) lists running agent sessions with their last checks result, previews the live agent pane, and jumps straight to the pane running the agent.
