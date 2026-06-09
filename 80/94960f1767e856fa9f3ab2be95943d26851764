@@ -1,0 +1,21 @@
+.claude/rules/design.md
+  s_94ed569f590b08::t_bf438b2b3988f5 3-4
+.claude/rules/tests.md
+  s_94ed569f590b08::t_e916900aac8a87 3-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "8094960f1767e856fa9f3ab2be95943d26851764",
+  "prompts": {},
+  "sessions": {
+    "s_94ed569f590b08": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "59ffdaaf-7699-48fb-8b27-25fe50e5c500",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
