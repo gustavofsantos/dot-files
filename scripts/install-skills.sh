@@ -36,6 +36,15 @@ for theme in "$DOTFILES_DIR"/.claude/themes/*.json; do
 done
 echo "Installing custom themes... OK"
 
+echo "Installing custom rules..."
+mkdir -p "$HOME/.claude/rules"
+for rule in "$DOTFILES_DIR"/.claude/rules/*.md; do
+  [ -f "$rule" ] || continue
+  name=$(basename "$rule")
+  ln -sf "$rule" "$HOME/.claude/rules/$name"
+done
+echo "Installing custom rules... OK"
+
 echo "Merging Claude settings..."
 DOTFILES_SETTINGS="$DOTFILES_DIR/.claude/settings.json"
 GLOBAL_SETTINGS="$HOME/.claude/settings.json"
