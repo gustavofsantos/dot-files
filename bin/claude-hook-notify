@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# claude-hook-notify — Stop + Notification hook: update session state and notify
+#
+# Wire in .claude/settings.json:
+#   "Stop":         [{"type":"command","command":"claude-hook-notify"}]
+#   "Notification": [{"type":"command","command":"claude-hook-notify"}]
+#
+# Claude Code injects $CLAUDE_SESSION_ID into the hook environment.
+# claude-run exports: $CLAUDE_TRACK_NAME, $CLAUDE_TRACK_TASK, $CLAUDE_TRACK_DIR.
+# Sessions started without claude-run still get a state file written here,
+# using the current tmux window name as the track name.
+
+set -euo pipefail
+
+INPUT=$(cat)
+SESSION_ID="${CLAUDE_SESSION_ID:-}"
+TRACK_NAME="${CLAUDE_TRACK_NAME:-}"
+TRACK_TASK="${CLAUDE_TRACK_TASK:-}"
+TRACK_DIR="${CLAUDE_TRACK_DIR:-${PWD}}"
+SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
+
+# Need jq — bail silently if missing (notification still sent below)
+if ! command -v jq &>/dev/null; then
+  command -v claude-notify &>/dev/null && claude-notify "Claude" "Done" --sound || printf '\a'
+  exit 0
+fi
+
+# Determine hook type from payload shape
+if printf '%s' "$INPUT" | jq -e 'has("stop_hook_active")' &>/dev/null; then
+  HOOK_TYPE="stop"
+  NOTIF_MSG="Done — waiting for your input"
+elif printf '%s' "$INPUT" | jq -e 'has("message")' &>/dev/null; then
+  HOOK_TYPE="notification"
+  NOTIF_MSG=$(printf '%s' "$INPUT" | jq -r '.message // "Notification"')
+else
+  exit 0
+fi
+
+NOTIF_TITLE="${TRACK_NAME:-Claude}"
+NOW=$(date +%s)
+
+# Write or update the session state file (keyed by CLAUDE_SESSION_ID)
+if [[ -n "$SESSION_ID" ]]; then
+  mkdir -p "$SESSIONS_DIR"
+  STATE="${SESSIONS_DIR}/${SESSION_ID}.json"
+
+  if [[ -f "$STATE" ]]; then
+    TMP=$(mktemp)
+    jq --arg s "waiting" --argjson ts "$NOW" \
+      '.status = $s | .last_activity = $ts | .notifications = ((.notifications // 0) + 1)' \
+      "$STATE" > "$TMP" && mv "$TMP" "$STATE"
+  else
+    # First hook fire for this session — seed from env vars + tmux context
+    WINDOW=$(tmux display-message -p '#{window_name}' 2>/dev/null || echo "$TRACK_NAME")
+    jq -n \
+      --arg  sid  "$SESSION_ID" \
+      --arg  name "${TRACK_NAME:-$WINDOW}" \
+      --arg  task "$TRACK_TASK" \
+      --arg  dir  "$TRACK_DIR" \
+      --argjson ts "$NOW" \
+      '{session_id:$sid, track_name:$name, task:$task, dir:$dir,
+        status:"waiting", started_at:$ts, last_activity:$ts, notifications:1}' \
+      > "$STATE"
+  fi
+fi
+
+# Mark the tmux window as waiting (⊡ prefix)
+if [[ -n "${TMUX_PANE:-}" ]]; then
+  tmux rename-window -t "$TMUX_PANE" "⊡ ${TRACK_NAME:-claude}" 2>/dev/null || true
+fi
+
+# Dispatch notification
+command -v claude-notify &>/dev/null \
+  && claude-notify "$NOTIF_TITLE" "$NOTIF_MSG" --sound \
+  || printf '\a'
+
+exit 0

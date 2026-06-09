@@ -36,6 +36,9 @@
       "Bash(uniq *)",
       "Bash(wc *)",
       "Bash(yq *)",
+      "Bash(tmux *)",
+      "Bash(claude-run *)",
+      "Bash(claude-sessions *)",
       "Bash(brew info *)",
       "Bash(brew list *)",
       "Bash(npm *)",
@@ -100,6 +103,24 @@
             "command": "claude-hook-vault-lint"
           }
         ]
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "claude-hook-notify"
+      }
+    ],
+    "Notification": [
+      {
+        "type": "command",
+        "command": "claude-hook-notify"
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "type": "command",
+        "command": "claude-hook-session-track"
       }
     ]
   },

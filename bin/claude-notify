@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# claude-notify — cross-platform desktop + tmux notification
+# Usage: claude-notify <title> <message> [--sound]
+
+TITLE="${1:-Claude}"
+MESSAGE="${2:-}"
+SOUND=false
+[[ "${3:-}" == "--sound" ]] && SOUND=true
+
+_notify_macos() {
+  local msg ttl sound=""
+  msg="${MESSAGE//\"/\'}"
+  ttl="${TITLE//\"/\'}"
+  $SOUND && sound=' sound name "Glass"'
+  osascript -e "display notification \"$msg\" with title \"$ttl\"$sound" 2>/dev/null || true
+  $SOUND && afplay /System/Library/Sounds/Glass.aiff 2>/dev/null &
+}
+
+_notify_linux() {
+  command -v notify-send &>/dev/null \
+    && notify-send --urgency=normal -- "$TITLE" "$MESSAGE" 2>/dev/null || true
+  if $SOUND; then
+    paplay /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null \
+      || aplay /usr/share/sounds/freedesktop/stereo/bell.oga 2>/dev/null \
+      || true
+  fi
+}
+
+_notify_tmux() {
+  [[ -z "${TMUX:-}" ]] && return
+  printf '\a'
+  tmux display-message "${TITLE}: ${MESSAGE}" 2>/dev/null || true
+}
+
+case "$(uname -s)" in
+  Darwin) _notify_macos ;;
+  Linux)  _notify_linux ;;
+esac
+
+_notify_tmux

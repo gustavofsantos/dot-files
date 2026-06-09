@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# claude-run-prompt — popup task prompt → claude-run
+#
+# Called from tmux:
+#   bind C display-popup -w 60% -h 25% \
+#     -e "CLAUDE_TASK_DIR=#{pane_current_path}" -E "claude-run-prompt"
+#
+# The session is created detached; use C-a a (claude-sessions) to attach later.
+
+DIR="${CLAUDE_TASK_DIR:-$PWD}"
+PROJECT=$(basename "$DIR")
+SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
+COUNT=$(ls "$SESSIONS_DIR"/*.json 2>/dev/null | wc -l | tr -d ' ')
+
+printf "  project  %s\n" "$PROJECT"
+(( COUNT > 0 )) && printf "  sessions %s active\n" "$COUNT"
+printf "\n"
+
+IFS= read -e -r -p "  task › " TASK
+
+if [[ -z "$TASK" ]]; then
+  exit 0
+fi
+
+NAME=$(claude-run --no-attach -d "$DIR" -t "$TASK" 2>&1 | grep '^session:' | awk '{print $2}')
+printf "\n  started  %s\n" "${NAME:-session}"
+printf "  switch   C-a a\n"
+sleep 1

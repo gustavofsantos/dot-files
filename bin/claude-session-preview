@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# claude-session-preview — rich fzf preview for claude-* tmux sessions
+# Usage: claude-session-preview <session-name>
+# Called from tmux-sessionizer's --preview hook.
+
+SESSION="${1:-}"
+[[ -z "$SESSION" ]] && exit 0
+
+SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
+
+if [[ -d "$SESSIONS_DIR" ]] && command -v jq &>/dev/null; then
+  for f in "$SESSIONS_DIR"/*.json; do
+    [[ -f "$f" ]] || continue
+    name=$(jq -r '.track_name // ""' "$f" 2>/dev/null) || continue
+    [[ "$name" == "$SESSION" ]] || continue
+
+    task=$(jq -r '.task // ""' "$f")
+    status=$(jq -r '.status // "unknown"' "$f")
+    dir=$(jq -r '.dir // ""' "$f")
+    notifs=$(jq -r '.notifications // 0' "$f")
+
+    [[ -n "$task" ]]   && printf "task    %s\n" "$task"
+    printf "status  %s\n" "$status"
+    [[ -n "$dir" ]]    && printf "dir     %s\n" "$dir"
+    (( notifs > 0 ))   && printf "notifs  %d\n" "$notifs"
+    printf "\n"
+    break
+  done
+fi
+
+tmux list-windows -t "$SESSION" -F "  #{window_index}  #{window_name}" 2>/dev/null
