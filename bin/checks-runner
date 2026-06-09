@@ -25,34 +25,11 @@ need() { command -v "$1" &>/dev/null || { echo "checks-runner: missing $1" >&2; 
 need jq
 need yq
 
-# ── config loading ────────────────────────────────────────────────────────────
-
-# Read a jq filter against a YAML file, emitting JSON. Works with both yq
-# flavors: mikefarah (needs -o=json) and python/kislyuk (jq wrapper, JSON by
-# default). Returns the first invocation that yields valid JSON.
-yaml_to_json() {
-  local filter="$1" file="$2" out
-  if out=$(yq -o=json "$filter" "$file" 2>/dev/null) && jq -e . <<<"$out" &>/dev/null; then
-    printf '%s' "$out"; return 0
-  fi
-  if out=$(yq "$filter" "$file" 2>/dev/null) && jq -e . <<<"$out" &>/dev/null; then
-    printf '%s' "$out"; return 0
-  fi
-  return 1
-}
-
-# Echo the merged checks config (as JSON) for a repo dir, or nothing if absent.
-# A check in .checks.local.yml with the same name overrides the committed one;
-# local-only checks are appended.
+# Resolved checks for the repo owning $dir come from the global registry
+# (~/.checks.yml), via checks-config — which also handles worktrees and the
+# local overlay. Empty JSON array when the repo isn't registered.
 load_checks() {
-  local dir="$1" base="" local=""
-  [[ -f "$dir/.checks.yml" ]]       && base=$(yaml_to_json '.checks // []' "$dir/.checks.yml")
-  [[ -f "$dir/.checks.local.yml" ]] && local=$(yaml_to_json '.checks // []' "$dir/.checks.local.yml")
-  base="${base:-[]}"; local="${local:-[]}"
-  jq -n --argjson b "$base" --argjson l "$local" '
-    ($l | map(.name)) as $ln
-    | ($b | map(select(.name as $n | ($ln | index($n)) | not))) + $l
-  '
+  checks-config "$1" 2>/dev/null || echo '[]'
 }
 
 # ── single snapshot run ───────────────────────────────────────────────────────

@@ -68,20 +68,28 @@ Raw storage, if you need it directly:
    reproduce it, fix the root cause, and let the next turn's run confirm green.
 3. Don't claim the work is done while checks are red — say what failed.
 
-## Configuring checks (`.checks.yml`)
+## Configuring checks (`~/.checks.yml`)
 
-Each check is a `name` + a `command` (same shape as Claude Code hooks). Lives
-at the repo root, committed so worktrees inherit it. Add machine-specific or
-secret checks to `.checks.local.yml` (gitignored); it overlays by name.
+One global registry, `~/.checks.yml`, enrolls the repositories that run checks
+and defines them. A repo only runs checks if it's listed here — unregistered
+repos are skipped entirely. Repos are matched by `path` (the main working
+tree), so every worktree of a registered repo is covered automatically.
 
 ```yaml
-checks:
-  - name: typecheck
-    command: npm run typecheck
-  - name: lint
-    command: lintchanged
-  - name: unit
-    command: npm test
+repositories:
+  - path: ~/dot-files
+    checks:
+      - name: settings-json
+        command: jq -e . .claude/settings.json >/dev/null
+  - path: ~/Workplace/backend-services
+    checks:
+      - name: typecheck
+        command: npm run typecheck
+      - name: unit
+        command: npm test
 ```
 
-Commands run with the repo as cwd. Keep them fast — they run after every turn.
+Each check is a `name` + a `command` (same shape as Claude Code hooks), run
+with the repo as cwd. Keep them fast — they run after every turn. Machine-
+specific or secret checks go in `~/.checks.local.yml` (same shape); it overlays
+the matching repo's checks by name.
