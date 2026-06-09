@@ -52,7 +52,7 @@ A repo can carry a `.checks.yml` (root, committed) defining named checks — eac
 | `checks-runner` | Run `.checks.yml` checks for a snapshot; `--watch` for daemon mode |
 | `checks-status` | Show the latest result for a session/repo (`--json`, `--oneline`) |
 
-Session navigation (`claude-sessions`, `bind a` in tmux) lists running agent sessions with their last checks result, previews the live agent pane, and jumps straight to the pane running the agent.
+Session navigation is independent of checks. A `SessionStart`/`UserPromptSubmit` hook (`claude-hook-session-track`) registers *every* Claude session — however launched — into `~/.claude-sessions/<id>.json` with the exact tmux pane it runs in; `SessionEnd` (`claude-hook-session-end`) marks it ended. `claude-sessions` (`bind a` in tmux) lists them, keys liveness on whether that pane still exists, previews the live agent pane (plus its last checks result, if any), and Enter jumps straight to the pane running the agent. Works for a bare `claude` in any pane, not just `claude-run` sessions.
 
 ## Neovim config
 

@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
 """
-claude-sessions — interactive fzf picker for tracked Claude Code sessions.
+claude-sessions — interactive fzf picker for live Claude Code sessions.
 
 Usage:
-  claude-sessions          # fzf picker → attach on Enter
+  claude-sessions          # fzf picker → jump to the agent's pane on Enter
   claude-sessions --list   # print sessions to stdout and exit
 
-State files live in ~/.claude-sessions/<CLAUDE_SESSION_ID>.json (written by
-claude-hook-notify). Each file records: session_id, track_name, task, dir,
-status, started_at, last_activity, notifications.
+State files live in ~/.claude-sessions/<session_id>.json, written by the
+SessionStart/UserPromptSubmit hook (claude-hook-session-track) for *every*
+Claude session — however it was launched. Each file records the exact tmux
+pane the session runs in: { session_id, track_name, task, dir, pane, status,
+started_at, last_activity, notifications }.
 
-The track_name field matches the tmux session name created by claude-run.
-Untracked tmux sessions whose names start with "claude-" are also surfaced.
+Liveness and jumping are pane-based: a session is alive if its recorded pane
+still exists, and Enter switches to that pane's session and selects the pane —
+so this works for a bare `claude` in any pane, not just claude-run sessions.
 
 Keybindings in fzf:
-  Enter   attach to selected session
+  Enter   jump to the agent's pane
   Esc/q   dismiss
 """
 
@@ -36,25 +39,39 @@ RESET  = "\033[0m"
 ALIVE  = f"{GREEN}●{RESET}"
 DEAD   = f"{DIM}○{RESET}"
 
-STATUS_ORDER = {"running": 0, "waiting": 1, "gone": 2, "done": 3, "unknown": 4}
+STATUS_ORDER = {"running": 0, "waiting": 1, "gone": 2, "ended": 3, "done": 4, "unknown": 5}
 STATUS_COLOR = {
     "running": f"{GREEN}running{RESET}",
     "waiting": f"{YELLOW}waiting{RESET}",
     "gone":    f"{DIM}gone{RESET}",
+    "ended":   f"{DIM}ended{RESET}",
     "done":    f"{DIM}done{RESET}",
     "unknown": f"{DIM}?{RESET}",
 }
 
 
-def tmux_live_sessions() -> set[str]:
+def tmux_live_panes() -> set[str]:
+    """All currently-existing tmux pane ids (e.g. '%12')."""
     try:
         out = subprocess.check_output(
-            ["tmux", "list-sessions", "-F", "#{session_name}"],
+            ["tmux", "list-panes", "-a", "-F", "#{pane_id}"],
             stderr=subprocess.DEVNULL, text=True,
         )
         return set(out.strip().splitlines())
     except (subprocess.CalledProcessError, FileNotFoundError):
         return set()
+
+
+def pane_session(pane: str) -> str | None:
+    """The tmux session name owning a pane id, or None."""
+    try:
+        out = subprocess.check_output(
+            ["tmux", "display-message", "-p", "-t", pane, "#{session_name}"],
+            stderr=subprocess.DEVNULL, text=True,
+        )
+        return out.strip() or None
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
 
 
 def age(ts: float) -> str:
@@ -65,11 +82,17 @@ def age(ts: float) -> str:
     return f"{delta // 86400}d"
 
 
-def checks_summary(track_name: str) -> str:
-    """Latest checks result as a short colored token (✓/✗/●), or ''."""
+def checks_summary(session_id: str) -> str:
+    """Latest checks result as a short colored token (✓/✗/●), or '' if none.
+
+    Best-effort extra — navigation never depends on it, so repos without any
+    checks configured simply render a blank column.
+    """
+    if not session_id:
+        return ""
     try:
         r = subprocess.run(
-            ["checks-status", track_name, "--oneline"],
+            ["checks-status", session_id, "--oneline"],
             capture_output=True, text=True, timeout=3,
         )
     except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -77,7 +100,7 @@ def checks_summary(track_name: str) -> str:
     return r.stdout.strip()
 
 
-def load_tracked(live: set[str]) -> list[dict]:
+def load_tracked(live_panes: set[str]) -> list[dict]:
     if not SESSIONS_DIR.exists():
         return []
     sessions = []
@@ -86,63 +109,44 @@ def load_tracked(live: set[str]) -> list[dict]:
             data = json.loads(path.read_text())
         except (json.JSONDecodeError, OSError):
             continue
-        track_name = data.get("track_name") or path.stem
-        is_alive   = track_name in live
+        session_id = data.get("session_id") or path.stem
+        pane       = data.get("pane", "")
+        is_alive   = bool(pane) and pane in live_panes
         status     = data.get("status", "unknown")
-        if not is_alive and status not in ("done",):
+        if not is_alive and status not in ("ended", "done"):
             status = "gone"
         sessions.append({
-            "track_name":    track_name,
+            "session_id":    session_id,
+            "track_name":    data.get("track_name") or path.stem,
             "task":          data.get("task", ""),
+            "dir":           data.get("dir", ""),
             "status":        status,
             "alive":         is_alive,
-            "pane":          data.get("pane", ""),
-            "checks":        checks_summary(track_name),
+            "pane":          pane,
+            "checks":        checks_summary(session_id),
             "last_ts":       float(data.get("last_activity") or data.get("started_at") or 0),
             "notifications": data.get("notifications", 0),
-            "tracked":       True,
-        })
-    return sessions
-
-
-def load_untracked(live: set[str], tracked_names: set[str]) -> list[dict]:
-    sessions = []
-    for name in live:
-        if not name.startswith("claude-"):
-            continue
-        if name in tracked_names:
-            continue
-        sessions.append({
-            "track_name":    name,
-            "task":          "",
-            "status":        "running",
-            "alive":         True,
-            "pane":          "",
-            "checks":        checks_summary(name),
-            "last_ts":       0.0,
-            "notifications": 0,
-            "tracked":       False,
         })
     return sessions
 
 
 def render_line(s: dict) -> str:
-    """Render the visible columns (the hidden track_name key is prepended in run_fzf)."""
+    """Render the visible columns (the hidden session_id key is prepended in run_fzf)."""
     dot        = ALIVE if s["alive"] else DEAD
-    name       = s["track_name"][:36]
+    label      = s["track_name"] or (os.path.basename(s["dir"]) if s["dir"] else s["session_id"][:8])
+    name       = label[:36]
     status_str = STATUS_COLOR.get(s["status"], s["status"])
     checks_str = s.get("checks") or f"{DIM}—{RESET}"
     age_str    = age(s["last_ts"]) if s["last_ts"] else "?"
-    task_str   = (s["task"][:40] if s["task"] else f"{DIM}(untracked){RESET}") if not s["tracked"] \
-                 else s["task"][:40]
+    task_str   = s["task"][:40] if s["task"] else f"{DIM}{os.path.basename(s['dir'])}{RESET}"
     return f"{dot}  {name:<38}  {status_str:<24}  {checks_str:<16}  {age_str:<5}  {task_str}"
 
 
 def run_fzf(sessions: list[dict]) -> dict | None:
-    # Each line is "<track_name>\t<rendered>"; fzf shows fields 2.. and uses
-    # field 1 for the preview command, so selection carries the name unambiguously.
-    by_name = {s["track_name"]: s for s in sessions}
-    lines   = [f"{s['track_name']}\t{render_line(s)}" for s in sessions]
+    # Each line is "<session_id>\t<rendered>"; fzf shows fields 2.. and uses
+    # field 1 for the preview command, so selection carries the id unambiguously.
+    by_id = {s["session_id"]: s for s in sessions}
+    lines = [f"{s['session_id']}\t{render_line(s)}" for s in sessions]
     try:
         r = subprocess.run(
             ["fzf", "--ansi", "--no-sort", "--reverse", "--border=rounded",
@@ -159,42 +163,40 @@ def run_fzf(sessions: list[dict]) -> dict | None:
         sys.exit(1)
     if r.returncode != 0:
         return None
-    name = r.stdout.decode().split("\t", 1)[0].strip()
-    return by_name.get(name)
+    sid = r.stdout.decode().split("\t", 1)[0].strip()
+    return by_id.get(sid)
 
 
-def attach(s: dict, live: set[str]) -> None:
-    track_name, pane = s["track_name"], s.get("pane", "")
-    if track_name not in live:
-        print(f"Session '{track_name}' is no longer active.", file=sys.stderr)
+def attach(s: dict, live_panes: set[str]) -> None:
+    pane = s.get("pane", "")
+    if not pane or pane not in live_panes:
+        print(f"Session '{s['track_name']}' is no longer live.", file=sys.stderr)
         sys.exit(1)
 
-    # Jump straight to the agent's pane when we recorded one; otherwise the session.
-    def select_pane() -> None:
-        if pane:
-            subprocess.run(["tmux", "select-window", "-t", pane],
-                           stderr=subprocess.DEVNULL)
-            subprocess.run(["tmux", "select-pane", "-t", pane],
-                           stderr=subprocess.DEVNULL)
+    session = pane_session(pane)
+    if not session:
+        print(f"Pane {pane} vanished.", file=sys.stderr)
+        sys.exit(1)
 
+    # Jump straight to the agent's pane: its session, then its window + pane.
     if os.environ.get("TMUX"):
-        subprocess.run(["tmux", "switch-client", "-t", track_name])
-        select_pane()
+        subprocess.run(["tmux", "switch-client", "-t", session], stderr=subprocess.DEVNULL)
+        subprocess.run(["tmux", "select-window", "-t", pane], stderr=subprocess.DEVNULL)
+        subprocess.run(["tmux", "select-pane", "-t", pane], stderr=subprocess.DEVNULL)
     else:
-        select_pane()
-        os.execvp("tmux", ["tmux", "attach-session", "-t", track_name])
+        subprocess.run(["tmux", "select-window", "-t", pane], stderr=subprocess.DEVNULL)
+        subprocess.run(["tmux", "select-pane", "-t", pane], stderr=subprocess.DEVNULL)
+        os.execvp("tmux", ["tmux", "attach-session", "-t", session])
 
 
 def main() -> None:
     list_only = "--list" in sys.argv
-    live      = tmux_live_sessions()
-    tracked   = load_tracked(live)
-    named     = {s["track_name"] for s in tracked}
-    sessions  = tracked + load_untracked(live, named)
+    live      = tmux_live_panes()
+    sessions  = load_tracked(live)
     sessions.sort(key=lambda s: (STATUS_ORDER.get(s["status"], 99), -s["last_ts"]))
 
     if not sessions:
-        print("No tracked Claude sessions found.")
+        print("No Claude sessions found.")
         sys.exit(0)
 
     if list_only:

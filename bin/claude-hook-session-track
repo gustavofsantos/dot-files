@@ -1,34 +1,61 @@
 #!/usr/bin/env bash
-# claude-hook-session-track — UserPromptSubmit hook: mark session as running
+# claude-hook-session-track — register/refresh a Claude session and its pane.
 #
-# Wire in .claude/settings.json:
+# Wire in .claude/settings.json for both events:
+#   "SessionStart":     [{"type":"command","command":"claude-hook-session-track"}]
 #   "UserPromptSubmit": [{"type":"command","command":"claude-hook-session-track"}]
 #
-# On each user prompt:
-#   - Updates status → "running" and last_activity in the state file
-#   - Restores the tmux window name (removes the ⊡ waiting prefix)
+# Every Claude session — however it was launched (claude-run, a bare `claude`
+# in any tmux pane, a resumed session) — gets a state file the moment it starts
+# and on every prompt, recording the exact tmux pane it runs in. That makes it
+# visible and jump-to-able in `claude-sessions` regardless of repo or checks.
+#
+# State: ~/.claude-sessions/<session_id>.json
+#   { session_id, track_name, task, dir, pane, status, started_at,
+#     last_activity, notifications }
 
 set -euo pipefail
 
-SESSION_ID="${CLAUDE_SESSION_ID:-}"
+INPUT=$(cat 2>/dev/null || true)
 SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
-
-[[ -z "$SESSION_ID" ]] && exit 0
-
-STATE="${SESSIONS_DIR}/${SESSION_ID}.json"
-[[ -f "$STATE" ]] || exit 0
 command -v jq &>/dev/null || exit 0
 
-NOW=$(date +%s)
-TMP=$(mktemp)
-jq --argjson ts "$NOW" '.status = "running" | .last_activity = $ts' \
-  "$STATE" > "$TMP" && mv "$TMP" "$STATE"
+jget() { printf '%s' "$INPUT" | jq -r "$1 // empty" 2>/dev/null; }
 
-# Restore window name to bare track name (drop ⊡ prefix)
-if [[ -n "${TMUX_PANE:-}" ]]; then
-  TRACK_NAME=$(jq -r '.track_name // ""' "$STATE")
-  [[ -n "$TRACK_NAME" ]] \
-    && tmux rename-window -t "$TMUX_PANE" "$TRACK_NAME" 2>/dev/null || true
+SESSION_ID="${CLAUDE_SESSION_ID:-$(jget '.session_id')}"
+[[ -z "$SESSION_ID" ]] && exit 0
+
+DIR="$(jget '.cwd')"
+DIR="${DIR:-${CLAUDE_PROJECT_DIR:-${CLAUDE_TRACK_DIR:-$PWD}}}"
+PANE="${TMUX_PANE:-}"
+TRACK_NAME="${CLAUDE_TRACK_NAME:-$(basename "$DIR")}"
+TASK="${CLAUDE_TRACK_TASK:-}"
+NOW=$(date +%s)
+
+mkdir -p "$SESSIONS_DIR"
+STATE="${SESSIONS_DIR}/${SESSION_ID}.json"
+
+if [[ -f "$STATE" ]]; then
+  TMP=$(mktemp)
+  jq --argjson ts "$NOW" --arg pane "$PANE" --arg dir "$DIR" \
+    '.status = "running"
+     | .last_activity = $ts
+     | (if $pane != "" then .pane = $pane else . end)
+     | (if ((.dir // "") == "") and $dir != "" then .dir = $dir else . end)' \
+    "$STATE" > "$TMP" && mv "$TMP" "$STATE"
+else
+  jq -n \
+    --arg sid "$SESSION_ID" --arg name "$TRACK_NAME" --arg task "$TASK" \
+    --arg dir "$DIR" --arg pane "$PANE" --argjson ts "$NOW" \
+    '{session_id:$sid, track_name:$name, task:$task, dir:$dir, pane:$pane,
+      status:"running", started_at:$ts, last_activity:$ts, notifications:0}' \
+    > "$STATE"
+fi
+
+# Restore window name to bare track name (drop the ⊡ waiting prefix), for the
+# claude-run flow where the window is named after the session.
+if [[ -n "$PANE" && -n "${CLAUDE_TRACK_NAME:-}" ]]; then
+  tmux rename-window -t "$PANE" "$CLAUDE_TRACK_NAME" 2>/dev/null || true
 fi
 
 exit 0
