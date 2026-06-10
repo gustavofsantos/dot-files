@@ -7,14 +7,10 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 MAGENTA='\033[0;35m'
-CYAN='\033[0;36m'
 DIM='\033[2m'
 RESET='\033[0m'
 
 SEP="${DIM}│${RESET}"
-
-# Nerd font usage icon
-ICON_USAGE="${YELLOW}$(printf '\U000f0241')${RESET}"
 
 # Usage cache config
 USAGE_CACHE_TTL="${CLAUDE_STATUSLINE_USAGE_TTL:-120}"
@@ -26,15 +22,6 @@ input=$(cat)
 # ── Model ─────────────────────────────────────────────────────────────────────
 
 get_model_name() { echo "$input" | jq -r '.model.display_name // "Unknown Model"' | sed 's/ (.*)//'; }
-
-get_model_icon() {
-  case "$(get_model_name)" in
-  *[Oo]pus*) printf "${MAGENTA}\U000f01e5${RESET}" ;;
-  *[Ss]onnet*) printf "${CYAN}\U000f075a${RESET}" ;;
-  *[Hh]aiku*) printf "${GREEN}\U000f0735${RESET}" ;;
-  *) printf "${DIM}\U000f06a9${RESET}" ;;
-  esac
-}
 
 # ── Portable helpers (macOS / Linux) ──────────────────────────────────────────
 
@@ -186,12 +173,11 @@ build_usage_display() {
 # ── Render ────────────────────────────────────────────────────────────────────
 
 model=$(get_model_name)
-model_icon=$(get_model_icon)
 usage_display=$(build_usage_display)
 
-statusline="${model_icon} ${MAGENTA}${model}${RESET}"
+statusline="${MAGENTA}${model}${RESET}"
 if [ -n "$usage_display" ]; then
-  statusline+=" ${SEP} ${ICON_USAGE} ${usage_display}"
+  statusline+=" ${SEP} ${usage_display}"
 fi
 
 echo -e "$statusline"
