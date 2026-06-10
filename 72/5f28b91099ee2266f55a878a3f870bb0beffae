@@ -1,0 +1,19 @@
+test_bin/claude-statusline.bats
+  s_8a48d3c1a0a2ab::t_df8ffba9e6f720 1-223
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "725f28b91099ee2266f55a878a3f870bb0beffae",
+  "prompts": {},
+  "sessions": {
+    "s_8a48d3c1a0a2ab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9652a2ab-8e3b-49f8-b75f-3b098ed6b915",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
