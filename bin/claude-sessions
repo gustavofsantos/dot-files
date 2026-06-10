@@ -38,6 +38,7 @@ DIM    = "\033[2m"
 RESET  = "\033[0m"
 ALIVE  = f"{GREEN}●{RESET}"
 DEAD   = f"{DIM}○{RESET}"
+AGENT_TAG = {"claude": "cc", "cursor": "cu"}
 
 STATUS_ORDER = {"running": 0, "waiting": 1, "gone": 2, "ended": 3, "done": 4, "unknown": 5}
 STATUS_COLOR = {
@@ -121,6 +122,7 @@ def load_tracked(live_panes: set[str]) -> list[dict]:
             status = "gone"
         sessions.append({
             "session_id":    session_id,
+            "agent":         data.get("agent") or "claude",
             "track_name":    data.get("track_name") or path.stem,
             "task":          data.get("task", ""),
             "dir":           data.get("dir", ""),
@@ -137,13 +139,14 @@ def load_tracked(live_panes: set[str]) -> list[dict]:
 def render_line(s: dict) -> str:
     """Render the visible columns (the hidden session_id key is prepended in run_fzf)."""
     dot        = ALIVE if s["alive"] else DEAD
+    tag        = f"{DIM}{AGENT_TAG.get(s.get('agent', 'claude'), '··')}{RESET}"
     label      = s["track_name"] or (os.path.basename(s["dir"]) if s["dir"] else s["session_id"][:8])
     name       = label[:36]
     status_str = STATUS_COLOR.get(s["status"], s["status"])
     checks_str = s.get("checks") or f"{DIM}—{RESET}"
     age_str    = age(s["last_ts"]) if s["last_ts"] else "?"
     task_str   = s["task"][:40] if s["task"] else f"{DIM}{os.path.basename(s['dir'])}{RESET}"
-    return f"{dot}  {name:<38}  {status_str:<24}  {checks_str:<16}  {age_str:<5}  {task_str}"
+    return f"{dot} {tag}  {name:<38}  {status_str:<24}  {checks_str:<16}  {age_str:<5}  {task_str}"
 
 
 def run_fzf(sessions: list[dict]) -> dict | None:
@@ -200,7 +203,7 @@ def main() -> None:
     sessions.sort(key=lambda s: (STATUS_ORDER.get(s["status"], 99), -s["last_ts"]))
 
     if not sessions:
-        print("No Claude sessions found.")
+        print("No agent sessions found.")
         sys.exit(0)
 
     if list_only:
