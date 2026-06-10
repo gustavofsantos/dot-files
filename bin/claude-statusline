@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Minimalistic Claude statusline: selected model + session usage only.
+# Statusline: model + context window + all rate/usage limits (any billing model)
 
 # Colors
 RED='\033[0;31m'
@@ -12,35 +12,29 @@ RESET='\033[0m'
 
 SEP="${DIM}│${RESET}"
 
-# Usage cache config
 USAGE_CACHE_TTL="${CLAUDE_STATUSLINE_USAGE_TTL:-120}"
 USAGE_CACHE_DIR="${TMPDIR:-/tmp}/claude-statusline-cache"
 
-# Read JSON input from stdin
 input=$(cat)
 
 # ── Model ─────────────────────────────────────────────────────────────────────
 
 get_model_name() { echo "$input" | jq -r '.model.display_name // "Unknown Model"' | sed 's/ (.*)//'; }
 
-# ── Portable helpers (macOS / Linux) ──────────────────────────────────────────
+# ── Portable helpers ──────────────────────────────────────────────────────────
 
-# File modification time as epoch seconds
 file_mtime() {
   stat -c "%Y" "$1" 2>/dev/null || stat -f "%m" "$1" 2>/dev/null
 }
 
-# ISO 8601 timestamp → epoch seconds
 iso_to_epoch() {
   local ts="$1"
-  # Normalize: +00:00 → Z, strip fractional seconds
   local normalized="${ts/+00:00/Z}"
   normalized=$(echo "$normalized" | sed 's/\.[0-9]*Z/Z/')
   date -u -d "$normalized" "+%s" 2>/dev/null \
     || date -u -jf "%Y-%m-%dT%H:%M:%SZ" "$normalized" "+%s" 2>/dev/null
 }
 
-# OAuth access token: macOS keychain → Linux credentials file
 get_oauth_token() {
   if command -v security >/dev/null 2>&1; then
     security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null \
@@ -51,19 +45,17 @@ get_oauth_token() {
   [ -f "$creds" ] && jq -r '.claudeAiOauth.accessToken // empty' "$creds" 2>/dev/null
 }
 
-# ── Usage limits ──────────────────────────────────────────────────────────────
-
 format_time_until() {
   local resets_at="$1"
-  [ -z "$resets_at" ] && echo "?" && return
+  [ -z "$resets_at" ] && return
 
   local reset_epoch
-  reset_epoch=$(iso_to_epoch "$resets_at") || { echo "?"; return; }
-  [ -z "$reset_epoch" ] && { echo "?"; return; }
+  reset_epoch=$(iso_to_epoch "$resets_at") || return
+  [ -z "$reset_epoch" ] && return
 
   local now
   now=$(date "+%s")
-  [ "$now" -ge "$reset_epoch" ] && { echo "now"; return; }
+  [ "$now" -ge "$reset_epoch" ] && echo "now" && return
 
   local secs=$((reset_epoch - now))
   local mins=$((secs / 60))
@@ -79,10 +71,11 @@ format_time_until() {
   fi
 }
 
+# ── OAuth usage (for reset times only) ────────────────────────────────────────
+
 read_usage_cache() {
   local cache_file="${USAGE_CACHE_DIR}/usage.json"
   [ -f "$cache_file" ] || return 1
-
   local file_mod
   file_mod=$(file_mtime "$cache_file") || return 1
   local now
@@ -95,17 +88,13 @@ fetch_usage() {
   local token
   token=$(get_oauth_token) || return 1
   [ -n "$token" ] || return 1
-
   mkdir -p "$USAGE_CACHE_DIR"
-
   local response
   response=$(curl -s --max-time 3 \
     -H "Authorization: Bearer $token" \
     -H "anthropic-beta: oauth-2025-04-20" \
     "https://api.anthropic.com/api/oauth/usage" 2>/dev/null) || return 1
-
-  echo "$response" | jq -e 'has("five_hour")' >/dev/null 2>&1 || return 1
-
+  echo "$response" | jq -e 'type == "object"' >/dev/null 2>&1 || return 1
   echo "$response" > "${USAGE_CACHE_DIR}/usage.json"
   echo "$response"
 }
@@ -115,16 +104,17 @@ read_stale_cache() {
   [ -f "$cache_file" ] && cat "$cache_file"
 }
 
-get_usage_data() {
+get_oauth_usage() {
   local data
   data=$(read_usage_cache) && echo "$data" && return
   data=$(fetch_usage) && echo "$data" && return
   read_stale_cache
 }
 
-# Mini usage bar for a single window
-# Args: $1=remaining_pct (0-100), $2=label, $3=time_until
-build_usage_bar() {
+# ── Shared bar renderer ────────────────────────────────────────────────────────
+
+# Args: $1=remaining_pct (0-100 int), $2=label, $3=time_until (optional)
+build_bar() {
   local remaining="$1" label="$2" time_until="$3"
   local bar_width=5
   local filled=$((remaining * bar_width / 100))
@@ -134,50 +124,130 @@ build_usage_bar() {
   [ "$filled" -lt 0 ] && filled=0 && empty=$bar_width
 
   local bar_color
-  if [ "$remaining" -gt 50 ]; then
-    bar_color="$GREEN"
-  elif [ "$remaining" -gt 20 ]; then
-    bar_color="$YELLOW"
-  else
-    bar_color="$RED"
+  if [ "$remaining" -gt 50 ]; then bar_color="$GREEN"
+  elif [ "$remaining" -gt 20 ]; then bar_color="$YELLOW"
+  else bar_color="$RED"
   fi
 
   local bar=""
   for ((i = 0; i < filled; i++)); do bar+="━"; done
   for ((i = 0; i < empty; i++)); do bar+="╌"; done
 
-  printf "${DIM}%s${RESET} %s%s%s %d%% ${DIM}↻%s${RESET}" \
-    "$label" "$bar_color" "$bar" "$RESET" "$remaining" "$time_until"
+  if [ -n "$time_until" ]; then
+    printf "${DIM}%s${RESET} %s%s%s %d%% ${DIM}↻%s${RESET}" \
+      "$label" "$bar_color" "$bar" "$RESET" "$remaining" "$time_until"
+  else
+    printf "${DIM}%s${RESET} %s%s%s %d%%" \
+      "$label" "$bar_color" "$bar" "$RESET" "$remaining"
+  fi
 }
 
-build_usage_display() {
-  local data
-  data=$(get_usage_data) || return
+# ── Context window ─────────────────────────────────────────────────────────────
 
-  local five_used seven_used five_reset seven_reset
-  five_used=$(echo "$data" | jq -r '.five_hour.utilization // 0' | xargs printf "%.0f")
-  seven_used=$(echo "$data" | jq -r '.seven_day.utilization // 0' | xargs printf "%.0f")
-  five_reset=$(echo "$data" | jq -r '.five_hour.resets_at // empty')
-  seven_reset=$(echo "$data" | jq -r '.seven_day.resets_at // empty')
+build_context_display() {
+  local used_pct
+  used_pct=$(echo "$input" | jq -r '.context_window.used_percentage // empty')
+  [ -z "$used_pct" ] || [ "$used_pct" = "null" ] && return
 
-  # No active rate windows (e.g., enterprise billing) — nothing to show
-  [ -z "$five_reset" ] && [ -z "$seven_reset" ] && return
+  local used_int remaining
+  used_int=$(printf "%.0f" "$used_pct")
+  remaining=$((100 - used_int))
 
-  local five_bar seven_bar
-  five_bar=$(build_usage_bar $((100 - five_used)) "5h" "$(format_time_until "$five_reset")")
-  seven_bar=$(build_usage_bar $((100 - seven_used)) "7d" "$(format_time_until "$seven_reset")")
+  build_bar "$remaining" "ctx"
+}
 
-  printf "%s ${DIM}╱${RESET} %s" "$five_bar" "$seven_bar"
+# ── Rate / usage limits ────────────────────────────────────────────────────────
+
+# Map Claude Code's snake_case limit keys to short display labels
+format_limit_label() {
+  case "$1" in
+    five_hour)  echo "5h" ;;
+    seven_day)  echo "7d" ;;
+    one_hour)   echo "1h" ;;
+    daily)      echo "1d" ;;
+    monthly)    echo "mo" ;;
+    session)    echo "ses" ;;
+    *)          echo "$1" | sed 's/_[a-z]/\u&/g; s/_//g' | cut -c1-4 ;;
+  esac
+}
+
+build_rate_display() {
+  local stdin_limits
+  stdin_limits=$(echo "$input" | jq -r '.rate_limits // empty')
+
+  local parts=()
+
+  if [ -n "$stdin_limits" ] && [ "$stdin_limits" != "null" ] && [ "$stdin_limits" != "{}" ]; then
+    # Generic path: iterate every key Claude Code exposes (works for all billing models)
+    local oauth_data
+    oauth_data=$(get_oauth_usage)
+
+    while IFS= read -r key; do
+      [ -z "$key" ] && continue
+
+      local used_pct
+      used_pct=$(echo "$stdin_limits" | jq -r --arg k "$key" '.[$k].used_percentage // empty')
+      [ -z "$used_pct" ] || [ "$used_pct" = "null" ] && continue
+
+      local used_int remaining
+      used_int=$(printf "%.0f" "$used_pct")
+      remaining=$((100 - used_int))
+
+      local label time_until=""
+      label=$(format_limit_label "$key")
+
+      # Supplement with reset time from OAuth cache when available
+      if [ -n "$oauth_data" ]; then
+        local resets_at
+        resets_at=$(echo "$oauth_data" | jq -r --arg k "$key" '.[$k].resets_at // empty')
+        [ -n "$resets_at" ] && time_until=$(format_time_until "$resets_at")
+      fi
+
+      parts+=("$(build_bar "$remaining" "$label" "$time_until")")
+    done < <(echo "$stdin_limits" | jq -r 'keys[]')
+
+  else
+    # Fallback: OAuth-only (no stdin rate_limits — older Claude Code)
+    local oauth_data
+    oauth_data=$(get_oauth_usage)
+    [ -z "$oauth_data" ] && return
+
+    local five_reset seven_reset
+    five_reset=$(echo "$oauth_data" | jq -r '.five_hour.resets_at // empty')
+    seven_reset=$(echo "$oauth_data" | jq -r '.seven_day.resets_at // empty')
+    [ -z "$five_reset" ] && [ -z "$seven_reset" ] && return
+
+    local five_used seven_used
+    five_used=$(echo "$oauth_data" | jq -r '.five_hour.utilization // 0' | xargs printf "%.0f")
+    seven_used=$(echo "$oauth_data" | jq -r '.seven_day.utilization // 0' | xargs printf "%.0f")
+
+    parts+=("$(build_bar $((100 - five_used)) "5h" "$(format_time_until "$five_reset")")")
+    parts+=("$(build_bar $((100 - seven_used)) "7d" "$(format_time_until "$seven_reset")")")
+  fi
+
+  local count=${#parts[@]}
+  [ "$count" -eq 0 ] && return
+
+  local result=""
+  for ((i = 0; i < count; i++)); do
+    [ -n "$result" ] && result+=" ${DIM}╱${RESET} "
+    result+="${parts[$i]}"
+  done
+  printf "%s" "$result"
 }
 
 # ── Render ────────────────────────────────────────────────────────────────────
 
 model=$(get_model_name)
-usage_display=$(build_usage_display)
+ctx_display=$(build_context_display)
+rate_display=$(build_rate_display)
 
 statusline="${MAGENTA}${model}${RESET}"
-if [ -n "$usage_display" ]; then
-  statusline+=" ${SEP} ${usage_display}"
+if [ -n "$ctx_display" ]; then
+  statusline+=" ${SEP} ${ctx_display}"
+fi
+if [ -n "$rate_display" ]; then
+  statusline+=" ${SEP} ${rate_display}"
 fi
 
 echo -e "$statusline"
