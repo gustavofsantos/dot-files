@@ -15,7 +15,7 @@ kept under `~/engineering/`:
   `## Issues` lists the issues that reference it.
 
 (`~/engineering/` also holds `thinking/` and `spikes/`, written by
-`thinking-partner` and the `dead-reckoning` agent respectively.)
+`thinking-partner` and Finn respectively.)
 
 ## How the skills relate
 
@@ -32,9 +32,9 @@ flowchart TD
 
     %% ---------- Understand existing code ----------
     subgraph understand["Understand existing code"]
-        survey[survey]
-        dead[dead-reckoning]
-        survey -->|top entry point| dead
+        marco[Marco]
+        finn[Finn]
+        marco -->|top entry point| finn
     end
 
     %% ---------- Think & plan ----------
@@ -63,7 +63,7 @@ flowchart TD
     %% ---------- Build & review ----------
     subgraph build["Build & review"]
         tdd[tdd]
-        dr[deep-review]
+        dr[Victor]
         deslop["deslop<br/>(Clojure)"]
         readable["readable<br/>(Kotlin)"]
     end
@@ -78,10 +78,10 @@ flowchart TD
     tickets["tickets<br/>(Jira — standalone)"]
 
     %% ---------- Knowledge flow ----------
-    facts -.->|axioms| survey
-    facts -.->|axioms| dead
-    survey -->|fact candidates| factskill
-    dead -->|fact candidates| factskill
+    facts -.->|axioms| marco
+    facts -.->|axioms| finn
+    marco -->|fact candidates| factskill
+    finn -->|fact candidates| factskill
 
     %% ---------- Plan -> framing ----------
     tp -->|flush| task_s
@@ -106,13 +106,13 @@ flowchart TD
     issue -->|writes| issuestore
 
     %% ---------- Issue routing ----------
-    issuestore -.->|type: hypothesis| dead
+    issuestore -.->|type: hypothesis| finn
     issuestore -->|type: task · bug · user-story · outcome| tdd
     issuestore -.->|type: epic| epic_s
 
     %% ---------- Understand -> framing ----------
-    survey -.->|finding becomes work| task_s
-    dead -.->|finding becomes work| task_s
+    marco -.->|finding becomes work| task_s
+    finn -.->|finding becomes work| task_s
 
     %% ---------- Build & review flow ----------
     tdd -->|green branch| dr
@@ -127,11 +127,11 @@ feedback paths.
 
 ## The pipelines
 
-**Understand existing code** — `survey` discovers an unfamiliar repo and names
-the highest-signal questions; `dead-reckoning` traces a specific question to
-behavioral claims anchored in code. Both load facts as axioms before reading
-code, and route approved findings back through the `fact` skill. A finding that
-turns into work spawns a `task` issue.
+**Understand existing code** — Marco surveys an unfamiliar repo (zone discovery
++ DDD map) and names the highest-signal questions; Finn traces a specific
+question to behavioral claims anchored in code. Both load facts as axioms before
+reading code, and route approved findings back through the `fact` skill. A
+finding that turns into work spawns a `task` issue.
 
 **Facts & issues** — the `fact` skill records durable, sourced knowledge
 (`FACT-NNN`) and links it to the issues that depend on it. The `issue` skill is
@@ -160,11 +160,11 @@ into off-limits entries before framing begins.
 
 **Build & review** — `tdd` reads an active `task`, `bug`, `user-story`, or
 `outcome` issue and implements it test-first, treating `## Facts` as
-established ground. `hypothesis` issues route to `dead-reckoning` instead;
-findings become facts via the `fact` skill. When a branch is green it goes to
-`deep-review` (architecture, any language) and, by language, `deslop`
-(Clojure) or `readable` (Kotlin). A `Red` review loops back through
-`design-constraints` + `tdd`, or spawns a fresh `task`.
+established ground. `hypothesis` issues route to Finn instead; findings become
+facts via the `fact` skill. When a branch is green it goes to Victor
+(architecture review, any language) and, by language, `deslop` (Clojure) or
+`readable` (Kotlin). A `Red` review loops back through `design-constraints` +
+`tdd`, or spawns a fresh `task`.
 
 **Bruno API collections** — `bruno` handles the current YAML / OpenCollection
 format; `brulang` handles the legacy `.bru` markup. Pick by detecting the
@@ -175,9 +175,15 @@ local `issue`-driven flow.
 
 ## Agents
 
-`survey`, `dead-reckoning`, and `deep-review` each have a matching subagent in
-[`agents/`](agents/). The like-named skill is a thin dispatch shim that runs the
-heavy work in an isolated context and surfaces only the structured report.
+Four subagents live in [`agents/`](agents/) and are invoked automatically by
+name or explicitly ("call Finn to…"):
+
+| Agent | Trigger |
+|---|---|
+| **Marco** | Survey repo, map domains, DDD analysis |
+| **Finn** | Trace how something works, investigate code behavior |
+| **Victor** | Review a branch, architectural depth, pre-merge verdict |
+| **Mira** | Recall what the engineering vault already knows |
 
 ## Storage config
 

@@ -5,7 +5,7 @@ description: Survey a local repository and produce a strategic DDD description �
 
 # ddd-survey
 
-Shim: measure, gate, dispatch **Marco** (`agents/marco.md`). Never survey inline — the exploration would flood this session's context.
+Measure the repo, gate by size, then dispatch **Marco** to run a full zone-discovery + DDD analysis. Never survey inline — the exploration would flood this session's context.
 
 ## 1. Measure
 
@@ -29,4 +29,4 @@ Spawn **Marco** (Task tool) with: target paths, ignore paths, repo name, the mea
 
 ## 5. After
 
-Relay the agent's summary, including its stated unknowns — do not paper over them.
+Relay Marco's summary including stated unknowns — do not paper over them. Surface the **Fact candidates** for promotion via `vault`, and the **Entry points for Finn** as suggested next investigations.

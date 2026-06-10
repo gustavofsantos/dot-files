@@ -16,7 +16,7 @@ hooks:
 
 # TDD
 
-Drives `type: implementation` issues only — an `investigation` issue is answered with Finn (dead-reckoning), not tested into existence.
+Drives `type: implementation` issues only — an `investigation` issue is answered by Finn, not tested into existence.
 
 Locate the active issue (same resolution the `vault` skill uses):
 
@@ -40,7 +40,7 @@ Each `## Tasks` entry names the scenarios (`S1, S2 — label`) it covers; `## Sc
 
 Mark the task `[x]` when its scenarios are green (the Stop hook runs `verify-task --branch` and blocks if anything is red), then move on.
 
-When all tasks are checked, hand the branch to Victor (deep-review) before merge, plus `deslop`/`readable` for language cleanup. Archiving the issue is the human's call.
+When all tasks are checked, hand the branch to Victor before merge, plus `deslop`/`readable` for language cleanup. Archiving the issue is the human's call.
 
 ## Discipline
 
