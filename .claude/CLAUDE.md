@@ -32,5 +32,5 @@ Regenerate `DOMAIN_MAP.md` manually with `fd`/`rg` when missing or stale.
 
 ## Citing KB context
 
-Reference notes by `[[Note Title]]` and issues by `NNN`. The `dead-reckoning`
-agent loads note context as axioms before traversing code.
+Reference notes by `[[Note Title]]` and issues by `NNN`. Finn
+loads note context as axioms before traversing code.

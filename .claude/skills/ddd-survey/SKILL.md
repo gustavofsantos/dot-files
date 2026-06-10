@@ -5,7 +5,7 @@ description: Survey a local repository and produce a strategic DDD description �
 
 # ddd-survey
 
-Shim: measure, gate, dispatch the `ddd-cartographer` subagent. Never survey inline — the exploration would flood this session's context.
+Measure the repo, gate by size, then dispatch **Marco** to run a full zone-discovery + DDD analysis. Never survey inline — the exploration would flood this session's context.
 
 ## 1. Measure
 
@@ -25,8 +25,8 @@ Show the measurement and the `modules` list sorted by size as candidate scopes. 
 
 ## 4. Dispatch
 
-Spawn `ddd-cartographer` (Task tool) with: target paths, ignore paths, repo name, the measurement JSON verbatim, output file path (default `<repo-root>/ddd-survey.md`; ask if writing inside the repo is unwanted), and any prior context map to extend.
+Spawn **Marco** (Task tool) with: target paths, ignore paths, repo name, the measurement JSON verbatim, output file path (default `<repo-root>/ddd-survey.md`; ask if writing inside the repo is unwanted), and any prior context map to extend.
 
 ## 5. After
 
-Relay the agent's summary, including its stated unknowns — do not paper over them.
+Relay Marco's summary including stated unknowns — do not paper over them. Surface the **Fact candidates** for promotion via `vault`, and the **Entry points for Finn** as suggested next investigations.
