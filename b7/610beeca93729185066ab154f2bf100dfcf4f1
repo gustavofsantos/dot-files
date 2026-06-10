@@ -1,0 +1,23 @@
+bin/claude-sessions
+  s_978aaba1ed2a5e::t_3a421bc5cffcf4 142
+  s_978aaba1ed2a5e::t_1e4d48b95d4218 206
+  s_978aaba1ed2a5e::t_7961564854f835 41
+  s_978aaba1ed2a5e::t_9f2bc6ee0c670d 149
+  s_978aaba1ed2a5e::t_ef7b792b0ea903 125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "b7610beeca93729185066ab154f2bf100dfcf4f1",
+  "prompts": {},
+  "sessions": {
+    "s_978aaba1ed2a5e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9b4c9912-a7b6-4370-a930-5be0d56c38d9",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
