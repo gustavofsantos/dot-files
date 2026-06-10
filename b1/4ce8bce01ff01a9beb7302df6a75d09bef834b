@@ -1,0 +1,19 @@
+bin/claude-hook-notify
+  s_a2c3dfa9a34906::t_c0e845d3f7a830 22-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "b14ce8bce01ff01a9beb7302df6a75d09bef834b",
+  "prompts": {},
+  "sessions": {
+    "s_a2c3dfa9a34906": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7676e5d5-814e-4ca1-ac42-a05d92e218fc",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
