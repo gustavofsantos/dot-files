@@ -19,24 +19,18 @@ TRACK_TASK="${CLAUDE_TRACK_TASK:-}"
 TRACK_DIR="${CLAUDE_TRACK_DIR:-${PWD}}"
 SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
 
-# Need jq — bail silently if missing (notification still sent below)
-if ! command -v jq &>/dev/null; then
-  command -v claude-notify &>/dev/null && claude-notify "Claude" "Done" --sound || printf '\a'
-  exit 0
-fi
+# Need jq — bail silently if missing
+command -v jq &>/dev/null || exit 0
 
 # Determine hook type from payload shape
 if printf '%s' "$INPUT" | jq -e 'has("stop_hook_active")' &>/dev/null; then
   HOOK_TYPE="stop"
-  NOTIF_MSG="Done — waiting for your input"
 elif printf '%s' "$INPUT" | jq -e 'has("message")' &>/dev/null; then
   HOOK_TYPE="notification"
-  NOTIF_MSG=$(printf '%s' "$INPUT" | jq -r '.message // "Notification"')
 else
   exit 0
 fi
 
-NOTIF_TITLE="${TRACK_NAME:-Claude}"
 NOW=$(date +%s)
 
 # Write or update the session state file (keyed by CLAUDE_SESSION_ID)
@@ -72,10 +66,5 @@ fi
 if [[ -n "${TMUX_PANE:-}" ]]; then
   tmux rename-window -t "$TMUX_PANE" "⊡ ${TRACK_NAME:-claude}" 2>/dev/null || true
 fi
-
-# Dispatch notification
-command -v claude-notify &>/dev/null \
-  && claude-notify "$NOTIF_TITLE" "$NOTIF_MSG" --sound \
-  || printf '\a'
 
 exit 0
