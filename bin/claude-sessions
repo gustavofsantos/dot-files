@@ -28,8 +28,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-SESSIONS_DIR = Path(os.environ.get("CLAUDE_SESSIONS_DIR", "")).expanduser() \
-    or Path.home() / ".claude-sessions"
+_sessions_env = os.environ.get("CLAUDE_SESSIONS_DIR")
+SESSIONS_DIR = Path(_sessions_env).expanduser() if _sessions_env else Path.home() / ".claude-sessions"
 
 GREEN  = "\033[0;32m"
 YELLOW = "\033[0;33m"
