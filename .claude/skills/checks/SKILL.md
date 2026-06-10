@@ -1,6 +1,7 @@
 ---
 name: checks
 description: Read and act on repository checks that run automatically after each agent turn. Use when verifying your changes didn't break anything, when the user asks "did checks pass", before declaring work done, or when you see a .checks.yml in the repo. Explains where results live and how to interpret them.
+disable-model-invocation: true
 ---
 
 # Checks

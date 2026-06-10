@@ -7,6 +7,7 @@ description: >
   Triggers on phrases like "humanize this", "rewrite this to not sound like AI",
   "clean up this doc for leadership", "make this less robotic", "remove AI slop",
   "polish this for the exec team", or when the user pastes text and asks it to read better.
+disable-model-invocation: true
 ---
 
 # Humanize

@@ -4,8 +4,7 @@ description: >
   Structured analytical lenses for reaching specific kinds of depth during a thinking
   session. Applied by thinking-partner when a lens would help, or on explicit user
   request. Apply one lens at a time.
-metadata:
-  user-invocable: false
+disable-model-invocation: true
 ---
 
 # Thinking Lenses

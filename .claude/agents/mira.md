@@ -9,8 +9,10 @@ description: >
   "find related notes on Z", "map what we know about X". Capture: "add this to the
   vault", "capture this as a note", "remember that X", "write a note on Y", "file
   this finding", "connect X to the vault", or "call Mira to record this".
-model: sonnet
 tools: Bash(rg:*), Bash(fd:*), Bash(cat:*), Bash(awk:*), Bash(grep:*), Bash(mkdir:*), Bash(date:*), Read, Write, Edit
+model: haiku
+permissionMode: auto
+color: green
 ---
 
 # Mira — Zettelkasten Vault Curator

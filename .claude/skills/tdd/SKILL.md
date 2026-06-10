@@ -7,6 +7,7 @@ description: >
   "let's build this", or when moving from planning to execution on a tracked issue.
 metadata:
   allowed-tools: Read Write Edit Bash(rg:*) Bash(fd:*) Bash(git:*)
+disable-model-invocation: true
 hooks:
   Stop:
     - hooks:

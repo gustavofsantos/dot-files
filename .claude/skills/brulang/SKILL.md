@@ -4,6 +4,7 @@ description: >
   Bruno API client using the legacy .bru format. Use when the repo contains
   bruno.json and .bru request files. For opencollection.yml + .yml files, use
   the bruno skill instead.
+disable-model-invocation: true
 ---
 
 # Bruno API Client — Legacy `.bru` Format

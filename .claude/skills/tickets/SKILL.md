@@ -7,6 +7,7 @@ description: >
   "create a task for", "document this as a ticket", or any request to register
   work in Jira. Also triggers when the user describes a problem, feature, or
   technical work and wants it turned into a trackable item.
+disable-model-invocation: true
 ---
 
 # Tickets

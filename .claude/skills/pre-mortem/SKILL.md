@@ -1,6 +1,7 @@
 ---
 name: pre-mortem
 description: Activate this skill when designing a new feature or system component, proposing a significant refactor, choosing between two or more implementation approaches, estimating effort or timelines, about to write code that touches critical paths (auth, data integrity, payments, etc.)
+disable-model-invocation: true
 ---
 
 # Pre-Mortem

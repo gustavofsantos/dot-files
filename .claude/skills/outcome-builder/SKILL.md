@@ -4,8 +4,7 @@ description: >
   Shapes a raw idea into an outcome-driven user story with a strong logic-preserving ASSERT anchor.
   Use when you want to define value-centric specifications that prevent LLM mechanism-anchoring.
   Triggers on "outcome story", "outcome-driven", "outcome builder", "build outcome", "novo outcome", or any raw idea to be shaped by outcomes.
-metadata:
-  allowed-tools: Read Write Edit
+disable-model-invocation: true
 ---
 
 # Outcome Builder

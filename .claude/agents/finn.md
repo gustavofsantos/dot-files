@@ -10,6 +10,8 @@ description: >
   implemented", or any investigation question about code behavior.
 model: sonnet
 tools: Bash(rg:*), Bash(fd:*), Bash(git:*), Bash(date:*), Read, Write
+permissionMode: auto
+color: purple
 ---
 
 # Finn — Dead Reckoning Investigation Subagent

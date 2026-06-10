@@ -7,8 +7,7 @@ description: >
   que", "quebra essa história em tasks", "define as tasks para", "como implementar essa
   história", or any raw idea or ready story before development begins. Always use before
   starting implementation.
-metadata:
-  allowed-tools: Read Write Edit
+disable-model-invocation: true
 ---
 
 # User Story

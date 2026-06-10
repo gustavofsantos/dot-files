@@ -7,9 +7,8 @@ description: >
   delegating to an agent. Triggers on "let's think about", "I want to understand", "help
   me plan", "let's figure out", "continue thinking about", or when the user arrives with
   a problem rather than a solution.
-metadata:
-  effort: high
-  allowed-tools: Read Write Edit Bash(rg:*) Bash(fd:*)
+disable-model-invocation: true
+effort: high
 ---
 
 # Thinking Partner

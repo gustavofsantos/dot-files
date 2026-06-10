@@ -4,6 +4,7 @@ description: >
   Bruno API client using the YAML/OpenCollection format. Use when the repo
   contains opencollection.yml and .yml request files. For bruno.json + .bru
   files, use the brulang skill instead.
+disable-model-invocation: true
 ---
 
 # Bruno API Client — YAML / OpenCollection Format

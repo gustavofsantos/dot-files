@@ -1,6 +1,7 @@
 ---
 name: deslop
 description: Checks the diff against master and removes AI-generated slop from this codebase. Use when cleaning up a branch before merge or when the user asks to remove AI slop from the diff.
+disable-model-invocation: true
 ---
 
 # Diff Slop Cleanup
