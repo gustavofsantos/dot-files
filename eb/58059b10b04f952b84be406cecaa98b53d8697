@@ -1,0 +1,19 @@
+.claude/skills/setup-checks/SKILL.md
+  s_e6b222cbc3ca78::t_7331561d9011da 1-167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "eb58059b10b04f952b84be406cecaa98b53d8697",
+  "prompts": {},
+  "sessions": {
+    "s_e6b222cbc3ca78": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6632aab0-f501-4048-b280-cb3629cc04fa",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
