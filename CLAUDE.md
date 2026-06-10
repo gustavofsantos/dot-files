@@ -12,7 +12,7 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 ./setup.sh          # links all files, merges Claude settings, installs skills/agents
 ```
 
-`setup.sh` delegates to five scripts in `scripts/`:
+`setup.sh` delegates to six scripts in `scripts/`:
 
 | Script | What it does |
 |--------|--------------|
@@ -21,6 +21,7 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 | `link-bin-files.sh` | Symlinks every file in `bin/` into `~/.bin/` |
 | `link-xdg-config.sh` | Symlinks each subdir of `config/` into `~/.config/` |
 | `install-skills.sh` | Symlinks Claude skills/agents/themes; merges `.claude/settings.json` into `~/.claude/settings.json` |
+| `install-cursor.sh` | Merges `.cursor/hooks.json` (session-tracking hooks) into `~/.cursor/hooks.json`, absolute-pathed |
 
 Re-running `setup.sh` is idempotent (`ln -sf`).
 
@@ -34,6 +35,7 @@ Re-running `setup.sh` is idempotent (`ln -sf`).
 - `bin/` — personal scripts added to `$PATH` via `~/.bin/`
 - `config/` — XDG config dirs: `nvim/`, `ghostty/`, `bat/`, `lazygit/`, `zed/`, `wezterm/`, `tmux/`, `sheldon/`, `starship.toml`
 - `.claude/` — Claude Code config: `skills/`, `agents/`, `themes/`, `settings.json`, `sync-pipeline.py`
+- `.cursor/` — Cursor Agent config: `hooks.json` (session-tracking hooks merged into `~/.cursor/hooks.json`)
 
 ## Claude skills & agents
 
@@ -53,7 +55,7 @@ A single global registry, `~/.checks.yml`, enrolls the repositories that run che
 | `checks-runner` | Run a snapshot's checks; `--watch` for daemon mode |
 | `checks-status` | Show the latest result for a session/repo (`--json`, `--oneline`) |
 
-Session navigation is independent of checks. A `SessionStart`/`UserPromptSubmit` hook (`claude-hook-session-track`) registers *every* Claude session — however launched — into `~/.claude-sessions/<id>.json` with the exact tmux pane it runs in; `SessionEnd` (`claude-hook-session-end`) marks it ended. `claude-sessions` (`bind a` in tmux) lists them, keys liveness on whether that pane still exists, previews the live agent pane (plus its last checks result, if any), and Enter jumps straight to the pane running the agent. Works for a bare `claude` in any pane, not just `claude-run` sessions.
+Session navigation is independent of checks, and spans both Claude Code and Cursor Agent. A `SessionStart`/`UserPromptSubmit` hook (`claude-hook-session-track`) registers *every* Claude session — however launched — into `~/.claude-sessions/<id>.json` with the exact tmux pane it runs in; `SessionEnd` (`claude-hook-session-end`) marks it ended. Cursor mirrors this: `~/.cursor/hooks.json` wires `sessionStart`/`beforeSubmitPrompt` → `cursor-hook-session-track` and `sessionEnd` → `cursor-hook-session-end`, which translate Cursor's `conversation_id`/`workspace_roots` into the *same* `~/.claude-sessions/<id>.json` schema (tagged `agent:"cursor"`). `beforeSubmitPrompt` creates-if-missing, so a session registers on its first prompt even if `sessionStart` is a no-op. `claude-sessions` (`bind a` in tmux) lists both tools in one picker (a `cc`/`cu` tag distinguishes them), keys liveness on whether that pane still exists, previews the live agent pane (plus its last checks result, if any), and Enter jumps straight to the pane running the agent. Works for a bare `claude` or `cursor-agent` in any pane.
 
 ## Neovim config
 

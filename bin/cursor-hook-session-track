@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# cursor-hook-session-track — register/refresh a Cursor Agent session and its pane.
+#
+# The Cursor analog of claude-hook-session-track. Wire in ~/.cursor/hooks.json:
+#   "sessionStart":       [{"command": "…/.bin/cursor-hook-session-track"}]
+#   "beforeSubmitPrompt": [{"command": "…/.bin/cursor-hook-session-track"}]
+#
+# Cursor spawns hooks as child processes with the conversation JSON on stdin
+# (https://cursor.com/docs/hooks). We translate Cursor's field names into the
+# SAME state-file schema that Claude writes, so `claude-sessions` lists Cursor
+# and Claude agents side by side in one picker. `beforeSubmitPrompt` is the
+# workhorse: it creates the state file if `sessionStart` didn't already, so the
+# session registers on its first prompt regardless.
+#
+# State: ~/.claude-sessions/<conversation_id>.json
+#   { session_id, agent, track_name, task, dir, pane, status, started_at,
+#     last_activity, notifications }
+
+set -euo pipefail
+
+INPUT=$(cat 2>/dev/null || true)
+SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
+command -v jq &>/dev/null || exit 0
+
+jget() { printf '%s' "$INPUT" | jq -r "$1 // empty" 2>/dev/null; }
+
+# conversation_id is stable across every turn of a Cursor session — the right
+# analog to Claude's session_id (generation_id changes every message).
+SESSION_ID="$(jget '.conversation_id')"
+[[ -z "$SESSION_ID" ]] && exit 0
+
+DIR="$(jget '.workspace_roots[0]')"
+DIR="${DIR:-${CURSOR_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}}"
+PANE="${TMUX_PANE:-}"
+TRACK_NAME="$(basename "$DIR")"
+NOW=$(date +%s)
+
+mkdir -p "$SESSIONS_DIR"
+STATE="${SESSIONS_DIR}/${SESSION_ID}.json"
+
+if [[ -f "$STATE" ]]; then
+  TMP=$(mktemp)
+  jq --argjson ts "$NOW" --arg pane "$PANE" --arg dir "$DIR" \
+    '.status = "running"
+     | .last_activity = $ts
+     | (if $pane != "" then .pane = $pane else . end)
+     | (if ((.dir // "") == "") and $dir != "" then .dir = $dir else . end)' \
+    "$STATE" > "$TMP" && mv "$TMP" "$STATE"
+else
+  jq -n \
+    --arg sid "$SESSION_ID" --arg name "$TRACK_NAME" \
+    --arg dir "$DIR" --arg pane "$PANE" --argjson ts "$NOW" \
+    '{session_id:$sid, agent:"cursor", track_name:$name, task:"", dir:$dir,
+      pane:$pane, status:"running", started_at:$ts, last_activity:$ts,
+      notifications:0}' \
+    > "$STATE"
+fi
+
+exit 0

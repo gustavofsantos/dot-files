@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# cursor-hook-session-end — sessionEnd hook: mark a Cursor session as ended.
+#
+# Wire in ~/.cursor/hooks.json:
+#   "sessionEnd": [{"command": "…/.bin/cursor-hook-session-end"}]
+#
+# Mirror of claude-hook-session-end: keeps the state file (recent history) but
+# flips status so `claude-sessions` shows it as ended, not a live pane.
+
+set -euo pipefail
+
+INPUT=$(cat 2>/dev/null || true)
+SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
+command -v jq &>/dev/null || exit 0
+
+SESSION_ID="$(printf '%s' "$INPUT" | jq -r '.conversation_id // empty' 2>/dev/null)"
+[[ -z "$SESSION_ID" ]] && exit 0
+
+STATE="${SESSIONS_DIR}/${SESSION_ID}.json"
+[[ -f "$STATE" ]] || exit 0
+
+NOW=$(date +%s)
+TMP=$(mktemp)
+jq --argjson ts "$NOW" '.status = "ended" | .last_activity = $ts | .pane = ""' \
+  "$STATE" > "$TMP" && mv "$TMP" "$STATE"
+
+exit 0

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      { "command": "~/.bin/cursor-hook-session-track" }
+    ],
+    "beforeSubmitPrompt": [
+      { "command": "~/.bin/cursor-hook-session-track" }
+    ],
+    "sessionEnd": [
+      { "command": "~/.bin/cursor-hook-session-end" }
+    ]
+  }
+}
