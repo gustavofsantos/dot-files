@@ -1,0 +1,34 @@
+.claude/workflows/issue-worker.js
+  s_eca9aa18ee154b::t_2ab70ec8dc7c41 295
+  s_eca9aa18ee154b::t_9e6c15c3737411 236
+  s_eca9aa18ee154b::t_ac1b5b1239eb28 97
+  s_eca9aa18ee154b::t_5f7e55df46f8d0 105
+  s_eca9aa18ee154b::t_0ce6ac54e615e1 256
+  s_eca9aa18ee154b::t_dbf33a14d0088a 306
+  s_eca9aa18ee154b::t_6018ffe4671ad6 182
+  s_eca9aa18ee154b::t_dfd1b2bcf01b56 27,31-32
+  s_eca9aa18ee154b::t_9cc8c12f1b76fc 1-26,28-30,33-86,88-96,98-104,106-141,143-155,157-169,171-175,178-181,183-200,202-235,237-255,257-271,273-294,296-305,307-310
+  s_eca9aa18ee154b::t_fa069c9218d4dc 87
+  s_eca9aa18ee154b::t_c65ab2799f36ac 156,170,176-177
+  s_eca9aa18ee154b::t_b4b1f78da77028 142
+  s_eca9aa18ee154b::t_eaef9d87e56994 201
+  s_eca9aa18ee154b::t_54f66b8a8448e6 272
+.claude/skills/vault/references/write-contracts.md
+  s_eca9aa18ee154b::t_bcd5598a81b956 49,51-86,88-107,115,118-121,124-131,133-138,140-141,143-144,147,149-152,155-156,158-163,170-189,198,200-208,210-211,216,221-222
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "ca54f6949f6d88f1a808cd7d786891a8358de489",
+  "prompts": {},
+  "sessions": {
+    "s_eca9aa18ee154b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "169d9579-65e8-4937-bc7d-375056efe65a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
