@@ -183,7 +183,7 @@ name or explicitly ("call Finn to…"):
 | **Marco** | Survey repo, map domains, DDD analysis |
 | **Finn** | Trace how something works, investigate code behavior |
 | **Victor** | Review a branch, architectural depth, pre-merge verdict |
-| **Mira** | Recall what the engineering vault already knows |
+| **Mira** | Curate the engineering vault — recall what's known, and ingest new knowledge as linked Zettelkasten notes |
 
 ## Storage config
 
