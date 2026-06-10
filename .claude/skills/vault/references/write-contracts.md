@@ -46,14 +46,65 @@ Parent: [[Payment Lifecycle]]
 
 **ID format:** 3-digit integer, zero-padded (`007`, `042`).
 
-**type values:** `implementation` | `bug` | `investigation`
+### Frontmatter schema
 
-**Body structure:**
+```yaml
+---
+id: "013"
+title: "Short imperative title"
+type: implementation        # implementation | bug | investigation
+status: inbox               # inbox | ready | active | blocked | review | done
+priority: medium            # high | medium | low
+tags: []
+repo: ""                    # /abs/path to git repo — required before status: ready
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+# workflow-managed — do not edit
+branch: ""
+worktree: ""
+pr: ""
+---
+```
+
+**Human-set fields:**
+
+| Field | Values | Notes |
+|-------|--------|-------|
+| `id` | `"NNN"` | 3-digit zero-padded string |
+| `title` | string | Short imperative phrase |
+| `type` | `implementation` · `bug` · `investigation` | |
+| `status` | see below | Only `inbox` and `ready` are human-set initially |
+| `priority` | `high` · `medium` · `low` | Used by issue-worker to order the queue |
+| `tags` | list | Domain labels for search |
+| `repo` | abs path | Fill before setting `status: ready` |
+| `created` / `updated` | `YYYY-MM-DD` | |
+
+**Status lifecycle:**
+
+```
+inbox → ready → active → blocked → active → review → done
+```
+
+| Status | Who sets it | Meaning |
+|--------|-------------|---------|
+| `inbox` | human | Captured, not yet ready to work |
+| `ready` | human | Queued for issue-worker; `repo:` must be set |
+| `active` | workflow | Being worked on |
+| `blocked` | workflow | Needs human input — see `## Blocked` section |
+| `review` | workflow | PR opened — see `pr:` field |
+| `done` | human | Merged and closed |
+
+**Workflow-managed fields** (do not edit manually):
+
+| Field | Set when |
+|-------|----------|
+| `branch` | worktree created |
+| `worktree` | worktree created |
+| `pr` | PR opened |
+
+### Body: implementation
+
 ```markdown
-Type: implementation
-Status: active
-Created: YYYY-MM-DD
-
 ## Objective
 One sentence. What done looks like.
 
@@ -61,42 +112,81 @@ One sentence. What done looks like.
 What situation or observation created this issue. 2–4 sentences.
 
 ## Scope
-**In:** what will be touched
+**In:** bullet list of what will be touched
 **Off-limits:** what will not change and why
 
-## Scenarios
-- S1. Given ... When ... Then ...
-
-## Open questions
-- [ ] ?
+## Tasks
+- [ ] First task, present tense imperative
+- [ ] Second task
+- [ ] Third task
 ```
 
-**For type: bug** — replace Scenarios with:
-```markdown
-## Reproduction
-Steps to reproduce:
-1. {step}
+**Tasks rules:**
+- One action per checkbox
+- Order matters — tasks are executed sequentially by issue-worker
+- Each task should be completable in one agent turn
+- No `Task N:` prefix — the checkbox text is the identifier
 
-**Expected:** {what should happen}
-**Actual:** {what happens instead}
+### Body: bug
+
+```markdown
+## Objective
+One sentence. What correct behavior looks like once fixed.
+
+## Context
+What situation surfaced this bug. 2–4 sentences.
+
+## Reproduction
+1. Step one
+2. Step two
+
+**Expected:** what should happen
+**Actual:** what happens instead
 
 ## Root Cause
-Hypothesis or confirmed cause.
+Hypothesis or confirmed cause. Update once known.
 
-## Acceptance Criteria
-- [ ] Reproduction steps no longer exhibit the broken behavior
+## Tasks
+- [ ] Write a failing test reproducing the bug
+- [ ] Fix the implementation
+- [ ] Confirm the test passes and no regressions
 ```
 
-**For type: investigation** — replace Scenarios with:
+### Body: investigation
+
 ```markdown
+## Objective
+One sentence. What answering this unlocks.
+
+## Context
+What prompted the investigation. 2–4 sentences.
+
 ## Questions
 - Q1: {specific unknown} → Confirming: {signal} | Falsifying: {signal}
 
 ## Method
 How to investigate and what each approach will reveal.
 
-## Done when
-Conditions that close this issue.
+## Tasks
+- [ ] Answer Q1
+- [ ] Write a spike or note with findings
+```
+
+### Sections added during execution
+
+These sections are added by the workflow or by you after the fact — do not pre-populate them:
+
+```markdown
+## Blocked
+### Needs input
+{precise question or decision the agent cannot make alone}
+
+## Resolution
+PR: {url}
+{one-paragraph summary of what was done}
+
+## Open questions
+- [ ] {any remaining questions after closing}
 ```
 
 ---
@@ -105,25 +195,31 @@ Conditions that close this issue.
 
 **Location:** `~/engineering/spikes/NNN-Title Case.md`
 
-**ID format:** 3-digit integer, zero-padded
+**ID format:** 3-digit integer, zero-padded.
 
-**Body structure:**
+```yaml
+---
+id: "NNN"
+title: "Question being investigated"
+status: resolved             # resolved | inconclusive | deferred
+created: YYYY-MM-DD
+related-issue: "NNN"         # optional
+---
+```
+
+**Body:**
 ```markdown
-Status: resolved | inconclusive | deferred
-Created: YYYY-MM-DD
-Repo: <repo path or name>
-
 ## Question
 The question the spike is intended to answer.
 
 ## Context
-The context regarding the question.
+What prompted this spike. 2–4 sentences.
 
 ## Answer
 One sentence summary of the conclusion.
 
-## Evidences
-What was discovered.
+## Evidence
+What was discovered. Prose. Link to files, commits, or docs.
 
 ## Links
 - issues/NNN-Related Issue.md
