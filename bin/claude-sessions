@@ -103,6 +103,7 @@ def checks_summary(session_id: str) -> str:
 def load_tracked(live_panes: set[str]) -> list[dict]:
     if not SESSIONS_DIR.exists():
         return []
+    now = datetime.now(timezone.utc).timestamp()
     sessions = []
     for path in sorted(SESSIONS_DIR.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
         try:
@@ -112,6 +113,9 @@ def load_tracked(live_panes: set[str]) -> list[dict]:
         session_id = data.get("session_id") or path.stem
         pane       = data.get("pane", "")
         is_alive   = bool(pane) and pane in live_panes
+        last_ts    = float(data.get("last_activity") or data.get("started_at") or 0)
+        if not is_alive and last_ts and (now - last_ts) > 3600:
+            continue
         status     = data.get("status", "unknown")
         if not is_alive and status not in ("ended", "done"):
             status = "gone"
