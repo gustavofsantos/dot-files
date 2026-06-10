@@ -1,0 +1,31 @@
+setup.sh
+  s_978aaba1ed2a5e::t_7bf04b6e64ce25 11
+CLAUDE.md
+  s_978aaba1ed2a5e::t_5121a843d9295a 58
+  s_978aaba1ed2a5e::t_171445641fb905 15,24
+  s_978aaba1ed2a5e::t_9d733e0cd21004 38
+scripts/install-cursor.sh
+  s_978aaba1ed2a5e::t_e53e4221dd2fc8 1-51
+bin/cursor-hook-session-end
+  s_978aaba1ed2a5e::t_de01e57c28571a 1-27
+.cursor/hooks.json
+  s_978aaba1ed2a5e::t_2c3db963b375bf 1-14
+bin/cursor-hook-session-track
+  s_978aaba1ed2a5e::t_8251c21d560e68 1-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "2397e32a0dceec2c33cc0c7fa064396653d45f20",
+  "prompts": {},
+  "sessions": {
+    "s_978aaba1ed2a5e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9b4c9912-a7b6-4370-a930-5be0d56c38d9",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
