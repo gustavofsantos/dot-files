@@ -4,6 +4,7 @@ set -euo pipefail
 echo "Creating local override files..."
 touch "$HOME/.gitconfig.local"
 touch "$HOME/.zshlocal"
+touch "$HOME/.agent-hooks.local.yml"
 
 # Global checks registry: enrolls the repos that run checks after each agent
 # turn. Seeded once with a commented example; never overwritten.

@@ -1,0 +1,36 @@
+# ~/.agent-hooks.yml — committed baseline, shared across machines.
+#
+# Central registry of agent hooks run by hooks-runner across all harnesses.
+# Machine-specific or private hooks go in ~/.agent-hooks.local.yml (same shape,
+# gitignored), overlaid by hook name.
+#
+# Merge semantics (by name):
+#   - Local entry with a new name: adds the hook
+#   - Local entry with an existing name: replaces the base entry wholesale
+#   - Local entry with enabled: false: disables the base hook on this machine
+
+hooks:
+  - name: session-track
+    on: [session_start, prompt_submit]
+    command: claude-hook-session-track
+    harness: [claude]
+  - name: cursor-session-track
+    on: [session_start, prompt_submit]
+    command: cursor-hook-session-track
+    harness: [cursor]
+  - name: session-end
+    on: [session_end]
+    command: claude-hook-session-end
+    harness: [claude]
+  - name: cursor-session-end
+    on: [session_end]
+    command: cursor-hook-session-end
+    harness: [cursor]
+  - name: notify
+    on: [turn_end, notification]
+    command: claude-hook-notify
+    harness: [claude]
+  - name: checks-snapshot
+    on: [turn_end]
+    command: checks-snapshot
+    harness: [claude, cursor]

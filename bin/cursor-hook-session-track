@@ -1,18 +1,20 @@
 #!/usr/bin/env bash
 # cursor-hook-session-track — register/refresh a Cursor Agent session and its pane.
 #
-# The Cursor analog of claude-hook-session-track. Wire in ~/.cursor/hooks.json:
-#   "sessionStart":       [{"command": "…/.bin/cursor-hook-session-track"}]
-#   "beforeSubmitPrompt": [{"command": "…/.bin/cursor-hook-session-track"}]
+# Invoked via hooks-runner for the cursor harness:
+#   "sessionStart":       hooks-runner cursor sessionStart
+#   "beforeSubmitPrompt": hooks-runner cursor beforeSubmitPrompt
 #
-# Cursor spawns hooks as child processes with the conversation JSON on stdin
-# (https://cursor.com/docs/hooks). We translate Cursor's field names into the
-# SAME state-file schema that Claude writes, so `claude-sessions` lists Cursor
-# and Claude agents side by side in one picker. `beforeSubmitPrompt` is the
-# workhorse: it creates the state file if `sessionStart` didn't already, so the
-# session registers on its first prompt regardless.
+# Receives the CanonicalEvent envelope on stdin (built by hooks-runner):
+#   { harness, event, session_id, cwd, raw: { ...original Cursor payload... } }
 #
-# State: ~/.claude-sessions/<conversation_id>.json
+# We translate Cursor's fields into the SAME state-file schema that Claude
+# writes, so `claude-sessions` lists Cursor and Claude agents side by side in
+# one picker.  `beforeSubmitPrompt` is the workhorse: it creates the state file
+# if `sessionStart` didn't already, so the session registers on its first
+# prompt regardless.
+#
+# State: ~/.claude-sessions/<session_id>.json
 #   { session_id, agent, track_name, task, dir, pane, status, started_at,
 #     last_activity, notifications }
 
@@ -24,12 +26,17 @@ command -v jq &>/dev/null || exit 0
 
 jget() { printf '%s' "$INPUT" | jq -r "$1 // empty" 2>/dev/null; }
 
-# conversation_id is stable across every turn of a Cursor session — the right
-# analog to Claude's session_id (generation_id changes every message).
-SESSION_ID="$(jget '.conversation_id')"
+# Read session_id from the envelope (set by hooks-runner adapter).  Fall back
+# to the raw Cursor conversation_id for direct invocations without the runner.
+SESSION_ID="$(jget '.session_id')"
+[[ -z "$SESSION_ID" ]] && SESSION_ID="$(jget '.raw.conversation_id')"
+[[ -z "$SESSION_ID" ]] && SESSION_ID="$(jget '.conversation_id')"
 [[ -z "$SESSION_ID" ]] && exit 0
 
-DIR="$(jget '.workspace_roots[0]')"
+# cwd from envelope; fall back to raw Cursor workspace_roots and env vars.
+DIR="$(jget '.cwd')"
+[[ -z "$DIR" ]] && DIR="$(jget '.raw.workspace_roots[0]')"
+[[ -z "$DIR" ]] && DIR="$(jget '.workspace_roots[0]')"
 DIR="${DIR:-${CURSOR_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}}"
 PANE="${TMUX_PANE:-}"
 TRACK_NAME="$(basename "$DIR")"

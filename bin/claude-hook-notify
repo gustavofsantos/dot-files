@@ -22,10 +22,20 @@ SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
 # Need jq — bail silently if missing
 command -v jq &>/dev/null || exit 0
 
-# Determine hook type from payload shape
-if printf '%s' "$INPUT" | jq -e 'has("stop_hook_active")' &>/dev/null; then
+# Determine hook type.  When invoked via hooks-runner the canonical event is
+# exported as HOOK_EVENT ("turn_end" or "notification"); fall back to payload
+# shape detection for direct invocations.
+if [[ "${HOOK_EVENT:-}" == "turn_end" ]]; then
+  HOOK_TYPE="stop"
+elif [[ "${HOOK_EVENT:-}" == "notification" ]]; then
+  HOOK_TYPE="notification"
+elif printf '%s' "$INPUT" | jq -e 'has("stop_hook_active")' &>/dev/null; then
+  HOOK_TYPE="stop"
+elif printf '%s' "$INPUT" | jq -e '.event == "turn_end"' &>/dev/null; then
   HOOK_TYPE="stop"
 elif printf '%s' "$INPUT" | jq -e 'has("message")' &>/dev/null; then
+  HOOK_TYPE="notification"
+elif printf '%s' "$INPUT" | jq -e '.event == "notification"' &>/dev/null; then
   HOOK_TYPE="notification"
 else
   exit 0

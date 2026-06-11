@@ -99,44 +99,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "claude-hook-session-track"
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "claude-hook-session-end"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "claude-hook-notify"
-          },
-          {
-            "type": "command",
-            "command": "checks-snapshot"
-          }
-        ]
-      }
-    ],
-    "Notification": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "claude-hook-notify"
+            "command": "hooks-runner claude SessionStart"
           }
         ]
       }
@@ -147,7 +110,40 @@
         "hooks": [
           {
             "type": "command",
-            "command": "claude-hook-session-track"
+            "command": "hooks-runner claude UserPromptSubmit"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "hooks-runner claude Stop"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "hooks-runner claude SessionEnd"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "hooks-runner claude Notification"
           }
         ]
       }
