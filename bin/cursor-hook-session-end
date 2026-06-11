@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # cursor-hook-session-end — sessionEnd hook: mark a Cursor session as ended.
 #
-# Wire in ~/.cursor/hooks.json:
-#   "sessionEnd": [{"command": "…/.bin/cursor-hook-session-end"}]
+# Invoked via hooks-runner for the cursor harness:
+#   "sessionEnd": hooks-runner cursor sessionEnd
 #
+# Receives the CanonicalEvent envelope on stdin (built by hooks-runner).
 # Mirror of claude-hook-session-end: keeps the state file (recent history) but
 # flips status so `claude-sessions` shows it as ended, not a live pane.
 
@@ -13,7 +14,11 @@ INPUT=$(cat 2>/dev/null || true)
 SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
 command -v jq &>/dev/null || exit 0
 
-SESSION_ID="$(printf '%s' "$INPUT" | jq -r '.conversation_id // empty' 2>/dev/null)"
+# Read session_id from the envelope; fall back to raw Cursor field for direct
+# invocations without the runner.
+SESSION_ID="$(printf '%s' "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)"
+[[ -z "$SESSION_ID" ]] && SESSION_ID="$(printf '%s' "$INPUT" | jq -r '.raw.conversation_id // empty' 2>/dev/null)"
+[[ -z "$SESSION_ID" ]] && SESSION_ID="$(printf '%s' "$INPUT" | jq -r '.conversation_id // empty' 2>/dev/null)"
 [[ -z "$SESSION_ID" ]] && exit 0
 
 STATE="${SESSIONS_DIR}/${SESSION_ID}.json"
