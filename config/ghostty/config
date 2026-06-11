@@ -2,12 +2,12 @@
 # font-family = CommitMono
 
 # Berkeley Mono
-# font-family = BerkeleyMono Nerd Font
-# adjust-cell-height = 6
+font-family = BerkeleyMono Nerd Font
+adjust-cell-height = 6
 
 # Mono Lisa
-font-family = MonoLisa Nerd Font
-adjust-cell-height = 2
+# font-family = MonoLisa Nerd Font
+# adjust-cell-height = 2
 
 # Operator Mono
 # font-family = OperatorMono Nerd Font
