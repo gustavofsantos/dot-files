@@ -1,0 +1,56 @@
+bin/hooks-runner
+  s_89b508b428198f::t_b2ad1df4914208 1-3,10,35-39,55-62,75-88,92-94,105-115,200-201,204-223,301-310,312-318,374,382-384,424,444-445
+  s_89b508b428198f::t_7e54ea386c8fa6 311
+  s_89b508b428198f::t_4fcd5e47e12718 116-199
+  s_89b508b428198f::t_25174d5ea938ea 319-326,375
+  s_89b508b428198f::t_02549fd174d866 327-373,376-381,385-423,425-443
+  s_89b508b428198f::t_bece70b3944982 89-91,95-104
+  s_89b508b428198f::t_ae46eb6bf5284c 40-42,44-45,63-74
+  s_89b508b428198f::t_28c984071beb04 43,46-54
+  s_89b508b428198f::t_7d8ed448ab2d2e 202-203,224-300
+  s_89b508b428198f::t_e6ce1f953c06c9 4-9,11-34
+bin/cursor-hook-session-end
+  s_89b508b428198f::t_3ab61d8030a0b5 4-5,7,17-21
+.cursor/hooks.json
+  s_89b508b428198f::t_df758c1dd2183f 5,8-11,14
+scripts/link-home-files.sh
+  s_89b508b428198f::t_16650f9bd0f79e 18
+.gitignore
+  s_89b508b428198f::t_6b54b87d54c302 4-6
+.claude/settings.json
+  s_89b508b428198f::t_fb8ff3a3e840d1 124
+  s_89b508b428198f::t_51641bd0247a9a 102,107,113,129,135,140,146
+bin/cursor-hook-session-track
+  s_89b508b428198f::t_cecc5cd90a722c 4-6,8-9,11-17,29-33,36-39
+bin/claude-hook-notify
+  s_89b508b428198f::t_a3075db6a8ba25 25-34,38
+.agent-hooks.yml
+  s_89b508b428198f::t_da11ed0ddab91d 1-15,21-23,29-31,33-36
+  s_89b508b428198f::t_e2fd169e5fe8e3 16-20,24-28,32
+test_bin/hooks-runner.bats
+  s_89b508b428198f::t_8fe743d4fbdd49 133-203
+  s_89b508b428198f::t_40d0a82596a89d 1-15,17-24,28-132,204-311
+  s_89b508b428198f::t_1c07acedd924e0 16,26-27
+  s_89b508b428198f::t_069234f4cfee6b 534-687
+  s_89b508b428198f::t_09b8cecfee104c 312-455
+  s_89b508b428198f::t_a7ea900dd6a9f9 25
+  s_89b508b428198f::t_8985987ece24f2 456-533
+scripts/create-local-files.sh
+  s_89b508b428198f::t_cf6591e75f7440 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "fc3e1b28b0981e2ec2c1d2430048e57355fc2d33",
+  "prompts": {},
+  "sessions": {
+    "s_89b508b428198f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "86965b30-c84a-4fe2-b4c0-8c9ffd22965b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
