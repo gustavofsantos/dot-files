@@ -45,6 +45,15 @@ for rule in "$DOTFILES_DIR"/.claude/rules/*.md; do
 done
 echo "Installing custom rules... OK"
 
+echo "Installing custom workflows..."
+mkdir -p "$HOME/.claude/workflows"
+for wf in "$DOTFILES_DIR"/.claude/workflows/*; do
+  [ -f "$wf" ] || continue
+  name=$(basename "$wf")
+  ln -sf "$wf" "$HOME/.claude/workflows/$name"
+done
+echo "Installing custom workflows... OK"
+
 echo "Merging Claude settings..."
 DOTFILES_SETTINGS="$DOTFILES_DIR/.claude/settings.json"
 GLOBAL_SETTINGS="$HOME/.claude/settings.json"
