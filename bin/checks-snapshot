@@ -15,10 +15,9 @@
 
 set -euo pipefail
 
-# Hook JSON arrives on stdin; we don't need its body, just drain it.
-cat >/dev/null 2>&1 || true
-
-SESSION_ID="${CLAUDE_SESSION_ID:-}"
+# Hook JSON arrives on stdin; extract session_id, fall back to env var.
+HOOK_JSON=$(cat 2>/dev/null || true)
+SESSION_ID="${CLAUDE_SESSION_ID:-$(printf '%s' "$HOOK_JSON" | jq -r '.session_id // empty' 2>/dev/null)}"
 DIR="${CLAUDE_TRACK_DIR:-$PWD}"
 CHECKS_DIR="${CHECKS_DIR:-${HOME}/.checks}"
 SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
