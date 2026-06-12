@@ -1,5 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {
+    "CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING": "1"
+  },
   "permissions": {
     "allow": [
       "Read",
@@ -152,6 +155,32 @@
   "statusLine": {
     "type": "command",
     "command": "claude-statusline"
+  },
+  "spinnerVerbs": {
+    "mode": "replace",
+    "verbs": [
+      "Calculando os arreios",
+      "Cozinhando o mate",
+      "Ajeitando a carga na carroça",
+      "Peleando com as linhas de código",
+      "Desatando esse nó cego",
+      "Campereando o código pra achar o rastro",
+      "Remexendo o braseiro pra clarear as ideias",
+      "Passando o esmeril nessa função",
+      "Caçando pulga em pelo de cusco",
+      "Verificando se essa gambiarra não vai dar xarope",
+      "Testando se o laço tá firme ou se vai arrebentar",
+      "Mateando",
+      "Matutando",
+      "Ruminando",
+      "Gauderiando",
+      "Chasqueando",
+      "Carpindo",
+      "Ajeitando",
+      "Peleando",
+      "Cuscando",
+      "Firmando"
+    ]
   },
   "theme": "custom:nord",
   "teammateMode": "tmux",
