@@ -27,7 +27,7 @@ so that {measurable outcome}.
 - [ ] Task 1: {title} — done when {verifiable condition}
 
 ## Facts
-Facts this issue relies on (see the `vault` skill):
+Facts this issue relies on (captured via **Mira**):
 - FACT-NNN — why it matters here
 
 ## Context

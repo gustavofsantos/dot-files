@@ -19,7 +19,7 @@ hooks:
 
 Drives `type: implementation` issues only — an `investigation` issue is answered by Finn, not tested into existence.
 
-Locate the active issue (same resolution the `vault` skill uses):
+Locate the active issue (same resolution the `issue` skill uses):
 
 ```bash
 _ROOT=$(git rev-parse --show-toplevel 2>/dev/null)

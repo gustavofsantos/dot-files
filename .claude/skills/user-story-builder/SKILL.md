@@ -72,4 +72,4 @@ Break into atomic tasks (max 7; more means story needs a split):
 
 ## Phase 4 — Store as issue
 
-Read [references/issue-template.md](references/issue-template.md), fill it (`{title}` slugified; `{id}`/`{today}` resolved by the skill; story, criteria, out-of-scope, confirmed tasks), then invoke the `vault` skill to allocate an ID, link facts, and write the file.
+Read [references/issue-template.md](references/issue-template.md), fill it (`{title}` slugified; `{id}`/`{today}` resolved by the skill; story, criteria, out-of-scope, confirmed tasks), then invoke the `issue` skill to allocate an ID and write the file.

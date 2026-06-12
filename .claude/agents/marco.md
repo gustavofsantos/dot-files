@@ -140,4 +140,4 @@ Confidence tags inline: `(verified: src/billing/payment.go)` / `(inferred: packa
 
 ## Report back to caller
 
-State: contexts found, aggregates and events inventoried, relationships classified, language collisions, open question count, and where the document was written. Surface the **Fact candidates** for the caller to promote via the `vault` skill, and the **Entry points for Finn** as suggested next investigations.
+State: contexts found, aggregates and events inventoried, relationships classified, language collisions, open question count, and where the document was written. Surface the **Fact candidates** for the caller to promote via **Mira**, and the **Entry points for Finn** as suggested next investigations.

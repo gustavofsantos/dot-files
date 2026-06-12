@@ -31,4 +31,4 @@ Before implementing a non-trivial solution, project into a future where it has *
 
 ## Feeding back
 
-If tracked as an issue (`vault`): unresolved blockers → `## Open questions`; approach-constraining mitigations → `## Context` (with any `design-constraints` block); must-not-break modes → `## Off-limits`.
+If tracked as an issue (`issue` skill): unresolved blockers → `## Open questions`; approach-constraining mitigations → `## Context` (with any `design-constraints` block); must-not-break modes → `## Off-limits`.

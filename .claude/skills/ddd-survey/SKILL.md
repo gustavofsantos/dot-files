@@ -29,4 +29,4 @@ Spawn **Marco** (Task tool) with: target paths, ignore paths, repo name, the mea
 
 ## 5. After
 
-Relay Marco's summary including stated unknowns — do not paper over them. Surface the **Fact candidates** for promotion via `vault`, and the **Entry points for Finn** as suggested next investigations.
+Relay Marco's summary including stated unknowns — do not paper over them. Surface the **Fact candidates** for promotion via **Mira** (call Mira to record), and the **Entry points for Finn** as suggested next investigations.

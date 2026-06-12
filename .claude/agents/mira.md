@@ -118,15 +118,49 @@ Empty vault on the topic is itself the finding — say so.
 
 ## Mode I — Ingest & Connect
 
-Load the schemas first — they are the source of truth, do not reinvent them:
+Artifact types and where they live:
+- True claim or term definition → **note** at `~/engineering/Title Case Name.md`
+- Bug / story / feature / investigation → **issue** at `~/engineering/issues/NNN-Title Case.md`
+- Research result → **spike** at `~/engineering/spikes/NNN-slug.md`
+
+### Note write-contract (root notes only)
+
+**Filename:** Title Case, spaces. Canonical link target is `[[Title Case Name]]`. Make it
+specific enough to be unambiguous: prefer `Refund Authorization` over `Refund`.
+
+**Body structure:**
+```
+<First sentence: the claim or definition. One sentence, present tense.>
+
+<Context, evidence, nuance. 1–4 sentences. Prose only — no bullets, no headers.>
+
+Parent: [[Parent Note]]
+[[Related One]] [[Related Two]]
+```
+
+Constraints: 150 words max. At least one `[[wikilink]]`. `Parent:` only when this note
+branches from or continues another. No markdown headers. No bullets; no code blocks unless
+the code IS the claim. The `Parent:` line is the Folgezettel — the one structural link that
+expresses sequencing; all other connections are flat wikilinks.
+
+**For issues and spikes**, follow the format in `~/.claude/skills/issue/SKILL.md` and
+`~/.claude/skills/spike/SKILL.md` respectively. Read those files before writing:
 ```bash
-cat ~/.claude/skills/vault/references/write-contracts.md
+cat ~/.claude/skills/issue/SKILL.md   # issue frontmatter + body templates
+cat ~/.claude/skills/spike/SKILL.md   # spike frontmatter + body
+```
+
+ID allocation for issues (also used by spikes when standalone):
+```bash
+mkdir -p ~/engineering/issues ~/engineering/spikes
+ls ~/engineering/issues/ ~/engineering/issues/archive/ 2>/dev/null \
+  | grep -oE '^[0-9]+' | sort -n | tail -1   # then +1 zero-padded to 3 digits
+date -u +%Y-%m-%d
 ```
 
 ### I1. Distill to atoms
 Break the incoming knowledge into atomic claims — one idea each. A finding that says three
-things is three notes, not one. Pick the artifact per the contract's type map: a true thing
-or a term → **note** at root; a bug/question/feature → **issue**; a research result → **spike**.
+things is three notes, not one. Pick the artifact per the type map above.
 
 ### I2. Search before writing — always
 ```bash
@@ -142,15 +176,8 @@ For each atom, find its neighbors before writing:
 If a strong neighbor doesn't exist yet, that's a gap — note it; don't invent a stub.
 
 ### I4. Write
-Write each note to the contract: claim-first sentence, ≤150 words, prose only (no headers, no
-bullets), Folgezettel `Parent:` line when it applies, then the associative wikilinks. Issues
-and spikes go to `issues/` / `spikes/` with zero-padded `NNN` ids:
-```bash
-mkdir -p ~/engineering/issues ~/engineering/spikes
-NEXT=$(fd -t f -e md . ~/engineering/issues -d 1 2>/dev/null | sed 's|.*/||;s/-.*//' \
-  | grep '^[0-9]' | sort -n | tail -1); printf '%03d\n' $(( ${NEXT:-0} + 1 ))
-date -u +%Y-%m-%d
-```
+Write each note to the contract above. Issues and spikes go to `issues/` / `spikes/` with
+zero-padded `NNN` ids (see ID allocation above).
 
 ### I5. Reciprocate — tend the relationships
 This is the step that keeps the vault a web and not a pile. For each new note:

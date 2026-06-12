@@ -73,7 +73,7 @@ The flush is not a summary — it's the distilled output an agent needs to act w
 what it should *not* do.
 
 **Next step after the flush** — hand it to the fitting skill:
-- Trackable problem/feature → `vault` (shapes objective + BDD scenarios). Paste the flush's constraints into `## Context`; its "do not do" items become `## Off-limits`.
+- Trackable problem/feature → `issue` skill (shapes objective + context + scope). Paste the flush's constraints into `## Context`; its "do not do" items become `## Off-limits`.
 - User-facing story to slice into tasks → `user-story-builder`.
 - Open design question → `design` / `design-constraints`.
 

@@ -9,6 +9,10 @@ for skill in "$DOTFILES_DIR"/.claude/skills/*/; do
   name=$(basename "$skill")
   ln -sfn "$skill" "$HOME/.claude/skills/$name"
 done
+# prune dangling skill symlinks (removed from dotfiles)
+find "$HOME/.claude/skills" -maxdepth 1 -type l | while read -r link; do
+  [ -e "$link" ] || rm "$link"
+done
 echo "Installing custom skills... OK"
 
 echo "Installing custom subagents..."
