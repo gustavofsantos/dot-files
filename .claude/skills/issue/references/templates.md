@@ -6,11 +6,13 @@
 ---
 id: "NNN"
 title: "Short imperative title"
-type: implementation        # implementation | bug | investigation
+type: implementation        # implementation | bug | investigation | prototype | characterization
 status: inbox               # inbox | ready | active | blocked | review | done
 priority: medium            # high | medium | low
 tags: []
 repo: ""                    # /abs/path to git repo — fill before status: ready
+intent: ""                  # throwaway | promote — required when type: prototype
+target: ""                  # module, function, or service — required when type: characterization
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 # workflow-managed — do not edit
@@ -84,9 +86,59 @@ What prompted the investigation. 2–4 sentences.
 ## Method
 How to investigate and what each approach will reveal.
 
+> **Optional pre-step — scratch refactoring:** if the code is illegible, do an aggressive throwaway refactor on a temp branch to understand it before investigating. Nothing is committed. The branch may be preserved as a readable reference but is never merged.
+
 ## Tasks
 - [ ] Answer Q1
 - [ ] Write a spike or note with findings
+```
+
+## Body: prototype
+
+> **Done when:** `## Decision` is filled. A merged PR is NOT required.
+> `intent: throwaway` means the prototype is discarded after Decision; `intent: promote` means it may become a real implementation issue.
+
+```markdown
+## Objective
+One sentence. What this prototype is meant to learn or validate.
+
+## Hypothesis
+The specific belief being tested. What would confirm it, what would falsify it.
+
+## Scope
+**In:** what will be built or tried
+**Off-limits:** what will not be touched so the prototype stays throwaway
+
+## Tasks
+- [ ] First task, present tense imperative
+- [ ] Second task
+
+## Findings
+_(filled during execution — do not pre-populate)_
+
+## Decision
+_(filled after evaluation — do not pre-populate)_
+Outcome: promote | discard
+Rationale: {one paragraph}
+```
+
+## Body: characterization
+
+> **Done when:** all tasks checked, `## Behaviors Captured` filled, and tests passing in CI.
+
+```markdown
+## Objective
+One sentence. What understanding this characterization produces.
+
+## Target
+{module, function, or service being characterized} — `target:` frontmatter must match.
+
+## Tasks
+- [ ] First task, present tense imperative
+- [ ] Second task
+
+## Behaviors Captured
+_(filled during execution — do not pre-populate)_
 ```
 
 ## Sections added during execution (do not pre-populate)

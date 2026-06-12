@@ -20,10 +20,16 @@ Create or update tracked work items in `~/engineering/issues/`.
      | grep -oE '^[0-9]+' | sort -n | tail -1
    # increment by 1 and zero-pad to 3 digits
    ```
-3. **Choose type** — `implementation`, `bug`, or `investigation`; infer from context, confirm if ambiguous.
+3. **Choose type** — `implementation`, `bug`, `investigation`, `prototype`, or `characterization`; infer from context, confirm if ambiguous.
 4. **Fill missing fields conversationally** — ask only what cannot be inferred.
 5. **Write** — if creating or updating a file, load [references/templates.md](references/templates.md) first and follow the matching template exactly.
 
 ## File location
 
 `~/engineering/issues/NNN-Title Case.md` — Title Case, spaces, short imperative phrase.
+
+## Notes on type-specific behavior
+
+- **prototype** — done when `## Decision` is filled. No merged PR required.
+- **characterization** — done when all tasks are checked, `## Behaviors Captured` is filled, and tests pass in CI.
+- **user-story**, **outcome** — created by their own builder skills; handled separately, not in scope here.
