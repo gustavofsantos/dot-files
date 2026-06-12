@@ -20,8 +20,17 @@ function drmid-fn {
   [ ! -z "$imgs" ] && docker rmi "$imgs" || echo "no dangling images."
 }
 
-eval "$(zoxide init zsh)"
-eval "$(starship init zsh)"
+if command -v "/opt/homebrew/bin/brew" &> /dev/null; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+fi
+
+if command -v "zoxide" &> /dev/null; then
+  eval "$(zoxide init zsh)"
+fi
+
+if command -v "starship" &> /dev/null; then
+  eval "$(starship init zsh)"
+fi
 
 if command -v "sheldon" &> /dev/null; then
   eval "$(sheldon source)"
@@ -34,10 +43,6 @@ fi
 if command -v "mise" &> /dev/null; then
   eval "$(mise activate zsh)"
 fi
-
-# if command -v "brew" &> /dev/null; then
-#   eval "$(/opt/homebrew/bin/brew shellenv)"
-# fi
 
 if command -v "fnm" &> /dev/null; then
   eval "$(fnm env --use-on-cd --shell zsh)"
