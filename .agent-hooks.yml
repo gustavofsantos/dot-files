@@ -34,3 +34,7 @@ hooks:
     on: [turn_end]
     command: checks-snapshot
     harness: [claude, cursor]
+  - name: session-log
+    on: [turn_end, SubagentStart, SubagentStop]
+    command: claude-hook-session-log
+    harness: [claude, cursor]

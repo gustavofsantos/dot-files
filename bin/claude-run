@@ -10,7 +10,7 @@
 #   --no-attach       Create session but don't switch to it
 #   -- ARGS           Extra args forwarded verbatim to claude
 #
-# Session state is written to ~/.claude-sessions/ by claude-hook-notify
+# Session state is written to ~/.agent-sessions/ by claude-hook-notify
 # when the Stop or Notification hook fires inside the new session.
 #
 # The session name is also used as the tmux session name; it is exported
@@ -18,7 +18,7 @@
 
 set -euo pipefail
 
-SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
+SESSIONS_DIR="${AGENT_SESSIONS_DIR:-${HOME}/.agent-sessions}"
 TASK="" NAME="" DIR="$PWD" AUTO=false ATTACH=true
 EXTRA=()
 
@@ -75,7 +75,7 @@ TMUX_CMD=""
 TMUX_CMD+="export CLAUDE_TRACK_NAME=$(q "$NAME")"
 TMUX_CMD+=" CLAUDE_TRACK_TASK=$(q "$TASK")"
 TMUX_CMD+=" CLAUDE_TRACK_DIR=$(q "$DIR")"
-TMUX_CMD+=" CLAUDE_SESSIONS_DIR=$(q "$SESSIONS_DIR")"
+TMUX_CMD+=" AGENT_SESSIONS_DIR=$(q "$SESSIONS_DIR")"
 TMUX_CMD+="; cd $(q "$DIR") && exec $CLAUDE_CMD"
 
 tmux new-session -d -s "$NAME" -c "$DIR"

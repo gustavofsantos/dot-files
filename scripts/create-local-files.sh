@@ -25,4 +25,10 @@ if [ ! -f "$HOME/.checks.yml" ]; then
 repositories: []
 EOF
 fi
+# One-time migration: rename ~/.claude-sessions/ → ~/.agent-sessions/
+if [[ -d "$HOME/.claude-sessions" && ! -d "$HOME/.agent-sessions" ]]; then
+  mv "$HOME/.claude-sessions" "$HOME/.agent-sessions"
+  echo "Migrated ~/.claude-sessions → ~/.agent-sessions"
+fi
+
 echo "Creating local override files... OK"

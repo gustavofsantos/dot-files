@@ -6,7 +6,7 @@ Usage:
   claude-sessions          # fzf picker → jump to the agent's pane on Enter
   claude-sessions --list   # print sessions to stdout and exit
 
-State files live in ~/.claude-sessions/<session_id>.json, written by the
+State files live in ~/.agent-sessions/<session_id>.json, written by the
 SessionStart/UserPromptSubmit hook (claude-hook-session-track) for *every*
 Claude session — however it was launched. Each file records the exact tmux
 pane the session runs in: { session_id, track_name, task, dir, pane, status,
@@ -28,8 +28,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-_sessions_env = os.environ.get("CLAUDE_SESSIONS_DIR")
-SESSIONS_DIR = Path(_sessions_env).expanduser() if _sessions_env else Path.home() / ".claude-sessions"
+_sessions_env = os.environ.get("AGENT_SESSIONS_DIR")
+SESSIONS_DIR = Path(_sessions_env).expanduser() if _sessions_env else Path.home() / ".agent-sessions"
 
 GREEN  = "\033[0;32m"
 YELLOW = "\033[0;33m"
@@ -83,24 +83,6 @@ def age(ts: float) -> str:
     return f"{delta // 86400}d"
 
 
-def checks_summary(session_id: str) -> str:
-    """Latest checks result as a short colored token (✓/✗/●), or '' if none.
-
-    Best-effort extra — navigation never depends on it, so repos without any
-    checks configured simply render a blank column.
-    """
-    if not session_id:
-        return ""
-    try:
-        r = subprocess.run(
-            ["checks-status", session_id, "--oneline"],
-            capture_output=True, text=True, timeout=3,
-        )
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        return ""
-    return r.stdout.strip()
-
-
 def load_tracked(live_panes: set[str]) -> list[dict]:
     if not SESSIONS_DIR.exists():
         return []
@@ -129,7 +111,7 @@ def load_tracked(live_panes: set[str]) -> list[dict]:
             "status":        status,
             "alive":         is_alive,
             "pane":          pane,
-            "checks":        checks_summary(session_id),
+            "checks":        "",
             "last_ts":       float(data.get("last_activity") or data.get("started_at") or 0),
             "notifications": data.get("notifications", 0),
         })

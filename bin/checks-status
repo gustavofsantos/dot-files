@@ -4,7 +4,7 @@
 # Usage:
 #   checks-status                 # current session ($CLAUDE_SESSION_ID) or $PWD
 #   checks-status <session-id>    # explicit checks session id
-#   checks-status <tmux-name>     # resolve via ~/.claude-sessions state
+#   checks-status <tmux-name>     # resolve via ~/.agent-sessions state
 #   checks-status --json          # emit the raw results.json
 #   checks-status --oneline       # single-line summary (for status bars)
 #
@@ -14,7 +14,7 @@
 set -euo pipefail
 
 CHECKS_DIR="${CHECKS_DIR:-${HOME}/.checks}"
-SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
+SESSIONS_DIR="${AGENT_SESSIONS_DIR:-${HOME}/.agent-sessions}"
 
 GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[0;33m'; DIM='\033[2m'; RESET='\033[0m'
 
@@ -35,7 +35,7 @@ resolve_session() {
   local key="$1"
   # 1. direct session id
   if [[ -n "$key" && -d "${CHECKS_DIR}/${key}" ]]; then echo "$key"; return; fi
-  # 2. tmux session name → ~/.claude-sessions state → session_id
+  # 2. tmux session name → ~/.agent-sessions state → session_id
   if [[ -n "$key" && -d "$SESSIONS_DIR" ]]; then
     for f in "$SESSIONS_DIR"/*.json; do
       [[ -f "$f" ]] || continue

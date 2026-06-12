@@ -10,7 +10,7 @@
 set -euo pipefail
 
 INPUT=$(cat 2>/dev/null || true)
-SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
+SESSIONS_DIR="${AGENT_SESSIONS_DIR:-${HOME}/.agent-sessions}"
 command -v jq &>/dev/null || exit 0
 
 SESSION_ID="${CLAUDE_SESSION_ID:-$(printf '%s' "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)}"

@@ -9,7 +9,7 @@
 
 DIR="${CLAUDE_TASK_DIR:-$PWD}"
 PROJECT=$(basename "$DIR")
-SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
+SESSIONS_DIR="${AGENT_SESSIONS_DIR:-${HOME}/.agent-sessions}"
 COUNT=$(ls "$SESSIONS_DIR"/*.json 2>/dev/null | wc -l | tr -d ' ')
 
 printf "  project  %s\n" "$PROJECT"

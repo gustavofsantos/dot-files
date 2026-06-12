@@ -17,7 +17,7 @@ SESSION_ID="${CLAUDE_SESSION_ID:-}"
 TRACK_NAME="${CLAUDE_TRACK_NAME:-}"
 TRACK_TASK="${CLAUDE_TRACK_TASK:-}"
 TRACK_DIR="${CLAUDE_TRACK_DIR:-${PWD}}"
-SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
+SESSIONS_DIR="${AGENT_SESSIONS_DIR:-${HOME}/.agent-sessions}"
 
 # Need jq — bail silently if missing
 command -v jq &>/dev/null || exit 0

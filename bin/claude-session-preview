@@ -4,13 +4,14 @@
 # Called from claude-sessions' fzf --preview hook.
 #
 # Shows: task/status/dir, the latest checks result for the session (if any),
-# and a live capture of the agent's pane.
+# and either the structured session log (.jsonl) or a live pane capture.
 
 SID="${1:-}"
 [[ -z "$SID" ]] && exit 0
 
-SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
+SESSIONS_DIR="${AGENT_SESSIONS_DIR:-${HOME}/.agent-sessions}"
 STATE="${SESSIONS_DIR}/${SID}.json"
+LOG="${SESSIONS_DIR}/${SID}.jsonl"
 
 DIM='\033[2m'; BOLD='\033[1m'; RESET='\033[0m'
 
@@ -39,9 +40,139 @@ if command -v checks-status &>/dev/null; then
   fi
 fi
 
-# Live capture of the agent pane.
-printf "\n${DIM}── agent pane ──${RESET}\n"
-if [[ -n "$PANE" ]]; then
-  tmux capture-pane -p -t "$PANE" 2>/dev/null | tail -n 30 \
-    || printf "${DIM}(pane %s no longer exists)${RESET}\n" "$PANE"
+# Structured session log when available; fall back to live pane capture.
+if [[ -f "$LOG" ]] && command -v python3 &>/dev/null; then
+  python3 - "$LOG" "$SESSIONS_DIR/$SID" <<'PYEOF'
+import json, os, sys
+from pathlib import Path
+
+DIM   = "\033[2m"; BOLD  = "\033[1m"; RESET = "\033[0m"
+CYAN  = "\033[0;36m"; GREEN = "\033[0;32m"; YELLOW = "\033[0;33m"
+
+log_path   = Path(sys.argv[1])
+subdir     = Path(sys.argv[2])  # ~/.agent-sessions/<sid>/
+
+def read_events(path: Path) -> list[dict]:
+    events = []
+    try:
+        for line in path.read_text().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+                if obj.get("type") != "_cursor":
+                    events.append(obj)
+            except json.JSONDecodeError:
+                pass
+    except OSError:
+        pass
+    return events
+
+def sum_tokens(events: list[dict]) -> dict:
+    total = {"input": 0, "output": 0, "cache_read": 0, "cache_write": 0}
+    for e in events:
+        if e.get("type") == "turn_end" and isinstance(e.get("tokens"), dict):
+            for k in total:
+                total[k] += e["tokens"].get(k, 0)
+    return total
+
+def fmt_tokens(t: dict) -> str:
+    parts = []
+    if t["input"] or t["output"]:
+        parts.append(f"in:{t['input']} out:{t['output']}")
+    cr = t["cache_read"]
+    cw = t["cache_write"]
+    if cr or cw:
+        parts.append(f"cache:{cr}r/{cw}w")
+    return "  ".join(parts)
+
+def fmt_k(n: int) -> str:
+    return f"{n//1000}k" if n >= 1000 else str(n)
+
+events = read_events(log_path)
+
+# Group events by turn
+turns: dict[int, list[dict]] = {}
+for e in events:
+    t = e.get("turn")
+    if t is not None:
+        turns.setdefault(t, []).append(e)
+# find turn_end events without a turn key (turn=0 means pre-turn metadata)
+turn_ends = [e for e in events if e.get("type") == "turn_end"]
+
+# Session model from session_start
+sess_model = ""
+for e in events:
+    if e.get("type") == "session_start":
+        sess_model = e.get("model", "")
+        break
+
+n_turns = max(turns.keys()) if turns else 0
+print(f"\n{BOLD}── session log ({n_turns} turn{'s' if n_turns != 1 else ''}) ──{RESET}")
+
+# Show last 4 turns for brevity
+shown_turns = sorted(turns.keys())[-4:]
+if shown_turns and min(shown_turns) > 1:
+    print(f"{DIM}  … {min(shown_turns)-1} earlier turn{'s' if min(shown_turns)-1 != 1 else ''} …{RESET}")
+
+for turn_key in shown_turns:
+    tevents = turns[turn_key]
+    te = next((e for e in tevents if e.get("type") == "turn_end"), None)
+    model = (te or {}).get("model") or sess_model
+    tok = sum_tokens(tevents)
+    tok_str = fmt_tokens(tok) if any(tok.values()) else ""
+    model_short = model.replace("claude-", "").replace("-20", " ") if model else ""
+    header = f"  {CYAN}turn {turn_key}{RESET}"
+    if model_short:
+        header += f"  {DIM}{model_short}{RESET}"
+    if tok_str:
+        header += f"  {DIM}{tok_str}{RESET}"
+    print(header)
+
+    for e in tevents:
+        etype = e.get("type")
+        if etype == "message":
+            role = e.get("role", "")
+            text = (e.get("text") or "").replace("\n", " ").strip()
+            if text:
+                label = "user" if role == "user" else "·"
+                color = YELLOW if role == "user" else DIM
+                print(f"    {color}{label}{RESET}  {DIM}{text[:80]}{RESET}")
+        elif etype == "file_change":
+            op = e.get("op", "edit")
+            path = e.get("path", "")
+            op_sym = "+" if op == "write" else "✎"
+            print(f"    {GREEN}{op_sym}{RESET}  {DIM}{path}{RESET}")
+
+# Totals (main + subagents)
+main_tok = sum_tokens(events)
+sub_agents = []
+if subdir.is_dir():
+    for p in sorted(subdir.glob("*.jsonl")):
+        sub_events = read_events(p)
+        sub_agents.append((p.stem[:12], sum_tokens(sub_events)))
+
+print(f"\n{BOLD}── totals ──{RESET}")
+if any(main_tok.values()):
+    i, o = main_tok["input"], main_tok["output"]
+    cr, cw = main_tok["cache_read"], main_tok["cache_write"]
+    print(f"  main   in:{fmt_k(i)} out:{fmt_k(o)} cache:{fmt_k(cr)}r/{fmt_k(cw)}w")
+
+if sub_agents:
+    agg = {"input": 0, "output": 0, "cache_read": 0, "cache_write": 0}
+    for _, t in sub_agents:
+        for k in agg:
+            agg[k] += t[k]
+    i, o = agg["input"], agg["output"]
+    cr, cw = agg["cache_read"], agg["cache_write"]
+    print(f"  subs   {len(sub_agents)} agents  in:{fmt_k(i)} out:{fmt_k(o)} cache:{fmt_k(cr)}r/{fmt_k(cw)}w")
+PYEOF
+else
+  # Fallback: live capture of the agent pane.
+  printf "\n${DIM}── agent pane ──${RESET}\n"
+  if [[ -n "$PANE" ]]; then
+    tmux capture-pane -p -t "$PANE" 2>/dev/null | tail -n 30 \
+      || printf "${DIM}(pane %s no longer exists)${RESET}\n" "$PANE"
+  fi
 fi

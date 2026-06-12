@@ -14,14 +14,14 @@
 # if `sessionStart` didn't already, so the session registers on its first
 # prompt regardless.
 #
-# State: ~/.claude-sessions/<session_id>.json
+# State: ~/.agent-sessions/<session_id>.json
 #   { session_id, agent, track_name, task, dir, pane, status, started_at,
 #     last_activity, notifications }
 
 set -euo pipefail
 
 INPUT=$(cat 2>/dev/null || true)
-SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
+SESSIONS_DIR="${AGENT_SESSIONS_DIR:-${HOME}/.agent-sessions}"
 command -v jq &>/dev/null || exit 0
 
 jget() { printf '%s' "$INPUT" | jq -r "$1 // empty" 2>/dev/null; }

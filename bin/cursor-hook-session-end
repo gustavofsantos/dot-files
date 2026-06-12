@@ -11,7 +11,7 @@
 set -euo pipefail
 
 INPUT=$(cat 2>/dev/null || true)
-SESSIONS_DIR="${CLAUDE_SESSIONS_DIR:-${HOME}/.claude-sessions}"
+SESSIONS_DIR="${AGENT_SESSIONS_DIR:-${HOME}/.agent-sessions}"
 command -v jq &>/dev/null || exit 0
 
 # Read session_id from the envelope; fall back to raw Cursor field for direct
