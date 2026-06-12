@@ -1,0 +1,23 @@
+.claude/skills/kb-map/SKILL.md
+  s_55c339a7fd4028::t_7870122dc6e0d3 61-64,66-70
+  s_55c339a7fd4028::t_ee21b9023494d2 1-60,65,71-141
+.claude/CLAUDE.md
+  s_55c339a7fd4028::t_277a9457b88d1e 21-24,34-38,40
+  s_55c339a7fd4028::t_904b7e8817013a 6-9,14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "91ceeb177cc87048075e62a69bb63747682ddbd4",
+  "prompts": {},
+  "sessions": {
+    "s_55c339a7fd4028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1dc451db-10e7-4e31-b428-c221ceda0964",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
