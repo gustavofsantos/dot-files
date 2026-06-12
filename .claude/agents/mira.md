@@ -143,11 +143,10 @@ branches from or continues another. No markdown headers. No bullets; no code blo
 the code IS the claim. The `Parent:` line is the Folgezettel — the one structural link that
 expresses sequencing; all other connections are flat wikilinks.
 
-**For issues and spikes**, follow the format in `~/.claude/skills/issue/SKILL.md` and
-`~/.claude/skills/spike/SKILL.md` respectively. Read those files before writing:
+**For issues and spikes**, load the templates before writing:
 ```bash
-cat ~/.claude/skills/issue/SKILL.md   # issue frontmatter + body templates
-cat ~/.claude/skills/spike/SKILL.md   # spike frontmatter + body
+cat ~/.claude/skills/issue/references/templates.md   # issue frontmatter + body templates
+cat ~/.claude/skills/spike/references/templates.md   # spike frontmatter + body
 ```
 
 ID allocation for issues (also used by spikes when standalone):
