@@ -1,0 +1,170 @@
+#!/usr/bin/env python3
+"""
+ai-stats — terminal visualization of token spend across your AI sessions.
+
+Reads the tailored per-session records produced by `ai-stats-import` from
+~/.agent-sessions/stats/*.json and renders horizontal bar charts of token usage,
+grouped by model (default), session, or project, with filters.
+
+Token categories are tracked separately because they are NOT cost-equivalent:
+cache_read is typically ~90% of raw volume but cheap, so the default headline
+metric is `io` (input + output) — the meaningful "work" number — while the full
+breakdown (in / out / cache-read / cache-write) is always shown beneath each bar.
+
+Examples:
+  ai-stats                              # last 30 days, by model, io tokens
+  ai-stats --since 7d                   # last week
+  ai-stats --by session --top 10        # top 10 sessions
+  ai-stats --by project --metric total  # every category summed, per project
+  ai-stats --project dot-files          # filter to a project
+  ai-stats --model sonnet --since all
+"""
+
+import argparse
+import glob
+import json
+import os
+import shutil
+import sys
+import time
+from pathlib import Path
+
+STATS_DIR = Path(os.environ.get("AGENT_SESSIONS_DIR") or (Path.home() / ".agent-sessions")) / "stats"
+
+CATEGORIES = ["input", "output", "cache_read", "cache_write"]
+METRICS = {
+    "io": ("input", "output"),
+    "total": tuple(CATEGORIES),
+    "input": ("input",),
+    "output": ("output",),
+    "cache_read": ("cache_read",),
+    "cache_write": ("cache_write",),
+}
+
+
+def parse_since(s: str | None) -> float | None:
+    if not s or s == "all":
+        return None
+    s = s.strip()
+    units = {"d": 86400, "w": 604800, "h": 3600}
+    if s and s[-1] in units and s[:-1].isdigit():
+        return time.time() - int(s[:-1]) * units[s[-1]]
+    try:
+        return time.mktime(time.strptime(s, "%Y-%m-%d"))
+    except ValueError:
+        sys.exit(f"ai-stats: bad --since value {s!r} (use 30d, 2w, 12h, all, or YYYY-MM-DD)")
+
+
+def humanize(n: int) -> str:
+    for unit, div in (("B", 1e9), ("M", 1e6), ("K", 1e3)):
+        if n >= div:
+            return f"{n / div:.1f}{unit}"
+    return str(n)
+
+
+def load_records(since, until, project, model):
+    records = []
+    for p in sorted(STATS_DIR.glob("*.json")):
+        try:
+            r = json.loads(p.read_text())
+        except (json.JSONDecodeError, OSError):
+            continue
+        ts = r.get("ended_at") or r.get("started_at")
+        if since and ts and ts < since:
+            continue
+        if until and ts and ts > until:
+            continue
+        if project and project not in (r.get("project") or ""):
+            continue
+        if model:
+            r = {**r, "models": {m: v for m, v in r["models"].items() if model in m}}
+            if not r["models"]:
+                continue
+        records.append(r)
+    return records
+
+
+def group(records, by, metric_cats):
+    """Return {label: {category: tokens}} aggregated by the chosen dimension."""
+    out: dict[str, dict[str, int]] = {}
+
+    def add(label, models):
+        bucket = out.setdefault(label, {c: 0 for c in CATEGORIES})
+        for mv in models.values():
+            for c in CATEGORIES:
+                bucket[c] += int(mv.get(c, 0))
+
+    for r in records:
+        if by == "model":
+            for m, mv in r["models"].items():
+                add(m, {m: mv})
+        elif by == "project":
+            add(r.get("project") or "?", r["models"])
+        elif by == "session":
+            label = (r.get("session_id") or "?")[:8]
+            add(label, r["models"])
+    return out
+
+
+def render(groups, metric, metric_cats, title):
+    width = shutil.get_terminal_size((100, 24)).columns
+    rows = sorted(groups.items(), key=lambda kv: sum(kv[1][c] for c in metric_cats), reverse=True)
+    if not rows:
+        print("no sessions match the filter.")
+        return
+
+    label_w = min(max((len(l) for l, _ in rows), default=6), 30)
+    metric_vals = [sum(v[c] for c in metric_cats) for _, v in rows]
+    peak = max(metric_vals) or 1
+    bar_w = max(10, width - label_w - 14)
+
+    grand = {c: sum(v[c] for _, v in rows) for c in CATEGORIES}
+    grand_metric = sum(grand[c] for c in metric_cats)
+
+    print(f"\n  {title}  ·  metric={metric}  ·  {len(rows)} group(s)  ·  "
+          f"{humanize(grand_metric)} tokens\n")
+
+    for (label, cats), mval in zip(rows, metric_vals):
+        filled = int(bar_w * mval / peak)
+        bar = "█" * filled + "·" * (bar_w - filled)
+        pct = 100 * mval / grand_metric if grand_metric else 0
+        print(f"  {label[:label_w]:<{label_w}} │{bar}│ {humanize(mval):>6} {pct:4.0f}%")
+        breakdown = "  ".join(f"{c.replace('_', '-')}:{humanize(cats[c])}" for c in CATEGORIES)
+        print(f"  {'':<{label_w}}   ↳ {breakdown}")
+
+    print(f"\n  total · in:{humanize(grand['input'])}  out:{humanize(grand['output'])}  "
+          f"cache-read:{humanize(grand['cache_read'])}  cache-write:{humanize(grand['cache_write'])}\n")
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Visualize AI-session token spend in the terminal.")
+    ap.add_argument("--since", default="30d", help="window start: 30d, 2w, 12h, all, or YYYY-MM-DD (default 30d)")
+    ap.add_argument("--until", help="window end: YYYY-MM-DD")
+    ap.add_argument("--project", help="filter to sessions whose project contains this substring")
+    ap.add_argument("--model", help="filter to models containing this substring")
+    ap.add_argument("--by", choices=["model", "session", "project"], default="model")
+    ap.add_argument("--metric", choices=list(METRICS), default="io")
+    ap.add_argument("--top", type=int, default=15, help="show only the top N groups (default 15)")
+    args = ap.parse_args()
+
+    if not STATS_DIR.exists() or not any(STATS_DIR.glob("*.json")):
+        sys.exit("ai-stats: no data. Run `ai-stats-import` first.")
+
+    since = parse_since(args.since)
+    until = parse_since(args.until) if args.until else None
+    records = load_records(since, until, args.project, args.model)
+    metric_cats = METRICS[args.metric]
+    groups = group(records, args.by, metric_cats)
+
+    if args.top and len(groups) > args.top:
+        top = dict(sorted(groups.items(),
+                          key=lambda kv: sum(kv[1][c] for c in metric_cats),
+                          reverse=True)[:args.top])
+        groups = top
+
+    win = args.since if args.since != "all" else "all time"
+    render(groups, args.metric, metric_cats, f"AI token spend by {args.by} · {win}")
+
+
+if __name__ == "__main__":
+    main()

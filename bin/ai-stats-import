@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+"""
+ai-stats-import — pull tailored token stats from original Claude Code transcripts.
+
+Scans ~/.claude/projects/*/*.jsonl and, for each session transcript, aggregates
+token usage **per model** into a tailored record at
+~/.agent-sessions/stats/<session_id>.json.
+
+Correctness notes (verified against the live corpus, see verify-tokens):
+  * A single assistant message is split across multiple JSONL lines (one per
+    content block). Every line repeats the SAME `message.usage`. Summing every
+    line triple-counts. We therefore dedupe by `message.id` and count each
+    message's usage exactly once.
+  * `message.id` never repeats across transcripts, so per-session records can be
+    summed across the corpus without double-counting.
+  * Sidechain (subagent) assistant lines carry no usage in the main transcript;
+    their spend lives in separate agent transcripts and is out of scope here.
+
+The store is independent of the hook-managed <id>.jsonl / <id>.json files; this
+script never touches those.
+
+Usage:
+  ai-stats-import                 # import every transcript (idempotent rewrite)
+  ai-stats-import --project NAME  # only transcripts whose project dir matches
+  ai-stats-import --quiet
+"""
+
+import argparse
+import glob
+import json
+import os
+from datetime import datetime, timezone
+from pathlib import Path
+
+PROJECTS_DIR = Path(
+    os.environ.get("CLAUDE_PROJECTS_DIR") or (Path.home() / ".claude" / "projects")
+)
+SESSIONS_DIR = Path(os.environ.get("AGENT_SESSIONS_DIR") or (Path.home() / ".agent-sessions"))
+STATS_DIR = SESSIONS_DIR / "stats"
+
+TOKEN_FIELDS = {
+    "input": "input_tokens",
+    "output": "output_tokens",
+    "cache_read": "cache_read_input_tokens",
+    "cache_write": "cache_creation_input_tokens",
+}
+
+
+def iso_to_unix(ts: str | None) -> int | None:
+    if not ts:
+        return None
+    try:
+        return int(datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp())
+    except (ValueError, TypeError):
+        return None
+
+
+def import_transcript(path: Path) -> dict | None:
+    """Build a tailored stats record from one transcript, or None if empty."""
+    session_id = path.stem
+    project = path.parent.name
+    cwd = None
+    first_ts = None
+    last_ts = None
+    models: dict[str, dict[str, int]] = {}
+    seen_ids: set[str] = set()
+
+    for line in path.read_text(errors="replace").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            e = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+
+        if cwd is None and e.get("cwd"):
+            cwd = e["cwd"]
+        ts = iso_to_unix(e.get("timestamp"))
+        if ts is not None:
+            if first_ts is None or ts < first_ts:
+                first_ts = ts
+            if last_ts is None or ts > last_ts:
+                last_ts = ts
+
+        if e.get("type") != "assistant" or e.get("isSidechain"):
+            continue
+        msg = e.get("message", {})
+        usage = msg.get("usage")
+        mid = msg.get("id")
+        if not usage or not mid or mid in seen_ids:
+            continue
+        seen_ids.add(mid)
+
+        model = msg.get("model") or "unknown"
+        bucket = models.setdefault(
+            model, {k: 0 for k in TOKEN_FIELDS} | {"messages": 0}
+        )
+        for short, raw in TOKEN_FIELDS.items():
+            bucket[short] += int(usage.get(raw, 0) or 0)
+        bucket["messages"] += 1
+
+    if not models:
+        return None
+
+    return {
+        "session_id": session_id,
+        "source": "claude-code",
+        "project": project,
+        "cwd": cwd,
+        "started_at": first_ts,
+        "ended_at": last_ts,
+        "models": models,
+    }
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Import tailored token stats from transcripts.")
+    ap.add_argument("--project", help="only import transcripts under a matching project dir")
+    ap.add_argument("--quiet", action="store_true")
+    args = ap.parse_args()
+
+    STATS_DIR.mkdir(parents=True, exist_ok=True)
+    pattern = str(PROJECTS_DIR / "*" / "*.jsonl")
+    files = sorted(Path(p) for p in glob.glob(pattern))
+
+    imported = 0
+    skipped = 0
+    for path in files:
+        if args.project and args.project not in path.parent.name:
+            continue
+        record = import_transcript(path)
+        if record is None:
+            skipped += 1
+            continue
+        out = STATS_DIR / f"{record['session_id']}.json"
+        out.write_text(json.dumps(record, indent=2) + "\n")
+        imported += 1
+
+    if not args.quiet:
+        total = sum(
+            sum(m[k] for m in json.loads(p.read_text())["models"].values() for k in TOKEN_FIELDS)
+            for p in STATS_DIR.glob("*.json")
+        )
+        print(f"imported {imported} session(s), skipped {skipped} empty → {STATS_DIR}")
+        print(f"corpus total tokens (all categories): {total:,}")
+
+
+if __name__ == "__main__":
+    main()
