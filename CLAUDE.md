@@ -12,12 +12,13 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 ./setup.sh          # links all files, merges Claude settings, installs skills/agents
 ```
 
-`setup.sh` delegates to six scripts in `scripts/`:
+`setup.sh` delegates to seven scripts in `scripts/`:
 
 | Script | What it does |
 |--------|--------------|
 | `link-home-files.sh` | Symlinks dotfiles (`.zshrc`, `.gitconfig`, etc.) into `$HOME` |
 | `create-local-files.sh` | Touches `~/.gitconfig.local` and `~/.zshlocal` if missing |
+| `init-engineering-repo.sh` | Idempotently `git init`s `~/engineering`, writes its `.gitignore`, seeds the first commit |
 | `link-bin-files.sh` | Symlinks every file in `bin/` into `~/.bin/` |
 | `link-xdg-config.sh` | Symlinks each subdir of `config/` into `~/.config/` |
 | `install-skills.sh` | Symlinks Claude skills/agents/themes; merges `.claude/settings.json` into `~/.claude/settings.json` |
@@ -69,6 +70,12 @@ Correctness is the point: a single assistant message is split across many JSONL 
 | `ai-stats` | Terminal charts. Defaults: last `30d`, `--by model`, `--metric io`. Filters: `--since 7d\|2w\|all\|YYYY-MM-DD`, `--until`, `--project`, `--model`, `--by model\|session\|project`, `--metric io\|total\|input\|output\|cache_read\|cache_write`, `--top N`. |
 
 Re-run `ai-stats-import` to refresh (live sessions whose transcript is still growing will show as stale until re-imported).
+
+## Engineering vault auto-commit
+
+`~/engineering` is a git repo whose changes are committed automatically after every agent turn — the commit never depends on the agent remembering to do it. `engineering-autocommit` is a `turn_end` hook (registered in `~/.agent-hooks.yml`, run by `hooks-runner` for both Claude and Cursor). It targets the **fixed** vault path (not the session cwd, since the vault is an additional working dir editable from any session): if the tree is dirty it `git add -A` + commits with a `vault: auto-commit N file(s) — <stamp>` message tagged with the harness and session id; if clean it no-ops fast. Concurrent turn-end hooks across sessions are serialised by an atomic `mkdir` lock under `.git/` (stale locks >60s reclaimed); a contender just bails, since the holder's commit or the next turn covers its changes.
+
+`init-engineering-repo.sh` (part of `setup.sh`) idempotently creates the repo, writes `.gitignore` (`.trash/`, Obsidian `workspace*.json`/`cache`, `.DS_Store`), and seeds the first commit. Commits stay local — nothing is pushed. To pause auto-commit on a machine, disable the hook via `~/.agent-hooks.local.yml` (`- name: engineering-autocommit` / `enabled: false`).
 
 ## Neovim config
 

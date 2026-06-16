@@ -38,3 +38,7 @@ hooks:
     on: [turn_end, SubagentStart, SubagentStop]
     command: claude-hook-session-log
     harness: [claude, cursor]
+  - name: engineering-autocommit
+    on: [turn_end]
+    command: engineering-autocommit
+    harness: [claude, cursor]

@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# engineering-autocommit — turn_end hook: auto-commit the ~/engineering vault.
+#
+# Wired in ~/.agent-hooks.yml:
+#   - name: engineering-autocommit
+#     on: [turn_end]
+#     command: engineering-autocommit
+#
+# After every agent turn (Claude or Cursor) this commits any pending changes in
+# the engineering knowledge vault, so the user never has to remember — and the
+# agent is never trusted — to commit.  It targets the FIXED vault path, not the
+# session cwd, because the vault is an additional working dir editable from any
+# session.  No-ops (fast) when the tree is clean, so idle turns cost nothing.
+#
+# Concurrency: many sessions can end a turn at once.  An atomic mkdir lock under
+# .git/ serialises commits; a contending hook simply bails (the holder's commit,
+# or the next turn, covers its changes).  Stale locks (>60s) are reclaimed.
+
+set -uo pipefail
+
+ENG_DIR="${ENGINEERING_HOME:-$HOME/engineering}"
+
+# Not a git repo yet (setup not run) or no vault → nothing to do.
+git -C "$ENG_DIR" rev-parse --is-inside-work-tree &>/dev/null || exit 0
+command -v git &>/dev/null || exit 0
+
+# Clean tree → nothing to commit. Cheapest possible early-out.
+[[ -z "$(git -C "$ENG_DIR" status --porcelain 2>/dev/null)" ]] && exit 0
+
+# ── Serialise concurrent turn_end hooks across sessions ────────────────────────
+LOCK="${ENG_DIR}/.git/engineering-autocommit.lock"
+lock_mtime() { stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null || echo 0; }
+
+acquired=""
+for _ in $(seq 1 15); do
+  if mkdir "$LOCK" 2>/dev/null; then acquired=1; break; fi
+  # Reclaim a stale lock left by a crashed hook.
+  if [[ -d "$LOCK" && $(( $(date +%s) - $(lock_mtime "$LOCK") )) -gt 60 ]]; then
+    rmdir "$LOCK" 2>/dev/null || true
+  fi
+  sleep 0.2
+done
+[[ -z "$acquired" ]] && exit 0
+trap 'rmdir "$LOCK" 2>/dev/null || true' EXIT
+
+# Another hook may have committed our changes while we waited for the lock.
+[[ -z "$(git -C "$ENG_DIR" status --porcelain 2>/dev/null)" ]] && exit 0
+
+# ── Build the commit message from the canonical event envelope (stdin) ─────────
+HOOK_JSON=$(cat 2>/dev/null || true)
+SID=$(printf '%s' "$HOOK_JSON" | jq -r '.session_id // empty' 2>/dev/null || true)
+HARNESS=$(printf '%s' "$HOOK_JSON" | jq -r '.harness // "agent"' 2>/dev/null || true)
+[[ -z "$HARNESS" || "$HARNESS" == "null" ]] && HARNESS="agent"
+
+COUNT=$(git -C "$ENG_DIR" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+STAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+git -C "$ENG_DIR" add -A 2>/dev/null || exit 0
+
+# Identity falls through to the user's git config; the fallback name only kicks
+# in on a machine with no configured identity so the commit still lands.
+git -C "$ENG_DIR" \
+  -c user.name="${GIT_AUTHOR_NAME:-$(git config user.name || echo engineering-autocommit)}" \
+  -c user.email="${GIT_AUTHOR_EMAIL:-$(git config user.email || echo autocommit@localhost)}" \
+  commit --quiet \
+  -m "vault: auto-commit ${COUNT} file(s) — ${STAMP}" \
+  -m "Automated commit at agent turn end (${HARNESS}${SID:+, session ${SID}})." \
+  >/dev/null 2>&1 || true
+
+exit 0
