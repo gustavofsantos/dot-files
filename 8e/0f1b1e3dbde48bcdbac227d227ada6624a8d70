@@ -1,0 +1,28 @@
+scripts/init-engineering-repo.sh
+  s_786c1c78df6c7b::t_5754de21cbb8d0 1-40
+.agent-hooks.yml
+  s_786c1c78df6c7b::t_91a80b0a96fd72 41-44
+CLAUDE.md
+  s_786c1c78df6c7b::t_90de90cf7c047a 74-79
+  s_786c1c78df6c7b::t_53423a77176a93 15,21
+setup.sh
+  s_786c1c78df6c7b::t_64f26768f15356 8
+bin/engineering-autocommit
+  s_786c1c78df6c7b::t_538a4be86811a5 1-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "8e0f1b1e3dbde48bcdbac227d227ada6624a8d70",
+  "prompts": {},
+  "sessions": {
+    "s_786c1c78df6c7b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ca55c9d0-9472-4ce1-a446-f319291f121e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
