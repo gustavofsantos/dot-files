@@ -1,0 +1,21 @@
+.claude/skills/explainer/SKILL.md
+  s_06cae4f2f0ae6d::t_063886df8afcc4 1-89
+.claude/skills/explainer/references/template.html
+  s_06cae4f2f0ae6d::t_27550b2377df3a 1-224
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "cca9e8fdebe6f39ac537b0b4405e853206248ba5",
+  "prompts": {},
+  "sessions": {
+    "s_06cae4f2f0ae6d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8c6963e-830b-4491-b76e-4a0ed3c4a622",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
