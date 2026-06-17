@@ -1,0 +1,52 @@
+.claude/CLAUDE.md
+  s_a01e01d7b5fad3::t_e3a8c2eef60e27 38-39,41,44-45
+  s_a01e01d7b5fad3::t_ded3fbdc1b1160 26-32
+  s_a01e01d7b5fad3::t_92d0680c7e887b 6-16,19-23,33,40,42-43,49,56-58,60-62
+  s_a01e01d7b5fad3::t_193b0b5d22fa00 46
+.claude/skills/tidy-kb/SKILL.md
+  s_a01e01d7b5fad3::t_52fe0c863a80ce 1-13,18-21,23,35-46,48-63,66-72,83-98,101-112,115-118
+  s_a01e01d7b5fad3::t_ae0837918e9861 113-114
+  s_a01e01d7b5fad3::t_61f2a61f73bc4a 99-100
+  s_a01e01d7b5fad3::t_e4d2a972ba20c2 47
+  s_a01e01d7b5fad3::t_96a316bbae1718 64-65
+  s_a01e01d7b5fad3::t_c218b7f1c597cb 14-17,22,24-34
+  s_a01e01d7b5fad3::t_058683b78ac17a 73-82
+  s_a01e01d7b5fad3::t_81d01dfa2a96a2 119-120
+.claude/skills/tidy-kb/references/classification.md
+  s_a01e01d7b5fad3::t_af8b8da93f0d80 3
+  s_a01e01d7b5fad3::t_c2ecc17c5baf61 1-2,4-65,67
+  s_a01e01d7b5fad3::t_d6fe4664d02953 66
+.claude/agents/mira.md
+  s_a01e01d7b5fad3::t_faa0f18f5fd723 226-227
+  s_a01e01d7b5fad3::t_5ec566cc853832 210-216
+  s_a01e01d7b5fad3::t_b2e1adf3063b04 246
+  s_a01e01d7b5fad3::t_7862c4ada3a129 70-71,74-76
+  s_a01e01d7b5fad3::t_30f3800e8cfe51 87
+  s_a01e01d7b5fad3::t_a69bef752fd147 252
+  s_a01e01d7b5fad3::t_f6efee6d1de9c1 107-108,110-111
+  s_a01e01d7b5fad3::t_2048d772f5f162 96
+  s_a01e01d7b5fad3::t_78592534bc22da 151-152,156,158-159,173-183
+  s_a01e01d7b5fad3::t_5dd8bfcc7b3e52 59-66
+  s_a01e01d7b5fad3::t_29529a68252af1 86,89-92
+  s_a01e01d7b5fad3::t_5fc66e46163144 205
+  s_a01e01d7b5fad3::t_9c05a72e0af819 32-33,36-43,46-57
+  s_a01e01d7b5fad3::t_bddac9947a6dc7 124
+  s_a01e01d7b5fad3::t_7a35d2fcd18a94 166-168
+  s_a01e01d7b5fad3::t_1ba904fa5d76fd 236-237
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "262844feb255642fd8241799c0bb54a037077600",
+  "prompts": {},
+  "sessions": {
+    "s_a01e01d7b5fad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cd59dc41-2e26-460b-b04f-da62f0ee94b4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
