@@ -1,0 +1,19 @@
+config/nvim/colors/nord_light.lua
+  s_88ffd1213f6be6::t_4660e83e0a2956 1-8,23-57,62-65,68-89,92-104,107-109,112-115,125,130-131,136-137,141,180,205,211,324,344,347,350-353,358,398,406
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "c865ee99b27a1df41da41d6ec6fb5d117267d1a3",
+  "prompts": {},
+  "sessions": {
+    "s_88ffd1213f6be6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1c69d2a2-d65a-4942-b83e-e6944e3a94e2",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
