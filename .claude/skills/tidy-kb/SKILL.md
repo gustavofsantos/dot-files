@@ -23,11 +23,15 @@ stop, moving nothing. Only `--apply` (or explicit approval of the plan) executes
 
 Self-contained — the full placement rules are in `references/classification.md`. In short:
 
-- **Two axes.** Conceptual notes (domains, models, terms) nest **by domain**; work artifacts
-  (`issues/`, `spikes/`, `facts/`) live in **type folders**.
-- **Folder-notes.** A domain is `Domain.md` sitting **beside** a `Domain/` folder holding its
-  child concepts and sub-domain folder-notes. The folder *is* the parent — no `Parent:` field.
-  Keep nesting shallow (2–3 levels).
+- **Two axes.** Conceptual notes (domains, models, terms) nest under **`domain/`** by domain;
+  work artifacts (`issues/`, `spikes/`, `facts/`) live in **type folders** at vault root.
+- **Systems ≠ domains.** Applications ([[Billing System]], [[Recurrence Engine]], [[SeuBarriga]],
+  [[Cart-System]], …) stay at vault root — they *host* or *implement* domains, they are not
+  domains themselves. Never create `domain/Billing System/`; place notes under the owning
+  domain (e.g. `domain/Recurrence/` for accrual adjustments, `domain/Bill/` for Bill invariants).
+- **Folder-notes.** A domain is `domain/<Domain>.md` sitting **beside** `domain/<Domain>/`
+  holding its child concepts and sub-domain folder-notes. The folder *is* the parent — no
+  `Parent:` field. Keep nesting shallow (2–3 levels: `domain/Invoice/Lifecycle/Closing/`).
 - **One canonical home** per concept, chosen by ownership; link from the others, never duplicate.
 - **Relationships** between domains are labeled `[[wikilinks]]` in a folder-note's
   `## Relationships` section. This skill only **stubs** that section — enriching it is a
@@ -67,8 +71,8 @@ index files (`DOMAIN_MAP.md`, `INDEX.md`) — removing those is out of scope —
 ```bash
 fd -e md -d 1 . "$V"      # then drop DOMAIN_MAP.md / INDEX.md and existing folder-notes
 ```
-Already-nested content (`Domain/…`, `issues/`, `spikes/`, `facts/`) is left untouched — the
-skill is re-runnable and only acts on the unorganized root.
+Already-nested content (`domain/<Domain>/…`, `issues/`, `spikes/`, `facts/`) is left
+untouched — the skill is re-runnable and only acts on the unorganized root.
 
 ### 3. Classify — fan out to classification subagents
 Split candidates into batches of ~30–40 and spawn one subagent per batch, each given this
@@ -82,8 +86,8 @@ classifications.
 > subagent fan-out described above is the default.
 
 ### 4. Assemble the plan
-- Derive the **domain set** from the `concept` placements; each domain gets a `Domain.md`
-  folder-note whose `## Concepts` lists its children.
+- Derive the **domain set** from the `concept` placements; each domain gets a
+  `domain/<Domain>.md` folder-note whose `## Concepts` lists its children.
 - Group `artifact` moves by type folder.
 - Build the `_triage/` list, each entry carrying its reason.
 
@@ -95,10 +99,11 @@ Do not move anything in this mode.
 ### 6. Apply (`--apply` or approved plan only)
 For each move use `git mv` (preserve history); **never delete, never overwrite, never touch
 already-nested content**:
-- Create each `Domain/` dir and, if absent, its `Domain.md` folder-note — a 1–3 sentence
-  overview, a `## Concepts` list of its children, and an empty `## Relationships` (a stub to
-  fill in a later curation pass; tidy does structure, not relationship enrichment).
-- `git mv` each `concept` into its `Domain/`; each `artifact` into its type folder.
+- Create each `domain/<Domain>/` dir and, if absent, its `domain/<Domain>.md` folder-note —
+  a 1–3 sentence overview, a `## Concepts` list of its children, and an empty
+  `## Relationships` (a stub to fill in a later curation pass; tidy does structure, not
+  relationship enrichment).
+- `git mv` each `concept` into `domain/<Domain>/…`; each `artifact` into its type folder.
 - `git mv` each `triage` file into `_triage/`, and write `_triage/MANIFEST.md` (template in
   references) listing every quarantined file, its reason, and a suggested resolution.
 
@@ -118,3 +123,16 @@ curation pass.
 In: structural reorganization + quarantine. Out: filling `## Relationships`, merging
 duplicates, repairing stubs (curation follow-ups on the `_triage/` pile), and removing the
 legacy index files. Keep it to moving files to the right home and honestly flagging the rest.
+
+## `domain/` layout conventions
+
+- **All domain concepts** live under `domain/<Domain>/`. Vault root holds only folder-notes
+  (`domain.md`, legacy hubs being migrated), type folders, and `_triage/`.
+- **Tier grouping** (optional, for large domains): one intermediate level groups related
+  subdomains — e.g. `domain/Invoice/Lifecycle/Closing/`. Cap depth at 3 levels below
+  `domain/<Domain>/`.
+- **Rename before nesting** when a subdomain name would collide with a tier name (e.g.
+  `Lifecycle/` content → `Semantics/` before adding a `Lifecycle/` tier).
+- **Subdomain rename to avoid collision** when tier and topic share a name (e.g.
+  `Validation/Checks/` not `Validation/Validation/`).
+- **Wikilinks** resolve by basename — path changes under `domain/` do not break links.

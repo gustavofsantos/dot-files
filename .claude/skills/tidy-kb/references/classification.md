@@ -8,7 +8,7 @@ record. **Conservative bar: when any test below is uncertain, choose `triage`.**
 ```
 { "file": "<root-relative path>",
   "decision": "concept" | "artifact" | "triage",
-  "domain": "<Domain>" | "<Domain>/<Sub>",   // concept only — the ONE owner
+  "domain": "domain/<Domain>" | "domain/<Domain>/<Sub>",   // concept only — the ONE owner
   "type": "issues" | "spikes" | "facts",       // artifact only
   "reason": "<why triaged>" }                  // triage only
 ```
@@ -22,8 +22,13 @@ Route to a type folder when it's clearly one of these (by frontmatter or filenam
 ### concept — a domain/model/term, with ONE unambiguous owner
 A claim, definition, model, or term. Place only when **both** hold:
 - the **kind** is clearly conceptual (not a work artifact, not a scratch/meeting/log note), and
-- exactly **one** owning domain is obvious from its content (the domain that owns the concept's
+- exactly **one** owning **domain** is obvious from its content (the domain that owns the concept's
   invariants). Prefer an existing domain in the tree; a genuinely new domain is fine.
+
+**Not a domain:** system/service names (Billing System, Recurrence Engine, SeuBarriga, Cart-System).
+Those stay at vault root; route their concepts to the domain they implement (`Bill`, `Recurrence`,
+`Invoice`, `Entry`, …). When a note names a system in `parent:`, re-home under the domain unless
+the note is purely about deployment/ops of that system.
 
 ### triage — anything that fails the bar
 Quarantine with a concrete reason. Common reasons:
@@ -49,7 +54,7 @@ _Resolve by: placing under a domain, merging into an existing note, splitting, o
 | `q3-sync.md` | not a knowledge note | meeting notes — move out of vault or delete |
 ```
 
-## Domain folder-note skeleton (written on --apply when a `Domain.md` is absent)
+## Domain folder-note skeleton (written on --apply when a `domain/<Domain>.md` is absent)
 
 ```markdown
 # <Domain>
