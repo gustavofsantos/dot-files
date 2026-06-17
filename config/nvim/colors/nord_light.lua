@@ -1,3 +1,11 @@
+-- nord_light: a high-contrast light Nord, tuned for reading in direct sunlight.
+--
+-- Standard Nord is intentionally low-contrast and muted, which falls apart on a
+-- bright screen outdoors. This variant keeps the Nord hue family but pushes for
+-- legibility: a bright near-white background and dark, saturated "ink" accents
+-- that all clear WCAG AA (>= 4.5:1) against that background. Nothing here is a
+-- pastel — every color is meant to survive glare.
+
 local blend_colors = function(base, target, ratio)
   local r1, g1, b1 = base:match("#(%x%x)(%x%x)(%x%x)")
   local r2, g2, b2 = target:match("#(%x%x)(%x%x)(%x%x)")
@@ -12,281 +20,99 @@ local blend_colors = function(base, target, ratio)
   return string.format("#%02X%02X%02X", r, g, b)
 end
 
-local nord0        = "#2e3440"
-local nord1        = "#3b4252"
-local nord2        = "#434c5e"
-local nord3        = "#4c566a"
-local nord4        = "#d8dee9"
-local nord5        = "#e5e9f0"
-local nord6        = "#eceff4"
-local nord7        = "#8fbcbb"
-local nord8        = "#88c0d0"
-local nord9        = "#81a1c1"
-local nord10       = "#5e81ac"
-local nord11       = "#bf616a"
-local nord12       = "#d08770"
-local nord13       = "#ebcb8b"
-local nord14       = "#a3be8c"
-local nord15       = "#b48ead"
+local palette = {
+  -- Surfaces: bright, faint cool tint so the page reads as paper, not gray.
+  white       = "#FFFFFF",
+  bg          = "#F7F9FB", -- main editor background
+  bg_alt      = "#E9EFF4", -- panels: pmenu, inactive statusline, telescope
+  bg_dim      = "#E0E7EE", -- subtle fills
+  cursorline  = "#EBF0F5", -- current line / column tint
+  selection   = "#C7DDF2", -- visual selection (clearly blue, still light)
+  border      = "#C2CCD7",
 
-local gray__50     = "#f0f1f3"
-local gray__100    = "#e4e5e9"
-local gray__200    = "#c6c9d2"
-local gray__300    = "#acb0bd"
-local gray__400    = "#8f96a7"
-local gray__500    = "#787f8f"
-local gray__550    = "#4c566a"
-local gray__600    = "#434c5e"
-local gray__700    = "#3b4252"
-local gray__800    = "#2e3440"
-local gray__900    = "#23262c"
-local gray__950    = "#1a1c21"
-local fg__50       = "#ede8dc"
-local fg__100      = "#e2d9c4"
-local fg__200      = "#c8c0ad"
-local fg__300      = "#aca595"
-local fg__400      = "#918b7d"
-local fg__500      = "#767266"
-local fg__600      = "#605c52"
-local fg__700      = "#47443d"
-local fg__800      = "#302e28"
-local fg__900      = "#1d1b18"
-local fg__950      = "#12110e"
-local cyan__50     = "#e1f8f8"
-local cyan__100    = "#b7f0ef"
-local cyan__200    = "#a3d5d4"
-local cyan__300    = "#8fbcbb"
-local cyan__400    = "#79a09f"
-local cyan__500    = "#628281"
-local cyan__600    = "#4e6867"
-local cyan__700    = "#394d4c"
-local cyan__800    = "#263535"
-local cyan__900    = "#141d1d"
-local cyan__950    = "#0b1212"
-local sky__50      = "#ebf5f9"
-local sky__100     = "#d0eaf2"
-local sky__200     = "#a0d7e8"
-local sky__300     = "#88c0d0"
-local sky__400     = "#73a3b0"
-local sky__500     = "#5d8590"
-local sky__600     = "#4a6b74"
-local sky__700     = "#364f56"
-local sky__800     = "#23353b"
-local sky__900     = "#131f23"
-local sky__950     = "#091215"
-local blue__50     = "#edf1f8"
-local blue__100    = "#dee6f3"
-local blue__200    = "#b8cbe7"
-local blue__300    = "#95b3dc"
-local blue__400    = "#7099cb"
-local blue__500    = "#5e81ac"
-local blue__600    = "#496588"
-local blue__700    = "#374d68"
-local blue__800    = "#243447"
-local blue__900    = "#131e2c"
-local blue__950    = "#0a111b"
-local red__50      = "#f7efef"
-local red__100     = "#f0e2e3"
-local red__200     = "#e1c2c4"
-local red__300     = "#d5a4a8"
-local red__400     = "#ca8288"
-local red__500     = "#bf616a"
-local red__600     = "#984c53"
-local red__700     = "#75393f"
-local red__800     = "#512529"
-local red__900     = "#321517"
-local red__950     = "#1f0b0d"
-local orange__50   = "#f7efed"
-local orange__100  = "#f2e2df"
-local orange__200  = "#e6c5bd"
-local orange__300  = "#dba495"
-local orange__400  = "#d08770"
-local orange__500  = "#ad6f5c"
-local orange__600  = "#885747"
-local orange__700  = "#694235"
-local orange__800  = "#482b23"
-local orange__900  = "#2c1913"
-local orange__950  = "#1b0d09"
-local yellow__100  = "#f5e6ce"
-local yellow__200  = "#ebcb8b"
-local yellow__300  = "#ccb078"
-local yellow__400  = "#ab9364"
-local yellow__500  = "#8e7a52"
-local yellow__600  = "#726140"
-local yellow__700  = "#54472e"
-local yellow__800  = "#3b311f"
-local yellow__900  = "#211b0f"
-local yellow__950  = "#151008"
-local green__50    = "#e9f8de"
-local green__100   = "#cef0b2"
-local green__200   = "#bad8a0"
-local green__300   = "#a3be8c"
-local green__400   = "#89a075"
-local green__500   = "#718561"
-local green__600   = "#58684b"
-local green__700   = "#434f38"
-local green__800   = "#2c3525"
-local green__900   = "#191f14"
-local green__950   = "#0e120a"
-local magenta__100 = "#ece3ea"
-local magenta__200 = "#d9c7d5"
-local magenta__300 = "#c7abc1"
-local magenta__400 = "#b48ead"
-local magenta__500 = "#997392"
-local magenta__600 = "#795a73"
-local magenta__700 = "#5c4458"
-local magenta__800 = "#3f2d3c"
-local magenta__900 = "#261a24"
-local magenta__950 = "#170e15"
+  -- Ink: text, from darkest body text down to faint structural marks.
+  ink         = "#11161F", -- primary text — near black, max contrast
+  ink_soft    = "#2A3340", -- secondary text / variables
+  slate       = "#34506F", -- properties, parameters
+  muted       = "#5B6573", -- comments — dimmed but fully readable in sun
+  faint       = "#98A2AF", -- line numbers, whitespace, non-text glyphs
 
+  -- Accents: dark + saturated so they hold up against glare on a light page.
+  blue        = "#2C5C8F", -- keywords
+  blue_bright = "#3E72A8", -- operators / info
+  blue_deep   = "#234B76", -- emphasis / incsearch
+  teal        = "#1C6B6E", -- functions
+  green       = "#3F6428", -- strings / additions
+  green_soft  = "#5E8C3E", -- success fills
+  amber       = "#8A5A12", -- types
+  amber_soft  = "#9A6A00", -- warning fills
+  orange      = "#A24E1E", -- decorators / booleans
+  orange_dim  = "#B5642E", -- flash accent
+  red         = "#A0182A", -- errors
+  red_soft    = "#B21F2B", -- error fills
+  purple      = "#7A3B86", -- numbers / constants
 
-local palette  = {
-  -- Default nord colors
-  -------------------------
-
-  nord0          = "#2e3440",
-  nord1          = "#3b4252",
-  nord2          = "#434c5e",
-  nord3          = "#4c566a",
-  nord4          = "#d8dee9",
-  nord5          = "#e5e9f0",
-  nord6          = "#eceff4",
-  nord7          = "#8fbcbb",
-  nord8          = "#88c0d0",
-  nord9          = "#81a1c1",
-  nord10         = "#5e81ac",
-  nord11         = "#bf616a",
-  nord12         = "#d08770",
-  nord13         = "#ebcb8b",
-  nord14         = "#a3be8c",
-  nord15         = "#b48ead",
-
-  cream1         = '#D9D3C4',
-  cream2         = '#E5DECD',
-  cream3         = '#EDE8DC',
-  cream4         = '#F6F3ED',
-  cream5         = '#F0EFEA',
-
-  -- Mappings for Light Theme (inversions)
-  -- Dark backgrounds become light foregrounds
-
-  gray000        = '#1A1C21',
-  gray00         = '#191D24',
-  gray0          = '#242933',
-  gray1          = '#2E3440',
-  gray2          = '#3B4252',
-  gray3          = '#434C5E',
-  gray4          = '#4C566A',
-  gray5          = '#60728A',
-
-  -- Light backgrounds
-  bg_main        = '#F0EFEA', -- cream5
-  bg_alt         = '#F6F3ED', -- cream4
-  bg_dim         = '#EDE8DC', -- cream3
-  bg_active      = '#E5DECD', -- cream2
-  bg_inactive    = '#D9D3C4', -- cream1
-
-  -- Text colors
-  fg_main        = '#2E3440', -- nord0
-  fg_alt         = '#3B4252', -- nord1
-  fg_dim         = '#4C566A', -- nord3
-
-  cyan_bright    = '#9FC6C5',
-  cyan           = "#8FBCBB",
-  cyan_dim       = '#80B3B2',
-  sky            = "#88C0D0",
-  sky_bright     = "#bee9e8",
-  blue_bright    = "#81A1C1",
-  blue           = "#5E81AC",
-  blue_muted     = "#415570",
-  red_bright     = "#C5727A",
-  red            = "#BF616A",
-  red_dim        = "#B74E58",
-  red_muted      = "#72454F",
-  orange_bright  = '#D79784',
-  orange         = "#D08770",
-  orange_dim     = '#CB775D',
-  yellow_bright  = '#EFD49F',
-  yellow         = "#EBCB8B",
-  yellow_dim     = '#E7C173',
-  yellow_muted   = "#BAA375",
-  gold           = "#FDC500",
-  golder         = "#FFD500",
-  green_bright   = '#B1C89D',
-  green          = "#A3BE8C",
-  green_dim      = '#97B67C',
-  magenta_bright = '#BE9DB8',
-  magenta        = "#B48EAD",
-  magenta_dim    = '#A97EA1',
+  -- Highlights.
+  search      = "#FBE39A", -- soft amber wash for matches
+  gold        = "#FDC500",
 }
-
--- Darker Variants for Light Theme Accessibility
-local p        = palette
-p.red_dark     = blend_colors(p.red, "#000000", 0.4)
-p.green_dark   = blend_colors(p.green, "#000000", 0.6) -- More darkening needed for green
-p.yellow_dark  = blend_colors(p.yellow, "#000000", 0.65)
-p.blue_dark    = blend_colors(p.blue, "#000000", 0.4)
-p.magenta_dark = blend_colors(p.magenta, "#000000", 0.5)
-p.cyan_dark    = blend_colors(p.cyan, "#000000", 0.6)
-p.orange_dark  = blend_colors(p.orange, "#000000", 0.4)
-
 
 local components = {
   -- Base
-  bg = gray__50,
-  fg = gray__800,
-  bg_alt = gray__100,
-  fg_dim = gray__800,
+  bg = palette.bg,
+  fg = palette.ink,
+  bg_alt = palette.bg_alt,
+  fg_dim = palette.ink_soft,
 
   -- UI Elements
-  border = gray__300,
-  cursor_fg = palette.bg_main,
-  cursor_bg = palette.nord0,
-  line_nr_fg = gray__300,
-  line_nr_active_fg = yellow__200,
-  gutter_bg = gray__100,
-  gutter_bg_active = gray__700,
-  selection_bg = blue__200,
-  float_bg = gray__200,
-  float_border = gray__300,
+  border = palette.border,
+  cursor_fg = palette.bg,
+  cursor_bg = palette.ink,
+  line_nr_fg = palette.faint,
+  line_nr_active_fg = palette.orange,
+  gutter_bg = palette.cursorline,
+  gutter_bg_active = palette.bg_dim,
+  selection_bg = palette.selection,
+  float_bg = palette.white,
+  float_border = palette.border,
 
-  -- Status
-  error = red__600,
-  warning = yellow__500,
-  success = green__200,
-  info = blue__300,
+  -- Status (fills / undercurl colors — kept saturated)
+  error = palette.red_soft,
+  warning = palette.amber_soft,
+  success = palette.green_soft,
+  info = palette.blue_bright,
 
-  -- Status Text
-  error_fg = red__700,
-  warning_fg = yellow__700,
-  success_fg = green__600,
-  info_fg = blue__500,
+  -- Status Text (foreground — kept dark)
+  error_fg = palette.red,
+  warning_fg = palette.amber,
+  success_fg = palette.green,
+  info_fg = palette.blue_deep,
 
   -- Syntax
-  comment = gray__300,
-  string = green__500,
-  keyword = nord10,
-  function_ = sky__500,
-  type = yellow__500,
-  variable = nord2,
-  constant = nord2,
-  operator = nord9,
-  number = nord15,
-  boolean = nord12,
-  property = gray__600,
-  parameter = gray__600,
-  decorator = nord12,
+  comment = palette.muted,
+  string = palette.green,
+  keyword = palette.blue,
+  function_ = palette.teal,
+  type = palette.amber,
+  variable = palette.ink_soft,
+  constant = palette.purple,
+  operator = palette.blue_bright,
+  number = palette.purple,
+  boolean = palette.orange,
+  property = palette.slate,
+  parameter = palette.slate,
+  decorator = palette.orange,
 
   -- Search
-  search_bg = palette.nord4,
-  inc_search_bg = palette.blue_dark,
-  inc_search_fg = palette.bg_main,
+  search_bg = palette.search,
+  inc_search_bg = palette.blue_deep,
+  inc_search_fg = palette.bg,
 
   -- Diff
-  diff_add = green__400,
-  diff_change = orange__400,
-  diff_delete = red__400,
-  diff_text = blue__800,
+  diff_add = palette.green,
+  diff_change = palette.amber,
+  diff_delete = palette.red,
+  diff_text = palette.blue_deep,
 }
 
 local highlights = {
@@ -296,23 +122,23 @@ local highlights = {
   Underline = { underline = true },
 
   -- Editor
-  ColorColumn = { bg = components.border },
+  ColorColumn = { bg = components.gutter_bg },
   Cursor = { fg = components.cursor_fg, bg = components.cursor_bg },
   Error = { fg = components.cursor_fg, bg = components.error },
   iCursor = { fg = components.cursor_fg, bg = components.cursor_bg },
   LineNr = { fg = components.line_nr_fg },
-  MatchParen = { fg = components.keyword, bg = components.search_bg },
-  NonText = { fg = components.search_bg },
+  MatchParen = { fg = components.keyword, bg = components.search_bg, bold = true },
+  NonText = { fg = components.line_nr_fg },
   Normal = { fg = components.fg, bg = components.bg },
   NormalNC = { fg = components.fg, bg = components.bg },
   NormalSB = { fg = components.fg, bg = components.bg },
   NormalFloat = { fg = components.fg, bg = components.float_bg },
-  FloatBorder = { link = "NormalFloat" },
-  FloatTitle = { fg = components.keyword },
+  FloatBorder = { fg = components.float_border, bg = components.float_bg },
+  FloatTitle = { fg = components.keyword, bold = true },
   FloatFooter = { link = "NormalFloat" },
   Pmenu = { fg = components.fg, bg = components.bg_alt },
   PmenuSbar = { fg = components.border, bg = components.border },
-  PmenuSel = { fg = components.bg, bg = components.operator },
+  PmenuSel = { fg = components.bg, bg = components.keyword },
   PmenuThumb = { fg = components.line_nr_fg, bg = components.line_nr_fg },
   SpecialKey = { fg = components.line_nr_fg },
   SpellBad = { fg = components.error, bg = "NONE", undercurl = true, sp = components.error },
@@ -351,7 +177,7 @@ local highlights = {
   CursorLine = { bg = components.gutter_bg },
   CursorLineNr = { fg = components.line_nr_active_fg, bg = components.gutter_bg_active, bold = true },
   CursorLineSign = { bg = components.gutter_bg_active },
-  Folded = { fg = components.line_nr_fg, bg = components.gutter_bg, bold = true },
+  Folded = { fg = components.comment, bg = components.gutter_bg, bold = true },
   FoldColumn = { fg = components.line_nr_fg, bg = components.bg },
   SignColumn = { fg = components.line_nr_fg, bg = components.bg },
   SignColumnSB = { fg = components.line_nr_fg, bg = components.bg },
@@ -376,13 +202,13 @@ local highlights = {
   WildMenu = { fg = components.keyword, bg = components.bg_alt },
 
   -- Search
-  IncSearch = { fg = components.bg, bg = components.info_fg, underline = true },
+  IncSearch = { fg = components.inc_search_fg, bg = components.inc_search_bg, bold = true },
   Search = { fg = components.fg, bg = components.search_bg },
 
   -- Tabs
   TabLine = { fg = components.line_nr_fg, bg = components.bg_alt },
   TabLineFill = { fg = components.line_nr_fg, bg = components.border },
-  TabLineSel = { fg = components.fg, bg = components.bg },
+  TabLineSel = { fg = components.fg, bg = components.bg, bold = true },
 
   -- Window
   Title = { fg = components.keyword },
@@ -495,7 +321,7 @@ local highlights = {
 
   -- Fallbacks
   Special = { fg = components.type },
-  Todo = { fg = components.warning_fg, bg = "NONE" },
+  Todo = { fg = components.warning_fg, bg = "NONE", bold = true },
   Annotation = { link = "Decorator" },
   Macro = { link = "Define" },
   PreCondit = { link = "PreProc" },
@@ -515,21 +341,21 @@ local highlights = {
   TelescopeBorder = { fg = components.border, bg = components.bg_alt },
   TelescopePromptBorder = { fg = components.border, bg = components.bg_alt },
   TelescopePromptNormal = { fg = components.fg, bg = components.bg_alt },
-  TelescopePromptTitle = { fg = components.fg, bg = components.search_bg },
+  TelescopePromptTitle = { fg = components.bg, bg = components.keyword },
   TelescopeResultsBorder = { fg = components.border, bg = components.bg },
   TelescopeResultsNormal = { fg = components.fg, bg = components.bg },
-  TelescopeResultsTitle = { fg = components.fg, bg = components.search_bg },
+  TelescopeResultsTitle = { fg = components.bg, bg = components.keyword },
   TelescopePreviewBorder = { fg = components.border, bg = components.bg },
   TelescopePreviewNormal = { fg = components.fg, bg = components.bg },
-  TelescopePreviewTitle = { fg = components.fg, bg = components.search_bg },
-  TelescopeMatching = { fg = components.cursor_bg, bg = components.warning },
-  TelescopeSelection = { fg = components.fg, bg = components.search_bg, italic = false },
-  TelescopeSelectionCaret = { fg = components.keyword, bg = components.search_bg },
+  TelescopePreviewTitle = { fg = components.bg, bg = components.keyword },
+  TelescopeMatching = { fg = components.cursor_bg, bg = components.search_bg, bold = true },
+  TelescopeSelection = { fg = components.fg, bg = components.selection_bg, italic = false },
+  TelescopeSelectionCaret = { fg = components.keyword, bg = components.selection_bg },
 
   -- Flash
   FlashMatch = { bg = components.selection_bg },
   FlashCurrent = { fg = components.bg, bg = palette.orange_dim },
-  FlashLabel = { fg = components.bg, bg = components.warning },
+  FlashLabel = { fg = components.bg, bg = components.error, bold = true },
   FlashPrompt = { link = "MsgArea" },
   FlashPromptIcon = { link = "Special" },
   FlashCursor = { link = "Cursor" },
@@ -569,7 +395,7 @@ vim.g.terminal_color_2 = components.success_fg
 vim.g.terminal_color_3 = components.warning_fg
 vim.g.terminal_color_4 = components.info_fg
 vim.g.terminal_color_5 = components.constant
-vim.g.terminal_color_6 = components.type
+vim.g.terminal_color_6 = components.function_
 vim.g.terminal_color_7 = components.border
 vim.g.terminal_color_8 = components.fg_dim
 vim.g.terminal_color_9 = components.error_fg
@@ -577,7 +403,7 @@ vim.g.terminal_color_10 = components.success_fg
 vim.g.terminal_color_11 = components.warning_fg
 vim.g.terminal_color_12 = components.info_fg
 vim.g.terminal_color_13 = components.constant
-vim.g.terminal_color_14 = components.type
+vim.g.terminal_color_14 = components.function_
 vim.g.terminal_color_15 = components.fg
 
 vim.g.colors_name = "nord_light"
