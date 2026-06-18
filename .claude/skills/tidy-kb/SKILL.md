@@ -76,10 +76,10 @@ skill's rubric (`references/classification.md`) and its batch's file list. Each 
 each file and returns, per the schema in the rubric, one record per file: `concept` (+ owning
 `domain`), `artifact` (+ `type`: issues|spikes|facts), or `triage` (+ `reason`). Collect all
 classifications.
-> The rubric is self-contained, so a general subagent works. If a convention-aware vault
-> curator (e.g. a `mira` agent) happens to be installed, it's a fine choice — but not required.
+> The rubric is self-contained, so a general subagent works. A convention-aware vault-curation
+> subagent, if one happens to be installed, is a fine choice too — but not required.
 > For a very large vault (hundreds of files) the Workflow harness gives resumability; the
-> Agent-tool fan-out here is the default.
+> subagent fan-out described above is the default.
 
 ### 4. Assemble the plan
 - Derive the **domain set** from the `concept` placements; each domain gets a `Domain.md`
