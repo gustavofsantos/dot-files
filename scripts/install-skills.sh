@@ -16,9 +16,15 @@ done
 echo "Installing custom skills... OK"
 
 echo "Installing custom subagents..."
+mkdir -p "$HOME/.claude/agents"
 for agent in "$DOTFILES_DIR"/.claude/agents/*; do
+  [ -f "$agent" ] || continue
   name=$(basename "$agent")
   ln -sf "$agent" "$HOME/.claude/agents/$name"
+done
+# prune dangling agent symlinks (removed from dotfiles)
+find "$HOME/.claude/agents" -maxdepth 1 -type l | while read -r link; do
+  [ -e "$link" ] || rm "$link"
 done
 echo "Installing custom subagents... OK"
 

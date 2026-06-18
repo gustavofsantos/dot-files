@@ -63,5 +63,5 @@ nesting migration is tracked in issue 017; until it completes on a given vault,
 
 ## Citing KB context
 
-Reference notes by `[[Note Title]]` and issues by `NNN`. Finn
-loads note context as axioms before traversing code.
+Reference notes by `[[Note Title]]` and issues by `NNN`. Code
+investigation loads note context as axioms before traversing code.

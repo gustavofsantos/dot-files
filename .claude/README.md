@@ -15,7 +15,7 @@ kept under `~/engineering/`:
   `## Issues` lists the issues that reference it.
 
 (`~/engineering/` also holds `thinking/` and `spikes/`, written by
-`thinking-partner` and Finn respectively.)
+`thinking-partner` and `spike` respectively.)
 
 ## How the skills relate
 
@@ -32,9 +32,9 @@ flowchart TD
 
     %% ---------- Understand existing code ----------
     subgraph understand["Understand existing code"]
-        marco[Marco]
-        finn[Finn]
-        marco -->|top entry point| finn
+        survey[ddd-survey]
+        investigate["ad-hoc investigation"]
+        survey -->|highest-signal entry point| investigate
     end
 
     %% ---------- Think & plan ----------
@@ -63,7 +63,7 @@ flowchart TD
     %% ---------- Build & review ----------
     subgraph build["Build & review"]
         tdd[tdd]
-        dr[Victor]
+        dr["code review"]
         deslop["deslop<br/>(Clojure)"]
         readable["readable<br/>(Kotlin)"]
     end
@@ -78,10 +78,10 @@ flowchart TD
     tickets["tickets<br/>(Jira — standalone)"]
 
     %% ---------- Knowledge flow ----------
-    facts -.->|axioms| marco
-    facts -.->|axioms| finn
-    marco -->|fact candidates| factskill
-    finn -->|fact candidates| factskill
+    facts -.->|axioms| survey
+    facts -.->|axioms| investigate
+    survey -->|fact candidates| factskill
+    investigate -->|fact candidates| factskill
 
     %% ---------- Plan -> framing ----------
     tp -->|flush| task_s
@@ -106,13 +106,13 @@ flowchart TD
     issue -->|writes| issuestore
 
     %% ---------- Issue routing ----------
-    issuestore -.->|type: hypothesis| finn
+    issuestore -.->|type: hypothesis| investigate
     issuestore -->|type: task · bug · user-story · outcome| tdd
     issuestore -.->|type: epic| epic_s
 
     %% ---------- Understand -> framing ----------
-    marco -.->|finding becomes work| task_s
-    finn -.->|finding becomes work| task_s
+    survey -.->|finding becomes work| task_s
+    investigate -.->|finding becomes work| task_s
 
     %% ---------- Build & review flow ----------
     tdd -->|green branch| dr
@@ -127,11 +127,12 @@ feedback paths.
 
 ## The pipelines
 
-**Understand existing code** — Marco surveys an unfamiliar repo (zone discovery
-+ DDD map) and names the highest-signal questions; Finn traces a specific
-question to behavioral claims anchored in code. Both load facts as axioms before
-reading code, and route approved findings back through the `fact` skill. A
-finding that turns into work spawns a `task` issue.
+**Understand existing code** — `ddd-survey` surveys an unfamiliar repo (zone
+discovery + DDD map) and names the highest-signal entry points; an ad-hoc
+investigation subagent then traces a specific question to behavioral claims
+anchored in code. Both load facts as axioms before reading code, and route
+approved findings back through the `fact` skill. A finding that turns into
+work spawns a `task` issue.
 
 **Facts & issues** — the `fact` skill records durable, sourced knowledge
 (`FACT-NNN`) and links it to the issues that depend on it. The `issue` skill is
@@ -160,11 +161,11 @@ into off-limits entries before framing begins.
 
 **Build & review** — `tdd` reads an active `task`, `bug`, `user-story`, or
 `outcome` issue and implements it test-first, treating `## Facts` as
-established ground. `hypothesis` issues route to Finn instead; findings become
-facts via the `fact` skill. When a branch is green it goes to Victor
-(architecture review, any language) and, by language, `deslop` (Clojure) or
-`readable` (Kotlin). A `Red` review loops back through `design-constraints` +
-`tdd`, or spawns a fresh `task`.
+established ground. `hypothesis` issues route to ad-hoc investigation
+instead; findings become facts via the `fact` skill. When a branch is green
+it goes to a code-review subagent (architecture review, any language) and,
+by language, `deslop` (Clojure) or `readable` (Kotlin). A `Red` review loops
+back through `design-constraints` + `tdd`, or spawns a fresh `task`.
 
 **Bruno API collections** — `bruno` handles the current YAML / OpenCollection
 format; `brulang` handles the legacy `.bru` markup. Pick by detecting the
@@ -172,18 +173,6 @@ collection's file layout.
 
 **`tickets`** is standalone — it formats Jira tickets and is not part of the
 local `issue`-driven flow.
-
-## Agents
-
-Four subagents live in [`agents/`](agents/) and are invoked automatically by
-name or explicitly ("call Finn to…"):
-
-| Agent | Trigger |
-|---|---|
-| **Marco** | Survey repo, map domains, DDD analysis |
-| **Finn** | Trace how something works, investigate code behavior |
-| **Victor** | Review a branch, architectural depth, pre-merge verdict |
-| **Mira** | Curate the engineering vault — recall what's known, and ingest new knowledge as linked Zettelkasten notes |
 
 ## Storage config
 
