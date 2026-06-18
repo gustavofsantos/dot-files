@@ -3,6 +3,34 @@ set -euo pipefail
 
 DOTFILES_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
+echo "Installing custom skills..."
+for skill in "$DOTFILES_DIR"/.claude/skills/*/; do
+  [ -d "$skill" ] || continue
+  name=$(basename "$skill")
+  ln -sfn "$skill" "$HOME/.cursor/skills/$name"
+done
+# prune dangling skill symlinks (removed from dotfiles)
+find "$HOME/.cursor/skills" -maxdepth 1 -type l | while read -r link; do
+  [ -e "$link" ] || rm "$link"
+done
+echo "Installing custom skills... OK"
+
+echo "Installing custom subagents..."
+for agent in "$DOTFILES_DIR"/.claude/agents/*; do
+  name=$(basename "$agent")
+  cp "$agent" "$HOME/.cursor/agents/$name"
+done
+echo "Installing custom subagents... OK"
+
+echo "Installing custom commands..."
+mkdir -p "$HOME/.cursor/commands"
+for cmd in "$DOTFILES_DIR"/.claude/commands/*.md; do
+  [ -f "$cmd" ] || continue
+  name=$(basename "$cmd")
+  ln -sf "$cmd" "$HOME/.cursor/commands/$name"
+done
+echo "Installing custom commands... OK"
+
 echo "Merging Cursor hooks..."
 BASELINE="$DOTFILES_DIR/.cursor/hooks.json"
 GLOBAL="$HOME/.cursor/hooks.json"

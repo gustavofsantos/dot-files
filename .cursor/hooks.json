@@ -2,16 +2,16 @@
   "version": 1,
   "hooks": {
     "sessionStart": [
-      { "command": "~/.bin/hooks-runner cursor sessionStart" }
+      { "command": "hooks-runner cursor sessionStart" }
     ],
     "beforeSubmitPrompt": [
-      { "command": "~/.bin/hooks-runner cursor beforeSubmitPrompt" }
+      { "command": "hooks-runner cursor beforeSubmitPrompt" }
     ],
     "stop": [
-      { "command": "~/.bin/hooks-runner cursor stop" }
+      { "command": "hooks-runner cursor stop" }
     ],
     "sessionEnd": [
-      { "command": "~/.bin/hooks-runner cursor sessionEnd" }
+      { "command": "hooks-runner cursor sessionEnd" }
     ]
   }
 }
