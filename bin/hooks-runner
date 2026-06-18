@@ -1,445 +1,345 @@
-#!/usr/bin/env bash
+#!/usr/bin/env ruby
 # hooks-runner <harness> <event> — central hook dispatcher.
 #
 # Reads the raw event payload on stdin, normalises it into a CanonicalEvent
 # envelope, exports HOOK_HARNESS and HOOK_EVENT, looks up matching hooks from
 # ~/.agent-hooks.yml (+ local overlay), and runs each one with the envelope on
-# stdin.  Hook stdout is suppressed; hook stderr is kept for debuggability.
+# stdin. Hook stdout is suppressed; hook stderr is kept for debuggability.
 # The runner always exits 0 (neutral) — it never blocks the harness regardless
 # of individual hook outcomes.
 #
-# Supported harnesses and their lifecycle events:
-#   claude: SessionStart, UserPromptSubmit, Stop, SessionEnd, Notification
-#   cursor: sessionStart, beforeSubmitPrompt, stop, sessionEnd
-#
-# Blocking Cursor events (preToolUse, beforeShellExecution, beforeMCPExecution,
-# beforeReadFile, beforeSubmitPrompt's permission mode) are NOT registered in
-# the harness config — the runner never sees them.  The four lifecycle events
-# above are the only ones we hook, all observational.  This means "pass blocking
-# events through neutral" is satisfied structurally: hooks-runner is never
-# invoked for them, so it emits nothing and returns nothing to the harness.
-#
-# CanonicalEvent envelope (sent as stdin to every matched hook):
-#   {
-#     "harness":         "claude" | "cursor",
-#     "event":           canonical name (e.g. "turn_end"),
-#     "raw_event":       original harness event name (e.g. "Stop"),
-#     "session_id":      stable session / conversation id,
-#     "cwd":             working directory (workspace root),
-#     "transcript_path": path to the transcript file (Claude only; null otherwise),
-#     "model":           model id string (Claude only; null otherwise),
-#     "prompt":          user prompt text (prompt_submit only; null otherwise),
-#     "tool":            null (reserved for future decision-hook use),
-#     "raw":             { ...original payload... }
-#   }
-#
-# Usage:
-#   hooks-runner <harness> <event>
-#
-# Environment:
-#   AGENT_HOOKS_CONFIG        — override base registry path (default: ~/.agent-hooks.yml)
-#   AGENT_HOOKS_CONFIG_LOCAL  — override local overlay path (default: ~/.agent-hooks.local.yml)
-#   AGENT_HOOKS_CACHE_DIR     — override cache dir (default: ${XDG_CACHE_HOME:-~/.cache}/agent-hooks)
-#   AGENT_HOOKS_LOG_DIR       — override log dir (default: ${XDG_DATA_HOME:-~/.local/share}/agent-hooks/logs)
-#   HOOK_HARNESS              — exported for hooks: harness name (e.g. "claude")
-#   HOOK_EVENT                — exported for hooks: canonical event name (e.g. "turn_end")
-#
-# Dispatch logging:
-#   When at least one hook matches, a trace file is written to AGENT_HOOKS_LOG_DIR:
-#     <log-dir>/<session_id>/<timestamp>-<harness>-<canonical_event>.json
-#   The trace mirrors the checks results.json shape:
-#     { harness, event, raw_event, started_at, finished_at,
-#       hooks: [{name, command, status, exit_code, duration_ms, output_tail}],
-#       summary: {total, passed, failed, status} }
-#   Log-write failure is always non-fatal (the runner still exits 0).
-#
-# Registry format (YAML):
-#   hooks:
-#     - name: my-hook
-#       on: [turn_end]
-#       command: my-hook-script
-#       harness: [claude, cursor]   # optional; default = all harnesses
-#       enabled: true               # optional; set false to disable
-#
-# Two-file registry:
-#   ~/.agent-hooks.yml        — committed baseline, shared across machines
-#   ~/.agent-hooks.local.yml  — per-machine private overlay, never committed
-#
-# Merge semantics (by name):
-#   - Local entry with a new name: adds the hook
-#   - Local entry with an existing name: replaces the base entry wholesale
-#   - Local entry with enabled: false: disables the base hook (existing filter handles this)
-#
-# The merged registry is cached to disk, keyed by mtime+size of both files, so
-# repeated calls on hot events (e.g. prompt_submit) skip the yq parse entirely.
-#
-# Exit semantics: always 0.
+# See agent-hooks skill for envelope shape, registry format, dispatch logging.
 
-set -uo pipefail
+require "digest"
+require "fileutils"
+require "json"
+require "open3"
+require "time"
+require "yaml"
 
-HARNESS="${1:-}"
-RAW_EVENT="${2:-}"
+CANONICAL_EVENTS = {
+  %w[claude Stop] => "turn_end",
+  %w[claude SessionStart] => "session_start",
+  %w[claude UserPromptSubmit] => "prompt_submit",
+  %w[claude SessionEnd] => "session_end",
+  %w[claude Notification] => "notification",
+  %w[cursor stop] => "turn_end",
+  %w[cursor sessionStart] => "session_start",
+  %w[cursor beforeSubmitPrompt] => "prompt_submit",
+  %w[cursor sessionEnd] => "session_end",
+}.freeze
 
-if [[ -z "$HARNESS" || -z "$RAW_EVENT" ]]; then
-  echo "usage: hooks-runner <harness> <event>" >&2
-  exit 0
-fi
+def home
+  ENV.fetch("HOME", Dir.home)
+end
 
-# ── Canonical event mapping ────────────────────────────────────────────────────
-# Maps (harness, raw_event) → canonical event name.
-# Only observational lifecycle events are mapped; any unrecognised event is
-# passed through tagged with its raw name so a hook can still match it.
-canonical_event() {
-  local harness="$1" raw="$2"
-  case "${harness}/${raw}" in
-    claude/Stop)               echo "turn_end" ;;
-    claude/SessionStart)       echo "session_start" ;;
-    claude/UserPromptSubmit)   echo "prompt_submit" ;;
-    claude/SessionEnd)         echo "session_end" ;;
-    claude/Notification)       echo "notification" ;;
-    cursor/stop)               echo "turn_end" ;;
-    cursor/sessionStart)       echo "session_start" ;;
-    cursor/beforeSubmitPrompt) echo "prompt_submit" ;;
-    cursor/sessionEnd)         echo "session_end" ;;
-    *)                         echo "$raw" ;;  # pass through unknown events tagged raw
-  esac
-}
+def xdg_cache
+  ENV.fetch("XDG_CACHE_HOME", File.join(home, ".cache"))
+end
 
-CANONICAL_EVENT=$(canonical_event "$HARNESS" "$RAW_EVENT")
+def xdg_data
+  ENV.fetch("XDG_DATA_HOME", File.join(home, ".local", "share"))
+end
 
-export HOOK_HARNESS="$HARNESS"
-export HOOK_EVENT="$CANONICAL_EVENT"
+def canonical_event(harness, raw_event)
+  CANONICAL_EVENTS.fetch([harness, raw_event], raw_event)
+end
 
-# ── Read stdin once ────────────────────────────────────────────────────────────
-INPUT=$(cat 2>/dev/null || true)
+def parse_json_payload(payload)
+  return {} if payload.nil? || payload.strip.empty?
 
-# ── CanonicalEvent envelope ───────────────────────────────────────────────────
-# Build the normalised envelope from the raw payload.  All hooks receive this
-# on stdin instead of the raw harness payload, so hooks written for one harness
-# work unchanged on any other.
-#
-# Adapters extract well-known fields by position in each harness's schema and
-# place them at consistent top-level keys.  The `raw` key always carries the
-# original payload as an escape hatch for any field not yet normalised.
-#
-# jq is required to build the envelope; if it is absent the runner falls through
-# to the early exit below and no hooks run — consistent with the rest of the
-# tool's dependency handling.
-_build_envelope() {
-  local harness="$1" canonical="$2" raw_event="$3" payload="$4"
-  # Validate payload is JSON; fall back to empty object so the envelope is
-  # always well-formed even for harnesses that send no body.
-  local raw_json
-  raw_json=$(printf '%s' "$payload" | jq '.' 2>/dev/null) || raw_json='{}'
-  [[ -z "$raw_json" || "$raw_json" == "null" ]] && raw_json='{}'
+  parsed = JSON.parse(payload)
+  parsed.is_a?(Hash) ? parsed : {}
+rescue JSON::ParserError
+  {}
+end
 
-  case "$harness" in
-    claude)
-      jq -n \
-        --arg  harness    "$harness" \
-        --arg  event      "$canonical" \
-        --arg  raw_event  "$raw_event" \
-        --argjson raw     "$raw_json" \
-        '{
-          harness:         $harness,
-          event:           $event,
-          raw_event:       $raw_event,
-          session_id:      ($raw.session_id // null),
-          cwd:             ($raw.cwd // null),
-          transcript_path: ($raw.transcript_path // null),
-          model:           ($raw.model // null),
-          prompt:          ($raw.prompt // null),
-          tool:            null,
-          raw:             $raw
-        }'
-      ;;
-    cursor)
-      # Cursor's stable session identifier is conversation_id (generation_id
-      # changes every message).  workspace_roots[0] is the working directory.
-      jq -n \
-        --arg  harness   "$harness" \
-        --arg  event     "$canonical" \
-        --arg  raw_event "$raw_event" \
-        --argjson raw    "$raw_json" \
-        '{
-          harness:         $harness,
-          event:           $event,
-          raw_event:       $raw_event,
-          session_id:      ($raw.conversation_id // null),
-          cwd:             ($raw.workspace_roots[0] // null),
-          transcript_path: null,
-          model:           null,
-          prompt:          ($raw.prompt // null),
-          tool:            null,
-          raw:             $raw
-        }'
-      ;;
-    *)
-      # Unknown harness — pass raw payload through with minimal envelope.
-      jq -n \
-        --arg  harness   "$harness" \
-        --arg  event     "$canonical" \
-        --arg  raw_event "$raw_event" \
-        --argjson raw    "$raw_json" \
-        '{
-          harness:         $harness,
-          event:           $event,
-          raw_event:       $raw_event,
-          session_id:      null,
-          cwd:             null,
-          transcript_path: null,
-          model:           null,
-          prompt:          null,
-          tool:            null,
-          raw:             $raw
-        }'
-      ;;
-  esac
-}
+def build_envelope(harness, canonical, raw_event, payload)
+  raw = parse_json_payload(payload)
 
-# ── Registry ──────────────────────────────────────────────────────────────────
-AGENT_HOOKS_CONFIG="${AGENT_HOOKS_CONFIG:-${HOME}/.agent-hooks.yml}"
-AGENT_HOOKS_CONFIG_LOCAL="${AGENT_HOOKS_CONFIG_LOCAL:-${HOME}/.agent-hooks.local.yml}"
-AGENT_HOOKS_CACHE_DIR="${AGENT_HOOKS_CACHE_DIR:-${XDG_CACHE_HOME:-${HOME}/.cache}/agent-hooks}"
+  envelope = {
+    "harness" => harness,
+    "event" => canonical,
+    "raw_event" => raw_event,
+    "tool" => nil,
+    "raw" => raw,
+  }
 
-[[ -f "$AGENT_HOOKS_CONFIG" ]] || exit 0
-
-command -v jq &>/dev/null  || exit 0
-command -v yq &>/dev/null  || exit 0
-
-# Read a jq filter against a YAML file, emitting JSON. Works with both yq
-# flavors: mikefarah (needs -o=json) and python/kislyuk (jq wrapper, JSON by
-# default).
-yaml_to_json() {
-  local filter="$1" file="$2" out
-  if out=$(yq -o=json "$filter" "$file" 2>/dev/null) && jq -e . <<<"$out" &>/dev/null; then
-    printf '%s' "$out"; return 0
-  fi
-  if out=$(yq "$filter" "$file" 2>/dev/null) && jq -e . <<<"$out" &>/dev/null; then
-    printf '%s' "$out"; return 0
-  fi
-  return 1
-}
-
-# ── Registry cache ─────────────────────────────────────────────────────────────
-# Cache the merged hooks JSON on disk, keyed by mtime+size of both registry
-# files.  Avoids repeated yq parses on hot events.  Stamp uses mtime:size per
-# file so content changes within the same 1-second mtime granularity are caught.
-# Missing local file contributes sentinel "0:0" so its later creation invalidates
-# the cache.  Cache files are isolated by hashed config paths so concurrent
-# agents with different registries don't collide.
-
-# Portable stat: GNU (linux) vs BSD (macOS).
-_file_stamp() {
-  local f="$1"
-  if [[ ! -f "$f" ]]; then printf '0:0'; return; fi
-  # GNU stat
-  if stat -c '%Y:%s' "$f" 2>/dev/null; then return; fi
-  # BSD stat
-  stat -f '%m:%z' "$f" 2>/dev/null || printf '0:0'
-}
-
-_registry_stamp() {
-  printf '%s|%s' "$(_file_stamp "$AGENT_HOOKS_CONFIG")" "$(_file_stamp "$AGENT_HOOKS_CONFIG_LOCAL")"
-}
-
-# Derive a short, filesystem-safe cache key from the two config paths.
-_cache_key() {
-  printf '%s|%s' "$AGENT_HOOKS_CONFIG" "$AGENT_HOOKS_CONFIG_LOCAL" \
-    | sha256sum 2>/dev/null | cut -c1-16 \
-    || printf '%s|%s' "$AGENT_HOOKS_CONFIG" "$AGENT_HOOKS_CONFIG_LOCAL" \
-         | md5sum 2>/dev/null | cut -c1-16 \
-    || printf 'default'
-}
-
-_load_and_merge_hooks() {
-  local base local_hooks
-  base=$(yaml_to_json '.hooks // []' "$AGENT_HOOKS_CONFIG") || return 1
-  [[ -z "$base" || "$base" == "null" ]] && base='[]'
-
-  local_hooks='[]'
-  if [[ -f "$AGENT_HOOKS_CONFIG_LOCAL" ]]; then
-    local_hooks=$(yaml_to_json '.hooks // []' "$AGENT_HOOKS_CONFIG_LOCAL" 2>/dev/null || echo '[]')
-    [[ -z "$local_hooks" || "$local_hooks" == "null" ]] && local_hooks='[]'
-  fi
-
-  # Merge: local entries replace base entries of the same name; new local names append.
-  # Existing filter (enabled/harness/on) handles enabled:false disabling after merge.
-  jq -n --argjson b "$base" --argjson l "$local_hooks" '
-    ($l | map(.name)) as $ln
-    | ($b | map(select(.name as $n | ($ln | index($n)) | not))) + $l
-  '
-}
-
-# Try to serve from cache; fall back to parse-and-write.
-HOOKS_JSON=""
-CACHE_FILE=""
-if mkdir -p "$AGENT_HOOKS_CACHE_DIR" 2>/dev/null; then
-  CACHE_KEY=$(_cache_key)
-  CACHE_FILE="${AGENT_HOOKS_CACHE_DIR}/${CACHE_KEY}.json"
-  CURRENT_STAMP=$(_registry_stamp)
-  if [[ -f "$CACHE_FILE" ]]; then
-    CACHED_STAMP=$(head -n1 "$CACHE_FILE" 2>/dev/null || true)
-    if [[ "$CACHED_STAMP" == "$CURRENT_STAMP" ]]; then
-      HOOKS_JSON=$(tail -n +2 "$CACHE_FILE" 2>/dev/null || true)
-    fi
-  fi
-fi
-
-if [[ -z "$HOOKS_JSON" ]]; then
-  HOOKS_JSON=$(_load_and_merge_hooks) || exit 0
-  [[ -z "$HOOKS_JSON" || "$HOOKS_JSON" == "null" ]] && exit 0
-  # Write to cache atomically; failure is non-fatal.
-  if [[ -n "$CACHE_FILE" ]]; then
-    CACHE_TMP="${CACHE_FILE}.$$"
-    { printf '%s\n' "$(_registry_stamp)"; printf '%s' "$HOOKS_JSON"; } > "$CACHE_TMP" 2>/dev/null \
-      && mv "$CACHE_TMP" "$CACHE_FILE" 2>/dev/null \
-      || rm -f "$CACHE_TMP" 2>/dev/null || true
-  fi
-fi
-
-[[ -z "$HOOKS_JSON" || "$HOOKS_JSON" == "null" ]] && exit 0
-
-# ── Resolve matching hooks ─────────────────────────────────────────────────────
-# A hook matches when:
-#   1. canonical event is listed in its `on` array
-#   2. its `enabled` field is absent or true
-#   3. its `harness` filter is absent or includes the current harness
-MATCHED=$(jq -c --arg ev "$CANONICAL_EVENT" --arg h "$HARNESS" '
-  map(select(
-    (.on | index($ev)) != null
-    and ((.enabled == null) or (.enabled == true))
-    and (.harness == null or (.harness | index($h)) != null)
-  ))
-' <<<"$HOOKS_JSON")
-
-COUNT=$(jq 'length' <<<"$MATCHED")
-[[ "$COUNT" -eq 0 ]] && exit 0
-
-# ── Build the CanonicalEvent envelope ─────────────────────────────────────────
-# Construct once; every matched hook receives the same envelope on stdin.
-# Falls back to raw INPUT if jq is unavailable (already guarded above) or the
-# envelope build fails for any reason — keeps the runner robust.
-ENVELOPE=$(_build_envelope "$HARNESS" "$CANONICAL_EVENT" "$RAW_EVENT" "$INPUT" 2>/dev/null) \
-  || ENVELOPE="$INPUT"
-[[ -z "$ENVELOPE" ]] && ENVELOPE="$INPUT"
-
-# ── Dispatch logging setup ────────────────────────────────────────────────────
-# Log dir: isolate per invocation by session+timestamp so traces are queryable
-# and don't grow unboundedly per-hook.  Only written when at least one hook
-# matches (no-match hot events produce no trace file).
-# Falls back gracefully — log-write failure is always non-fatal.
-AGENT_HOOKS_LOG_DIR="${AGENT_HOOKS_LOG_DIR:-${XDG_DATA_HOME:-${HOME}/.local/share}/agent-hooks/logs}"
-
-# Derive a session id for the log filename from the envelope (best-effort).
-_log_session_id() {
-  local envelope="$1"
-  local sid
-  sid=$(jq -r '.session_id // empty' <<<"$envelope" 2>/dev/null)
-  [[ -n "$sid" ]] && printf '%s' "$sid" || printf 'unknown'
-}
-
-LOG_SESSION=$(_log_session_id "$ENVELOPE")
-LOG_TS=$(date +%s 2>/dev/null || printf '0')
-LOG_FILE=""
-if mkdir -p "$AGENT_HOOKS_LOG_DIR" 2>/dev/null; then
-  # Key: <session>/<timestamp>-<harness>-<canonical_event>.json
-  LOG_SESSION_DIR="${AGENT_HOOKS_LOG_DIR}/${LOG_SESSION}"
-  if mkdir -p "$LOG_SESSION_DIR" 2>/dev/null; then
-    LOG_FILE="${LOG_SESSION_DIR}/${LOG_TS}-${HARNESS}-${CANONICAL_EVENT}.json"
-  fi
-fi
-
-# Seed the dispatch log: harness, event, matched hooks all marked "running".
-if [[ -n "$LOG_FILE" ]]; then
-  jq -n \
-    --arg  harness  "$HARNESS" \
-    --arg  event    "$CANONICAL_EVENT" \
-    --arg  raw_ev   "$RAW_EVENT" \
-    --argjson count  "$COUNT" \
-    --argjson hooks  "$MATCHED" \
-    --argjson ts     "$LOG_TS" \
-    '{
-      harness:    $harness,
-      event:      $event,
-      raw_event:  $raw_ev,
-      started_at: $ts,
-      finished_at: null,
-      hooks: ($hooks | map({name, command, status:"running",
-                            exit_code:null, duration_ms:null, output_tail:null})),
-      summary: {total:$count, passed:0, failed:0, status:"running"}
-    }' > "$LOG_FILE" 2>/dev/null || LOG_FILE=""
-fi
-
-# ── Run each matched hook ──────────────────────────────────────────────────────
-# The CanonicalEvent envelope is replayed to each hook so every hook receives a
-# consistent normalised payload regardless of harness or order.  Combined output
-# (stdout+stderr) is captured for the dispatch log so failures are diagnosable;
-# hook stdout is never forwarded to the harness.  Non-zero exit from a hook is
-# absorbed so one failure never aborts the remaining hooks.
-PASSED=0
-FAILED=0
-for ((i = 0; i < COUNT; i++)); do
-  CMD=$(jq -r ".[$i].command" <<<"$MATCHED")
-  [[ -z "$CMD" || "$CMD" == "null" ]] && continue
-
-  T0=$(date +%s%3N 2>/dev/null || date +%s000)
-  HOOK_OUT=""
-  HOOK_EC=0
-  HOOK_OUT=$(printf '%s' "$ENVELOPE" | bash -c "$CMD" 2>&1) || HOOK_EC=$?
-  T1=$(date +%s%3N 2>/dev/null || date +%s000)
-  HOOK_DUR=$((T1 - T0))
-
-  if [[ "$HOOK_EC" -eq 0 ]]; then
-    HOOK_STATUS="pass"
-    PASSED=$((PASSED + 1))
+  case harness
+  when "claude"
+    envelope.merge!(
+      "session_id" => raw["session_id"],
+      "cwd" => raw["cwd"],
+      "transcript_path" => raw["transcript_path"],
+      "model" => raw["model"],
+      "prompt" => raw["prompt"]
+    )
+  when "cursor"
+    roots = raw["workspace_roots"]
+    roots = [] unless roots.is_a?(Array)
+    envelope.merge!(
+      "session_id" => raw["conversation_id"],
+      "cwd" => roots[0],
+      "transcript_path" => nil,
+      "model" => nil,
+      "prompt" => raw["prompt"]
+    )
   else
-    HOOK_STATUS="fail"
-    FAILED=$((FAILED + 1))
-    # Re-emit stderr to keep failure visible in harness logs.
-    [[ -n "$HOOK_OUT" ]] && printf '%s\n' "$HOOK_OUT" >&2 || true
-  fi
-  HOOK_TAIL=$(printf '%s' "$HOOK_OUT" | tail -n 20)
+    envelope.merge!(
+      "session_id" => nil,
+      "cwd" => nil,
+      "transcript_path" => nil,
+      "model" => nil,
+      "prompt" => nil
+    )
+  end
 
-  # Update the log entry for this hook atomically.
-  if [[ -n "$LOG_FILE" ]]; then
-    LOG_TMP="${LOG_FILE}.${i}.$$"
-    jq --argjson i   "$i" \
-       --arg    st   "$HOOK_STATUS" \
-       --argjson ec  "$HOOK_EC" \
-       --argjson dur "$HOOK_DUR" \
-       --arg    tail "$HOOK_TAIL" \
-       --argjson pass "$PASSED" \
-       --argjson fail "$FAILED" \
-       '.hooks[$i].status      = $st
-        | .hooks[$i].exit_code  = $ec
-        | .hooks[$i].duration_ms = $dur
-        | .hooks[$i].output_tail = $tail
-        | .summary.passed        = $pass
-        | .summary.failed        = $fail' \
-       "$LOG_FILE" > "$LOG_TMP" 2>/dev/null \
-      && mv "$LOG_TMP" "$LOG_FILE" 2>/dev/null \
-      || rm -f "$LOG_TMP" 2>/dev/null || true
-  fi
-done
+  JSON.generate(envelope)
+end
 
-# Finalise the log.
-if [[ -n "$LOG_FILE" ]]; then
-  LOG_FINISHED=$(date +%s 2>/dev/null || printf '0')
-  LOG_OVERALL="pass"
-  [[ "$FAILED" -gt 0 ]] && LOG_OVERALL="fail"
-  LOG_TMP="${LOG_FILE}.final.$$"
-  jq --argjson ts "$LOG_FINISHED" \
-     --arg    st "$LOG_OVERALL" \
-     --argjson pass "$PASSED" \
-     --argjson fail "$FAILED" \
-     '.finished_at     = $ts
-      | .summary.status  = $st
-      | .summary.passed  = $pass
-      | .summary.failed  = $fail' \
-     "$LOG_FILE" > "$LOG_TMP" 2>/dev/null \
-    && mv "$LOG_TMP" "$LOG_FILE" 2>/dev/null \
-    || rm -f "$LOG_TMP" 2>/dev/null || true
-fi
+def file_stamp(path)
+  return "0:0" unless File.file?(path)
 
-exit 0
+  stat = File.stat(path)
+  "#{stat.mtime.to_i}:#{stat.size}"
+end
+
+def registry_stamp(base_config, local_config)
+  "#{file_stamp(base_config)}|#{file_stamp(local_config)}"
+end
+
+def cache_key(base_config, local_config)
+  Digest::SHA256.hexdigest("#{base_config}|#{local_config}")[0, 16]
+end
+
+def normalize_hook(hook)
+  return hook unless hook.is_a?(Hash)
+
+  hook.each_with_object({}) do |(key, value), normalized|
+    normalized[key == true ? "on" : key.to_s] = value
+  end
+end
+
+def load_hooks_yaml(path)
+  return [] unless File.file?(path)
+
+  data = YAML.safe_load_file(path, permitted_classes: [Date, Time], aliases: true) || {}
+  hooks = data["hooks"] || []
+  return [] unless hooks.is_a?(Array)
+
+  hooks.map { |h| normalize_hook(h) }
+rescue StandardError
+  []
+end
+
+def merge_hooks(base_config, local_config)
+  base = load_hooks_yaml(base_config)
+  local = File.file?(local_config) ? load_hooks_yaml(local_config) : []
+  local_names = local.filter_map { |h| h["name"] if h.is_a?(Hash) }
+  merged = base.select { |h| h.is_a?(Hash) && !local_names.include?(h["name"]) }
+  merged.concat(local.select { |h| h.is_a?(Hash) })
+  merged
+end
+
+def load_hooks(base_config, local_config, cache_dir)
+  stamp = registry_stamp(base_config, local_config)
+  cache_file = File.join(cache_dir, "#{cache_key(base_config, local_config)}.json")
+
+  begin
+    FileUtils.mkdir_p(cache_dir)
+  rescue StandardError
+    cache_file = nil
+  end
+
+  if cache_file && File.file?(cache_file)
+    begin
+      lines = File.read(cache_file).lines
+      if !lines.empty? && lines[0].strip == stamp
+        hooks = JSON.parse(lines[1..].join)
+        return hooks if hooks.is_a?(Array)
+      end
+    rescue StandardError
+      # fall through to reload
+    end
+  end
+
+  hooks = merge_hooks(base_config, local_config)
+
+  if cache_file
+    begin
+      tmp = "#{cache_file}.#{Process.pid}.tmp"
+      File.write(tmp, "#{stamp}\n#{JSON.generate(hooks)}")
+      File.rename(tmp, cache_file)
+    rescue StandardError
+      File.delete(tmp) if defined?(tmp) && File.exist?(tmp)
+    end
+  end
+
+  hooks
+end
+
+def hook_matches?(hook, canonical_event_name, harness)
+  on = hook["on"] || []
+  return false unless on.include?(canonical_event_name)
+
+  enabled = hook.key?("enabled") ? hook["enabled"] : true
+  return false unless enabled == true
+
+  harness_filter = hook["harness"]
+  return false if harness_filter.is_a?(Array) && !harness_filter.include?(harness)
+
+  true
+end
+
+def select_hooks(hooks, canonical_event_name, harness)
+  hooks.select { |h| h.is_a?(Hash) && hook_matches?(h, canonical_event_name, harness) }
+end
+
+def log_session_id(envelope_json)
+  envelope = JSON.parse(envelope_json)
+  sid = envelope["session_id"]
+  sid && !sid.to_s.empty? ? sid.to_s : "unknown"
+rescue JSON::ParserError
+  "unknown"
+end
+
+def write_json_atomic(path, data)
+  tmp = "#{path}.#{Process.pid}.tmp"
+  File.write(tmp, JSON.pretty_generate(data))
+  File.rename(tmp, path)
+  true
+rescue StandardError
+  File.delete(tmp) if defined?(tmp) && File.exist?(tmp)
+  false
+end
+
+def run_hook(command, envelope, env)
+  started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+  stdout, stderr, status = Open3.capture3(env, "bash", "-c", command, stdin_data: envelope)
+  output = "#{stdout}#{stderr}"
+  duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).to_i
+  [status.exitstatus, output, duration_ms]
+rescue StandardError => e
+  duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).to_i
+  [1, e.message, duration_ms]
+end
+
+def tail_lines(text, n = 20)
+  text.lines.last(n).join
+end
+
+def dispatch(harness, raw_event, payload, base_config, local_config, cache_dir, log_dir)
+  canonical = canonical_event(harness, raw_event)
+  ENV["HOOK_HARNESS"] = harness
+  ENV["HOOK_EVENT"] = canonical
+
+  hooks = load_hooks(base_config, local_config, cache_dir)
+  return if hooks.nil? || hooks.empty?
+
+  matched = select_hooks(hooks, canonical, harness)
+  return if matched.empty?
+
+  envelope = build_envelope(harness, canonical, raw_event, payload)
+  envelope = payload if envelope.nil? || envelope.empty?
+
+  session_id = log_session_id(envelope)
+  started_at = Time.now.to_i
+  log_file = nil
+
+  begin
+    session_log_dir = File.join(log_dir, session_id)
+    FileUtils.mkdir_p(session_log_dir)
+    log_file = File.join(session_log_dir, "#{started_at}-#{harness}-#{canonical}.json")
+  rescue StandardError
+    log_file = nil
+  end
+
+  trace = {
+    "harness" => harness,
+    "event" => canonical,
+    "raw_event" => raw_event,
+    "started_at" => started_at,
+    "finished_at" => nil,
+    "hooks" => matched.map do |h|
+      {
+        "name" => h["name"],
+        "command" => h["command"],
+        "status" => "running",
+        "exit_code" => nil,
+        "duration_ms" => nil,
+        "output_tail" => nil,
+      }
+    end,
+    "summary" => {
+      "total" => matched.length,
+      "passed" => 0,
+      "failed" => 0,
+      "status" => "running",
+    },
+  }
+
+  log_file = nil unless log_file && write_json_atomic(log_file, trace)
+
+  passed = 0
+  failed = 0
+  hook_env = ENV.to_h
+
+  matched.each_with_index do |hook, i|
+    command = hook["command"]
+    next if command.nil? || command.to_s.empty?
+
+    exit_code, output, duration_ms = run_hook(command.to_s, envelope, hook_env)
+    if exit_code.zero?
+      passed += 1
+      status = "pass"
+    else
+      failed += 1
+      status = "fail"
+      warn output.rstrip unless output.nil? || output.empty?
+    end
+
+    next unless log_file
+
+    trace["hooks"][i].merge!(
+      "status" => status,
+      "exit_code" => exit_code,
+      "duration_ms" => duration_ms,
+      "output_tail" => tail_lines(output)
+    )
+    trace["summary"]["passed"] = passed
+    trace["summary"]["failed"] = failed
+    write_json_atomic(log_file, trace)
+  end
+
+  return unless log_file
+
+  trace["finished_at"] = Time.now.to_i
+  trace["summary"]["status"] = failed.positive? ? "fail" : "pass"
+  trace["summary"]["passed"] = passed
+  trace["summary"]["failed"] = failed
+  write_json_atomic(log_file, trace)
+end
+
+def main(argv)
+  if argv.length < 2
+    warn "usage: hooks-runner <harness> <event>"
+    return 0
+  end
+
+  harness, raw_event = argv[0], argv[1]
+  payload = $stdin.read
+
+  base_config = ENV.fetch("AGENT_HOOKS_CONFIG", File.join(home, ".agent-hooks.yml"))
+  return 0 unless File.file?(base_config)
+
+  local_config = ENV.fetch("AGENT_HOOKS_CONFIG_LOCAL", File.join(home, ".agent-hooks.local.yml"))
+  cache_dir = ENV.fetch("AGENT_HOOKS_CACHE_DIR", File.join(xdg_cache, "agent-hooks"))
+  log_dir = ENV.fetch("AGENT_HOOKS_LOG_DIR", File.join(xdg_data, "agent-hooks", "logs"))
+
+  dispatch(harness, raw_event, payload, base_config, local_config, cache_dir, log_dir)
+  0
+end
+
+if File.realpath($PROGRAM_NAME) == File.realpath(__FILE__)
+  exit(main(ARGV))
+end

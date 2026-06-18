@@ -193,8 +193,7 @@ yq -o=json '.hooks // []' ~/.agent-hooks.local.yml 2>/dev/null || echo '[]'
 ### 4. Verify dependencies
 
 ```bash
-command -v jq   # required by hooks-runner
-command -v yq   # required by hooks-runner
+command -v ruby      # required by hooks-runner (stdlib yaml/json only)
 command -v hooks-runner   # must be on PATH
 ```
 

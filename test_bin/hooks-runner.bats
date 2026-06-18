@@ -49,7 +49,7 @@ hooks:
     command: "touch \$MARKER/notify"
 YAML
 
-  stop_json | bash "$SCRIPT" claude Stop
+  stop_json | "$SCRIPT" claude Stop
 
   [ -f "$MARKER/notify" ]
 }
@@ -62,7 +62,7 @@ hooks:
     command: "touch \$MARKER/notify"
 YAML
 
-  run bash "$SCRIPT" claude Stop <<< "$(stop_json)"
+  run "$SCRIPT" claude Stop <<< "$(stop_json)"
   [ "$status" -eq 0 ]
 }
 
@@ -79,7 +79,7 @@ hooks:
     command: "touch \$MARKER/second"
 YAML
 
-  stop_json | bash "$SCRIPT" claude Stop
+  stop_json | "$SCRIPT" claude Stop
 
   [ -f "$MARKER/first" ]
   [ -f "$MARKER/second" ]
@@ -96,7 +96,7 @@ hooks:
     command: "touch \$MARKER/session_end"
 YAML
 
-  stop_json | bash "$SCRIPT" claude Stop
+  stop_json | "$SCRIPT" claude Stop
 
   [ -f "$MARKER/turn_end" ]
   [ ! -f "$MARKER/session_end" ]
@@ -113,7 +113,7 @@ hooks:
 YAML
 
   # Dispatch turn_end — nothing in the registry matches it.
-  stop_json | bash "$SCRIPT" claude Stop
+  stop_json | "$SCRIPT" claude Stop
 
   [ ! -f "$MARKER/session_only" ]
 }
@@ -126,7 +126,7 @@ hooks:
     command: "touch \$MARKER/session_only"
 YAML
 
-  run bash "$SCRIPT" claude Stop <<< "$(stop_json)"
+  run "$SCRIPT" claude Stop <<< "$(stop_json)"
   [ "$status" -eq 0 ]
 }
 
@@ -140,7 +140,7 @@ hooks:
     command: "touch \$MARKER/session_track"
 YAML
 
-  echo '{"session_id":"s1"}' | bash "$SCRIPT" claude SessionStart
+  echo '{"session_id":"s1"}' | "$SCRIPT" claude SessionStart
 
   [ -f "$MARKER/session_track" ]
 }
@@ -153,7 +153,7 @@ hooks:
     command: "touch \$MARKER/session_track"
 YAML
 
-  echo '{"session_id":"s1","prompt":"hello"}' | bash "$SCRIPT" claude UserPromptSubmit
+  echo '{"session_id":"s1","prompt":"hello"}' | "$SCRIPT" claude UserPromptSubmit
 
   [ -f "$MARKER/session_track" ]
 }
@@ -166,7 +166,7 @@ hooks:
     command: "touch \$MARKER/session_end"
 YAML
 
-  echo '{"session_id":"s1"}' | bash "$SCRIPT" claude SessionEnd
+  echo '{"session_id":"s1"}' | "$SCRIPT" claude SessionEnd
 
   [ -f "$MARKER/session_end" ]
 }
@@ -179,7 +179,7 @@ hooks:
     command: "touch \$MARKER/notify"
 YAML
 
-  echo '{"message":"done"}' | bash "$SCRIPT" claude Notification
+  echo '{"message":"done"}' | "$SCRIPT" claude Notification
 
   [ -f "$MARKER/notify" ]
 }
@@ -195,7 +195,7 @@ hooks:
     command: "touch \$MARKER/snapshot"
 YAML
 
-  echo '{"session_id":"s1"}' | bash "$SCRIPT" claude SessionStart
+  echo '{"session_id":"s1"}' | "$SCRIPT" claude SessionStart
 
   [ -f "$MARKER/session_track" ]
   [ ! -f "$MARKER/snapshot" ]
@@ -219,7 +219,7 @@ hooks:
 YAML
   export AGENT_HOOKS_CONFIG_LOCAL
 
-  stop_json | bash "$SCRIPT" claude Stop
+  stop_json | "$SCRIPT" claude Stop
 
   [ -f "$MARKER/local" ]
   [ ! -f "$MARKER/base" ]
@@ -241,7 +241,7 @@ hooks:
 YAML
   export AGENT_HOOKS_CONFIG_LOCAL
 
-  stop_json | bash "$SCRIPT" claude Stop
+  stop_json | "$SCRIPT" claude Stop
 
   [ -f "$MARKER/base" ]
   [ -f "$MARKER/extra" ]
@@ -264,7 +264,7 @@ hooks:
 YAML
   export AGENT_HOOKS_CONFIG_LOCAL
 
-  stop_json | bash "$SCRIPT" claude Stop
+  stop_json | "$SCRIPT" claude Stop
 
   [ ! -f "$MARKER/notify" ]
 }
@@ -287,7 +287,7 @@ hooks:
 YAML
   export AGENT_HOOKS_CONFIG_LOCAL
 
-  stop_json | bash "$SCRIPT" claude Stop
+  stop_json | "$SCRIPT" claude Stop
 
   [ ! -f "$MARKER/notify" ]
   [ -f "$MARKER/snapshot" ]
@@ -298,14 +298,14 @@ YAML
 @test "exits 0 gracefully when registry file is missing" {
   export AGENT_HOOKS_CONFIG="$TEST_HOME/nonexistent.yml"
 
-  run bash "$SCRIPT" claude Stop <<< "$(stop_json)"
+  run "$SCRIPT" claude Stop <<< "$(stop_json)"
   [ "$status" -eq 0 ]
 }
 
 @test "writes no markers when registry file is missing" {
   export AGENT_HOOKS_CONFIG="$TEST_HOME/nonexistent.yml"
 
-  stop_json | bash "$SCRIPT" claude Stop
+  stop_json | "$SCRIPT" claude Stop
   # Marker dir should be empty — nothing ran.
   [ -z "$(ls -A "$MARKER")" ]
 }
@@ -320,7 +320,7 @@ hooks:
     command: "touch \$MARKER/snapshot"
 YAML
 
-  echo '{"conversation_id":"c1"}' | bash "$SCRIPT" cursor stop
+  echo '{"conversation_id":"c1"}' | "$SCRIPT" cursor stop
 
   [ -f "$MARKER/snapshot" ]
 }
@@ -334,7 +334,7 @@ hooks:
 YAML
 
   echo '{"conversation_id":"c1","workspace_roots":["/home/user/proj"]}' \
-    | bash "$SCRIPT" cursor sessionStart
+    | "$SCRIPT" cursor sessionStart
 
   [ -f "$MARKER/cursor_track" ]
 }
@@ -348,7 +348,7 @@ hooks:
 YAML
 
   echo '{"conversation_id":"c1","workspace_roots":["/home/user/proj"]}' \
-    | bash "$SCRIPT" cursor beforeSubmitPrompt
+    | "$SCRIPT" cursor beforeSubmitPrompt
 
   [ -f "$MARKER/cursor_track" ]
 }
@@ -361,7 +361,7 @@ hooks:
     command: "touch \$MARKER/cursor_end"
 YAML
 
-  echo '{"conversation_id":"c1"}' | bash "$SCRIPT" cursor sessionEnd
+  echo '{"conversation_id":"c1"}' | "$SCRIPT" cursor sessionEnd
 
   [ -f "$MARKER/cursor_end" ]
 }
@@ -378,7 +378,7 @@ hooks:
     command: "touch \$MARKER/both"
 YAML
 
-  echo '{"conversation_id":"c1"}' | bash "$SCRIPT" cursor stop
+  echo '{"conversation_id":"c1"}' | "$SCRIPT" cursor stop
 
   [ ! -f "$MARKER/claude_only" ]
   [ -f "$MARKER/both" ]
@@ -398,7 +398,7 @@ hooks:
 YAML
 
   echo '{"stop_hook_active":true,"session_id":"s1","cwd":"/repo"}' \
-    | bash "$SCRIPT" claude Stop
+    | "$SCRIPT" claude Stop
 
   [ -f "$MARKER/payload" ]
   jq -e '.harness == "claude"' "$MARKER/payload" >/dev/null
@@ -415,7 +415,7 @@ hooks:
 YAML
 
   echo '{"session_id":"abc123","cwd":"/home/user/project","stop_hook_active":true}' \
-    | bash "$SCRIPT" claude Stop
+    | "$SCRIPT" claude Stop
 
   jq -e '.session_id == "abc123"' "$MARKER/payload" >/dev/null
   jq -e '.cwd == "/home/user/project"' "$MARKER/payload" >/dev/null
@@ -430,7 +430,7 @@ hooks:
 YAML
 
   echo '{"conversation_id":"cursor-sess-42","workspace_roots":["/home/user/cursorproj"]}' \
-    | bash "$SCRIPT" cursor stop
+    | "$SCRIPT" cursor stop
 
   [ -f "$MARKER/payload" ]
   jq -e '.harness == "cursor"' "$MARKER/payload" >/dev/null
@@ -448,7 +448,7 @@ hooks:
 YAML
 
   echo '{"conversation_id":"c99","workspace_roots":["/proj"],"extra_field":"kept"}' \
-    | bash "$SCRIPT" cursor sessionStart
+    | "$SCRIPT" cursor sessionStart
 
   jq -e '.raw.conversation_id == "c99"' "$MARKER/payload" >/dev/null
   jq -e '.raw.extra_field == "kept"' "$MARKER/payload" >/dev/null
@@ -472,7 +472,7 @@ YAML
   export CLAUDE_SESSIONS_DIR="$SESSIONS_DIR"
 
   echo '{"conversation_id":"integration-cursor-1","workspace_roots":["/home/user/cursorproj"]}' \
-    | bash "$SCRIPT" cursor sessionStart
+    | "$SCRIPT" cursor sessionStart
 
   [ -f "$SESSIONS_DIR/integration-cursor-1.json" ]
   jq -e '.agent == "cursor"' "$SESSIONS_DIR/integration-cursor-1.json" >/dev/null
@@ -495,7 +495,7 @@ YAML
   export CLAUDE_SESSION_ID="integration-claude-1"
 
   echo '{"session_id":"integration-claude-1","cwd":"/home/user/claudeproj"}' \
-    | bash "$SCRIPT" claude SessionStart
+    | "$SCRIPT" claude SessionStart
 
   [ -f "$SESSIONS_DIR/integration-claude-1.json" ]
   jq -e '.session_id == "integration-claude-1"' "$SESSIONS_DIR/integration-claude-1.json" >/dev/null
@@ -523,7 +523,7 @@ YAML
   unset CLAUDE_SESSION_ID 2>/dev/null || true
 
   echo '{"conversation_id":"cursor-only-sess","workspace_roots":["/proj"]}' \
-    | bash "$SCRIPT" cursor sessionStart
+    | "$SCRIPT" cursor sessionStart
 
   # Cursor session file should exist with agent:"cursor"
   [ -f "$SESSIONS_DIR/cursor-only-sess.json" ]
@@ -544,7 +544,7 @@ hooks:
 YAML
 
   echo '{"session_id":"log-sess-1","cwd":"/repo","stop_hook_active":true}' \
-    | bash "$SCRIPT" claude Stop
+    | "$SCRIPT" claude Stop
 
   # At least one trace file should exist under the session subdir.
   [ -n "$(find "$AGENT_HOOKS_LOG_DIR/log-sess-1" -name '*-claude-turn_end.json' 2>/dev/null)" ]
@@ -559,7 +559,7 @@ hooks:
 YAML
 
   echo '{"session_id":"log-sess-2","cwd":"/repo"}' \
-    | bash "$SCRIPT" claude Stop
+    | "$SCRIPT" claude Stop
 
   TRACE=$(find "$AGENT_HOOKS_LOG_DIR/log-sess-2" -name '*-claude-turn_end.json' | head -1)
   [ -n "$TRACE" ]
@@ -579,7 +579,7 @@ hooks:
 YAML
 
   echo '{"session_id":"log-sess-3","cwd":"/repo"}' \
-    | bash "$SCRIPT" claude Stop
+    | "$SCRIPT" claude Stop
 
   TRACE=$(find "$AGENT_HOOKS_LOG_DIR/log-sess-3" -name '*-claude-turn_end.json' | head -1)
   [ -n "$TRACE" ]
@@ -603,7 +603,7 @@ hooks:
 YAML
 
   echo '{"session_id":"log-sess-4","cwd":"/repo"}' \
-    | bash "$SCRIPT" claude Stop
+    | "$SCRIPT" claude Stop
 
   TRACE=$(find "$AGENT_HOOKS_LOG_DIR/log-sess-4" -name '*-claude-turn_end.json' | head -1)
   [ -n "$TRACE" ]
@@ -625,7 +625,7 @@ hooks:
 YAML
 
   echo '{"session_id":"log-sess-5","cwd":"/repo"}' \
-    | bash "$SCRIPT" claude Stop
+    | "$SCRIPT" claude Stop
 
   TRACE=$(find "$AGENT_HOOKS_LOG_DIR/log-sess-5" -name '*-claude-turn_end.json' | head -1)
   [ -n "$TRACE" ]
@@ -642,7 +642,7 @@ hooks:
     command: "touch \$MARKER/session_only"
 YAML
 
-  echo '{"session_id":"log-sess-no-match"}' | bash "$SCRIPT" claude Stop
+  echo '{"session_id":"log-sess-no-match"}' | "$SCRIPT" claude Stop
 
   # Log dir should not have any trace for this session.
   [ ! -d "$AGENT_HOOKS_LOG_DIR/log-sess-no-match" ]
@@ -656,7 +656,7 @@ hooks:
     command: "echo 'hook error message' >&2; exit 42"
 YAML
 
-  run bash "$SCRIPT" claude Stop <<< '{"session_id":"log-sess-6"}'
+  run "$SCRIPT" claude Stop <<< '{"session_id":"log-sess-6"}'
 
   # Runner still exits 0 — neutral.
   [ "$status" -eq 0 ]
@@ -679,7 +679,7 @@ hooks:
     command: "touch \$MARKER/notify"
 YAML
 
-  run bash "$SCRIPT" claude Stop <<< '{"session_id":"s1","stop_hook_active":true}'
+  run "$SCRIPT" claude Stop <<< '{"session_id":"s1","stop_hook_active":true}'
 
   # Hook still ran despite log failure.
   [ "$status" -eq 0 ]
