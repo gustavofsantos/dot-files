@@ -1,0 +1,10 @@
+{
+  "clojure": {
+    "command": "clojure-lsp",
+    "extensionToLanguage": {
+      ".clj": "clj",
+      ".cljs": "clj",
+      ".edn": "clj"
+    }
+  }
+}
