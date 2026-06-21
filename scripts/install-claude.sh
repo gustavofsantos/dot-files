@@ -7,17 +7,27 @@ echo "Installing personal plugins..."
 # Skills now ship as plugins under agents/plugins/, registered via a local
 # "directory" marketplace. `plugin install` COPIES each plugin into
 # ~/.claude/plugins/cache/personal/<name>/<version>/ from the repo's committed
-# HEAD (not the working tree), so `marketplace update` + `plugin update` are run
-# to refresh the cache after a *committed* change. Uncommitted edits are not
-# loaded. All four commands are idempotent.
+# HEAD (not the working tree). `plugin update` is *version*-based — it won't
+# refresh a same-version (1.0.0) edit — so to pick up a new commit we compare the
+# pinned gitCommitSha to HEAD and uninstall+reinstall only when they differ.
+# Everything here is idempotent. Uncommitted edits are not loaded.
 MARKETPLACE="$DOTFILES_DIR/agents/plugins"
+INSTALLED="$HOME/.claude/plugins/installed_plugins.json"
 PLUGINS=(bruno clojure engineering productivity)
 if command -v claude &>/dev/null; then
   claude plugin marketplace add "$MARKETPLACE" >/dev/null 2>&1 || true
   claude plugin marketplace update personal >/dev/null 2>&1 || true
+  head_sha=$(git -C "$DOTFILES_DIR" rev-parse HEAD 2>/dev/null || echo "")
   for p in "${PLUGINS[@]}"; do
-    claude plugin install "$p@personal" >/dev/null 2>&1 || true
-    claude plugin update  "$p@personal" >/dev/null 2>&1 || true
+    pinned=""
+    [ -f "$INSTALLED" ] && pinned=$(jq -r --arg k "$p@personal" \
+      '.plugins[$k][0].gitCommitSha // ""' "$INSTALLED" 2>/dev/null || echo "")
+    if [ -z "$pinned" ]; then
+      claude plugin install "$p@personal" >/dev/null 2>&1 || true
+    elif [ -n "$head_sha" ] && [ "$pinned" != "$head_sha" ]; then
+      claude plugin uninstall "$p@personal" >/dev/null 2>&1 || true
+      claude plugin install   "$p@personal" >/dev/null 2>&1 || true
+    fi
   done
   echo "Installing personal plugins... OK"
 else

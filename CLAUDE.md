@@ -53,9 +53,11 @@ Install (run by `setup.sh`):
 - **Claude Code** — `install-claude.sh` runs `claude plugin marketplace add agents/plugins`
   then `claude plugin install <name>@personal` for each. Claude **copies** the plugin into
   `~/.claude/plugins/cache/personal/<name>/<version>/` from the repo's committed HEAD (not
-  the working tree). After **committing** a skill change, run
-  `claude plugin update <name>@personal` (or re-run `setup.sh`) for it to take effect —
-  uncommitted edits are **not** loaded.
+  the working tree). `plugin update` is version-based and won't refresh a same-version
+  (`1.0.0`) edit, so the script compares each plugin's pinned commit to HEAD and
+  uninstall+reinstalls when they differ. After **committing** a skill change, re-run
+  `./setup.sh` (or `./scripts/install-claude.sh`) for it to take effect — uncommitted edits
+  are **not** loaded.
 - **Cursor** — `install-cursor.sh` symlinks each plugin into `~/.cursor/plugins/local/<name>`.
   Edits are live; reload Cursor to pick them up.
 
