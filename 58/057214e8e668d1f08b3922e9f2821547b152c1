@@ -1,0 +1,21 @@
+scripts/install-claude.sh
+  s_e9c9e7c578cfa5::t_a004b5d3f22452 10-13,15,20,22-30
+CLAUDE.md
+  s_e9c9e7c578cfa5::t_cb382fca519372 56-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "58057214e8e668d1f08b3922e9f2821547b152c1",
+  "prompts": {},
+  "sessions": {
+    "s_e9c9e7c578cfa5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4faa1f1d-41b2-4d3c-87f8-ec671fe47bd1",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
