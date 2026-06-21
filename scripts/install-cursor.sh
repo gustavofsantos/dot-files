@@ -3,20 +3,38 @@ set -euo pipefail
 
 DOTFILES_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-echo "Installing custom skills..."
-for skill in "$DOTFILES_DIR"/.claude/skills/*/; do
-  [ -d "$skill" ] || continue
-  name=$(basename "$skill")
-  ln -sfn "$skill" "$HOME/.cursor/skills/$name"
+echo "Installing personal plugins..."
+# Cursor (2.5+) loads local plugins from ~/.cursor/plugins/local/<name>.
+# Symlinking the plugin dir there keeps edits live (no copy). Reload Cursor to
+# pick up changes.
+mkdir -p "$HOME/.cursor/plugins/local"
+for plugin in "$DOTFILES_DIR"/agents/plugins/*/; do
+  [ -d "$plugin" ] || continue
+  [ -d "$plugin/.cursor-plugin" ] || continue
+  name=$(basename "$plugin")
+  ln -sfn "${plugin%/}" "$HOME/.cursor/plugins/local/$name"
 done
-# prune dangling skill symlinks (removed from dotfiles)
-find "$HOME/.cursor/skills" -maxdepth 1 -type l | while read -r link; do
+# prune dangling local-plugin symlinks (plugins removed from dotfiles)
+find "$HOME/.cursor/plugins/local" -maxdepth 1 -type l | while read -r link; do
   [ -e "$link" ] || rm "$link"
 done
-echo "Installing custom skills... OK"
+echo "Installing personal plugins... OK"
+
+# Remove stale skill symlinks left by the old .claude/skills install.
+if [ -d "$HOME/.cursor/skills" ]; then
+  find "$HOME/.cursor/skills" -maxdepth 1 -type l | while read -r link; do
+    target=$(readlink "$link")
+    case "$target" in
+      "$DOTFILES_DIR"/.claude/skills/*) rm "$link" ;;
+      *) [ -e "$link" ] || rm "$link" ;;
+    esac
+  done
+fi
 
 echo "Installing custom subagents..."
+mkdir -p "$HOME/.cursor/agents"
 for agent in "$DOTFILES_DIR"/.claude/agents/*; do
+  [ -f "$agent" ] || continue
   name=$(basename "$agent")
   cp "$agent" "$HOME/.cursor/agents/$name"
 done

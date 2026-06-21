@@ -21,8 +21,8 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 | `init-engineering-repo.sh` | Idempotently `git init`s `~/engineering`, writes its `.gitignore`, seeds the first commit |
 | `link-bin-files.sh` | Symlinks every file in `bin/` into `~/.bin/` |
 | `link-xdg-config.sh` | Symlinks each subdir of `config/` into `~/.config/` |
-| `install-skills.sh` | Symlinks Claude skills/agents/themes; merges `.claude/settings.json` into `~/.claude/settings.json` |
-| `install-cursor.sh` | Merges `.cursor/hooks.json` (session-tracking hooks) into `~/.cursor/hooks.json`, absolute-pathed |
+| `install-claude.sh` | Registers the `personal` plugin marketplace and installs the four plugins for Claude Code; links agents/commands/themes/rules/workflows; merges `.claude/settings.json` into `~/.claude/settings.json` |
+| `install-cursor.sh` | Symlinks the four plugins into `~/.cursor/plugins/local/`; merges `.cursor/hooks.json` (session-tracking hooks) into `~/.cursor/hooks.json`, absolute-pathed |
 
 Re-running `setup.sh` is idempotent (`ln -sf`).
 
@@ -35,14 +35,39 @@ Re-running `setup.sh` is idempotent (`ln -sf`).
 
 - `bin/` — personal scripts added to `$PATH` via `~/.bin/`
 - `config/` — XDG config dirs: `nvim/`, `ghostty/`, `bat/`, `lazygit/`, `zed/`, `wezterm/`, `tmux/`, `sheldon/`, `starship.toml`
-- `.claude/` — Claude Code config: `skills/`, `agents/`, `themes/`, `settings.json`, `sync-pipeline.py`
+- `agents/plugins/` — the four personal plugins (`bruno`, `clojure`, `engineering`, `productivity`), each bundling its skills/hooks/rules. Shared by Claude Code and Cursor.
+- `.claude/` — Claude Code config: `commands/`, `themes/`, `rules/`, `workflows/`, `settings.json`, `sync-pipeline.py`
 - `.cursor/` — Cursor Agent config: `hooks.json` (session-tracking hooks merged into `~/.cursor/hooks.json`)
 
-## Claude skills & agents
+## Plugins (skills, hooks, rules)
 
-Skills live in `.claude/skills/<name>/` and agents in `.claude/agents/`. `install-skills.sh` symlinks them into `~/.claude/`. When adding a new skill, create the directory here and re-run `./setup.sh` (or just `./scripts/install-skills.sh`).
+Skills no longer live under `.claude/skills/`. They ship as **plugins** under
+`agents/plugins/<name>/`, grouped into four: `bruno`, `clojure`, `engineering`,
+`productivity`. Each plugin is a directory with `.claude-plugin/plugin.json` (Claude) and
+`.cursor-plugin/plugin.json` (Cursor) plus auto-discovered `skills/`, `hooks/`, `rules/`,
+`scripts/`. The two marketplace manifests — `agents/plugins/.claude-plugin/marketplace.json`
+and `agents/plugins/.cursor-plugin/marketplace.json` — list all four under a marketplace
+named `personal`.
 
-The `.claude/settings.json` merges into the global `~/.claude/settings.json` on install. Global settings win on scalar/object conflicts; `permissions.allow/deny/ask` arrays are unioned.
+Install (run by `setup.sh`):
+- **Claude Code** — `install-claude.sh` runs `claude plugin marketplace add agents/plugins`
+  then `claude plugin install <name>@personal` for each. Claude **copies** the plugin into
+  `~/.claude/plugins/cache/personal/<name>/<version>/` from the repo's committed HEAD (not
+  the working tree). After **committing** a skill change, run
+  `claude plugin update <name>@personal` (or re-run `setup.sh`) for it to take effect —
+  uncommitted edits are **not** loaded.
+- **Cursor** — `install-cursor.sh` symlinks each plugin into `~/.cursor/plugins/local/<name>`.
+  Edits are live; reload Cursor to pick them up.
+
+Skills are namespaced once installed: `/engineering:checks`, `/productivity:issue`, etc.
+
+When adding a new skill, drop it under the right plugin's `skills/` dir and re-run
+`./setup.sh`. When adding a whole new plugin, also add it to both `marketplace.json` files
+and the `PLUGINS` list in `install-claude.sh`.
+
+The `.claude/settings.json` merges into the global `~/.claude/settings.json` on install.
+Global settings win on scalar/object conflicts; `permissions.allow/deny/ask` arrays are
+unioned.
 
 ## Agent checks
 

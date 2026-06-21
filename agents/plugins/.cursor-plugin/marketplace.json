@@ -1,0 +1,15 @@
+{
+  "name": "personal",
+  "owner": {
+    "name": "Gustavo Santos"
+  },
+  "metadata": {
+    "description": "Gustavo's personal Cursor plugins"
+  },
+  "plugins": [
+    { "name": "bruno", "source": "./bruno" },
+    { "name": "clojure", "source": "./clojure" },
+    { "name": "engineering", "source": "./engineering" },
+    { "name": "productivity", "source": "./productivity" }
+  ]
+}

@@ -3,17 +3,37 @@ set -euo pipefail
 
 DOTFILES_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-echo "Installing custom skills..."
-for skill in "$DOTFILES_DIR"/.claude/skills/*/; do
-  [ -d "$skill" ] || continue
-  name=$(basename "$skill")
-  ln -sfn "$skill" "$HOME/.claude/skills/$name"
-done
-# prune dangling skill symlinks (removed from dotfiles)
-find "$HOME/.claude/skills" -maxdepth 1 -type l | while read -r link; do
-  [ -e "$link" ] || rm "$link"
-done
-echo "Installing custom skills... OK"
+echo "Installing personal plugins..."
+# Skills now ship as plugins under agents/plugins/, registered via a local
+# "directory" marketplace. `plugin install` COPIES each plugin into
+# ~/.claude/plugins/cache/personal/<name>/<version>/ from the repo's committed
+# HEAD (not the working tree), so `marketplace update` + `plugin update` are run
+# to refresh the cache after a *committed* change. Uncommitted edits are not
+# loaded. All four commands are idempotent.
+MARKETPLACE="$DOTFILES_DIR/agents/plugins"
+PLUGINS=(bruno clojure engineering productivity)
+if command -v claude &>/dev/null; then
+  claude plugin marketplace add "$MARKETPLACE" >/dev/null 2>&1 || true
+  claude plugin marketplace update personal >/dev/null 2>&1 || true
+  for p in "${PLUGINS[@]}"; do
+    claude plugin install "$p@personal" >/dev/null 2>&1 || true
+    claude plugin update  "$p@personal" >/dev/null 2>&1 || true
+  done
+  echo "Installing personal plugins... OK"
+else
+  echo "Installing personal plugins... skipped (claude not on PATH)"
+fi
+
+# Remove stale skill symlinks left by the old .claude/skills install.
+if [ -d "$HOME/.claude/skills" ]; then
+  find "$HOME/.claude/skills" -maxdepth 1 -type l | while read -r link; do
+    target=$(readlink "$link")
+    case "$target" in
+      "$DOTFILES_DIR"/.claude/skills/*) rm "$link" ;;
+      *) [ -e "$link" ] || rm "$link" ;;
+    esac
+  done
+fi
 
 echo "Installing custom subagents..."
 mkdir -p "$HOME/.claude/agents"

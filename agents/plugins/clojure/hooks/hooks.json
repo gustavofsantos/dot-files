@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "clj-paren-repair-claude-hook --cljfmt"
+            "command": "command -v clj-paren-repair-claude-hook >/dev/null 2>&1 && clj-paren-repair-claude-hook --cljfmt || true"
           }
         ]
       }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "clj-paren-repair-claude-hook --cljfmt"
+            "command": "command -v clj-paren-repair-claude-hook >/dev/null 2>&1 && clj-paren-repair-claude-hook --cljfmt || true"
           }
         ]
       }
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "clj-paren-repair-claude-hook --cljfmt"
+            "command": "command -v clj-paren-repair-claude-hook >/dev/null 2>&1 && clj-paren-repair-claude-hook --cljfmt || true"
           }
         ]
       }

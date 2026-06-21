@@ -48,7 +48,7 @@ beats a full tree full of guesses.
 
 Load the rubric and manifest template before classifying:
 ```bash
-cat ~/.claude/skills/tidy-kb/references/classification.md
+cat references/classification.md
 ```
 
 ### 1. Preconditions — never reorganize a dirty tree
