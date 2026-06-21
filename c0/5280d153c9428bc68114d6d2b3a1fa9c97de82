@@ -1,0 +1,57 @@
+agents/plugins/productivity/skills/tidy-kb/SKILL.md
+  s_e9c9e7c578cfa5::t_faafe088c66aa6 51
+agents/plugins/.cursor-plugin/marketplace.json
+  s_e9c9e7c578cfa5::t_aeef7c5507f136 1-15
+agents/plugins/engineering/.claude-plugin/plugin.json
+  s_e9c9e7c578cfa5::t_090ede281f2c36 4-7
+CLAUDE.md
+  s_e9c9e7c578cfa5::t_780e9897282b85 24-25
+  s_e9c9e7c578cfa5::t_74753e56f40ba8 38-39,42-54,59-70
+  s_e9c9e7c578cfa5::t_06e3a153174b68 55-58
+agents/plugins/clojure/.cursor-plugin/plugin.json
+  s_e9c9e7c578cfa5::t_090ede281f2c36 5-8
+scripts/install-cursor.sh
+  s_e9c9e7c578cfa5::t_660d0b884ab765 6-15,17-18,21-32
+  s_e9c9e7c578cfa5::t_552d4d40882858 35,37
+setup.sh
+  s_e9c9e7c578cfa5::t_ea1df78788d525 11
+agents/plugins/clojure/hooks/cursor_hooks.json
+  s_e9c9e7c578cfa5::t_83a6e665b340cd 12,17
+agents/plugins/clojure/.claude-plugin/plugin.json
+  s_e9c9e7c578cfa5::t_090ede281f2c36 4-7
+agents/plugins/productivity/.claude-plugin/plugin.json
+  s_e9c9e7c578cfa5::t_090ede281f2c36 4-7
+scripts/install-claude.sh
+  s_e9c9e7c578cfa5::t_c3bf1f6c036de9 9-12
+  s_e9c9e7c578cfa5::t_2c1b0d6f3c2a7d 6-8,13-36
+agents/plugins/productivity/.cursor-plugin/plugin.json
+  s_e9c9e7c578cfa5::t_090ede281f2c36 4-7
+scripts/link-xdg-config.sh
+  s_e9c9e7c578cfa5::t_56080823cca0f0 12-14
+agents/plugins/bruno/.claude-plugin/plugin.json
+  s_e9c9e7c578cfa5::t_090ede281f2c36 4-7
+agents/plugins/clojure/hooks/hooks.json
+  s_e9c9e7c578cfa5::t_9516b468c25e55 9,20,30
+agents/plugins/bruno/.cursor-plugin/plugin.json
+  s_e9c9e7c578cfa5::t_090ede281f2c36 4-7
+agents/plugins/engineering/.cursor-plugin/plugin.json
+  s_e9c9e7c578cfa5::t_090ede281f2c36 4-7
+agents/plugins/.claude-plugin/marketplace.json
+  s_e9c9e7c578cfa5::t_32597ce5f0480a 1-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "c05280d153c9428bc68114d6d2b3a1fa9c97de82",
+  "prompts": {},
+  "sessions": {
+    "s_e9c9e7c578cfa5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4faa1f1d-41b2-4d3c-87f8-ec671fe47bd1",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
