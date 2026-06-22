@@ -1,0 +1,31 @@
+README.md
+  s_ac5e08c639aae2::t_cdd0e0bed9b606 28,31,35-38
+  s_ac5e08c639aae2::t_d94350333d71c2 66-67
+  s_ac5e08c639aae2::t_9f4a79d1dc69cc 13
+agents/plugins/engineering/skills/agent-hooks/SKILL.md
+  s_ac5e08c639aae2::t_86a367bc97be90 124-125,131-134,136-137
+  s_ac5e08c639aae2::t_f72b5c6ff01d10 9-15
+CLAUDE.md
+  s_ac5e08c639aae2::t_3198da760857ab 37
+  s_ac5e08c639aae2::t_83231ee1b0b273 44-46,49-59,64-66
+  s_ac5e08c639aae2::t_0b02432894651b 84
+  s_ac5e08c639aae2::t_9ffeaf9a1dd735 15
+agents/plugins/.claude-plugin/marketplace.json
+  s_ac5e08c639aae2::t_5d6e5a303262fd 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "01f5b60d8b417b8120c3543bc2ac0904924cc587",
+  "prompts": {},
+  "sessions": {
+    "s_ac5e08c639aae2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "068bca88-1f90-4282-bf90-95d26ebbfab1",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
