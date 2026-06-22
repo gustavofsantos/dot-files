@@ -36,7 +36,7 @@ Re-running `setup.sh` is idempotent (`ln -sf`).
 - `bin/` — personal scripts added to `$PATH` via `~/.bin/`
 - `config/` — XDG config dirs: `nvim/`, `ghostty/`, `bat/`, `lazygit/`, `zed/`, `wezterm/`, `tmux/`, `sheldon/`, `starship.toml`
 - `agents/plugins/` — the four personal plugins (`bruno`, `clojure`, `engineering`, `productivity`), each bundling its skills/hooks/rules. Shared by Claude Code and Cursor.
-- `.claude/` — Claude Code config: `commands/`, `themes/`, `rules/`, `workflows/`, `settings.json`, `sync-pipeline.py`
+- `.claude/` — Claude Code config: `commands/`, `themes/`, `rules/`, `workflows/`, `settings.json`
 - `.cursor/` — Cursor Agent config: `hooks.json` (session-tracking hooks merged into `~/.cursor/hooks.json`)
 
 ## Plugins (skills, hooks, rules)
