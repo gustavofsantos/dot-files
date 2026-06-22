@@ -9,6 +9,7 @@
     { "name": "bruno", "source": "./bruno" },
     { "name": "clojure", "source": "./clojure" },
     { "name": "engineering", "source": "./engineering" },
-    { "name": "productivity", "source": "./productivity" }
+    { "name": "productivity", "source": "./productivity" },
+    { "name": "system-cartographer", "source": "./system-cartographer" }
   ]
 }
