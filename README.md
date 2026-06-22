@@ -10,7 +10,7 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 
 That's the only step. It's idempotent — re-run it any time. `setup.sh` delegates to
 the scripts in `scripts/`: it links dotfiles into `$HOME`, seeds local-override files,
-links `bin/` and XDG config, and installs the Claude Code / Cursor plugins (below).
+links `bin/` and XDG config, and installs the Claude Code plugins (below).
 
 ### Local overrides (never committed)
 
@@ -25,21 +25,17 @@ Both are created empty by `setup.sh` if missing.
 
 ## Plugins
 
-Claude Code and Cursor config ships as four plugins under `agents/plugins/` —
+Claude Code config ships as four plugins under `agents/plugins/` —
 `bruno`, `clojure`, `engineering`, `productivity` — each bundling its own skills, hooks,
 rules, and scripts. They're served from a single local marketplace named `personal`
-(`agents/plugins/.claude-plugin/marketplace.json` for Claude,
-`agents/plugins/.cursor-plugin/marketplace.json` for Cursor).
+(`agents/plugins/.claude-plugin/marketplace.json`).
 
 ### Install
 
-`./setup.sh` installs them for both tools (via `scripts/install-claude.sh` and
-`scripts/install-cursor.sh`). What each does differs:
-
-- **Claude Code** — registers the `personal` marketplace, then `plugin install`s each
-  plugin. Claude **copies** the plugin into `~/.claude/plugins/cache/personal/<name>/<version>/`
-  from the repo's **committed HEAD** — not the working tree.
-- **Cursor** — symlinks each plugin into `~/.cursor/plugins/local/<name>`. Edits are live.
+`./setup.sh` installs them via `scripts/install-claude.sh`: it registers the `personal`
+marketplace, then `plugin install`s each plugin. Claude **copies** the plugin into
+`~/.claude/plugins/cache/personal/<name>/<version>/` from the repo's **committed HEAD** —
+not the working tree.
 
 ### Use
 
@@ -64,13 +60,11 @@ git commit -am "…"      # uncommitted edits are NOT loaded by Claude
 `install-claude.sh` compares each plugin's pinned commit to HEAD and uninstall+reinstalls
 only when they differ.
 
-For **Cursor**, edits are live (symlinked) — just reload Cursor to pick them up.
-
 ### Add a skill or plugin
 
 - **New skill** → drop it under the right plugin's `skills/` dir, commit, re-run `./setup.sh`.
-- **New plugin** → also add it to both `marketplace.json` files and the `PLUGINS` list in
-  `scripts/install-claude.sh`.
+- **New plugin** → also add it to `agents/plugins/.claude-plugin/marketplace.json` and the
+  `PLUGINS` list in `scripts/install-claude.sh`.
 
 ## More
 

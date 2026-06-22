@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "personal",
-  "description": "Gustavo's personal Claude Code / Cursor plugins",
+  "description": "Gustavo's personal Claude Code plugins",
   "owner": {
     "name": "Gustavo Santos"
   },

@@ -6,10 +6,13 @@ disable-model-invocation: true
 
 # Agent Hooks
 
-All agent hooks (Claude Code + Cursor) are centralised in `~/.agent-hooks.yml`
-and dispatched by `hooks-runner`. The harness configs (`settings.json`,
-`.cursor/hooks.json`) are *static* — they wire `hooks-runner` once per event
-and never change. You add, remove, or tune hooks by editing the registry alone.
+All agent hooks are centralised in `~/.agent-hooks.yml` and dispatched by
+`hooks-runner`, which retains adapters for both Claude Code and Cursor. The
+harness config that wires `hooks-runner` once per event is *static* — for Claude
+it's `~/.claude/settings.json`, installed by `./setup.sh`. The dotfiles no longer
+ship a `~/.cursor/hooks.json`; Cursor loads Claude's config, so wire its hooks
+yourself if you want Cursor dispatch. Either way you add, remove, or tune hooks by
+editing the registry alone.
 
 ## Registry format
 
@@ -118,17 +121,20 @@ jq '.hooks' ~/.claude/settings.json
 Expected: each event key (`SessionStart`, `UserPromptSubmit`, `Stop`,
 `SessionEnd`, `Notification`) maps to `hooks-runner claude <EventName>`.
 
-Cursor (same principle):
+Cursor (same principle, but **not shipped by the dotfiles** — wire it yourself if
+you run Cursor):
 
 ```bash
 cat ~/.cursor/hooks.json
 ```
 
-Expected: `sessionStart`, `beforeSubmitPrompt`, `stop`, `sessionEnd` each map
-to `~/.bin/hooks-runner cursor <eventName>`.
+Expected (if you've wired it): `sessionStart`, `beforeSubmitPrompt`, `stop`,
+`sessionEnd` each map to `~/.bin/hooks-runner cursor <eventName>`. The
+`hooks-runner cursor` adapter still exists; only the install of this config was
+removed.
 
-If wiring is missing, re-run `./setup.sh` in the dot-files repo. Do not hand-
-edit these files to add hook entries — add to the registry instead.
+If Claude wiring is missing, re-run `./setup.sh` in the dot-files repo. Do not
+hand-edit these files to add hook entries — add to the registry instead.
 
 ## Debugging a hook that isn't firing
 

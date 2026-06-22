@@ -12,7 +12,7 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 ./setup.sh          # links all files, merges Claude settings, installs skills/agents
 ```
 
-`setup.sh` delegates to seven scripts in `scripts/`:
+`setup.sh` delegates to six scripts in `scripts/`:
 
 | Script | What it does |
 |--------|--------------|
@@ -22,7 +22,6 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 | `link-bin-files.sh` | Symlinks every file in `bin/` into `~/.bin/` |
 | `link-xdg-config.sh` | Symlinks each subdir of `config/` into `~/.config/` |
 | `install-claude.sh` | Registers the `personal` plugin marketplace and installs the four plugins for Claude Code; links agents/commands/themes/rules/workflows; merges `.claude/settings.json` into `~/.claude/settings.json` |
-| `install-cursor.sh` | Symlinks the four plugins into `~/.cursor/plugins/local/`; merges `.cursor/hooks.json` (session-tracking hooks) into `~/.cursor/hooks.json`, absolute-pathed |
 
 Re-running `setup.sh` is idempotent (`ln -sf`).
 
@@ -35,37 +34,36 @@ Re-running `setup.sh` is idempotent (`ln -sf`).
 
 - `bin/` — personal scripts added to `$PATH` via `~/.bin/`
 - `config/` — XDG config dirs: `nvim/`, `ghostty/`, `bat/`, `lazygit/`, `zed/`, `wezterm/`, `tmux/`, `sheldon/`, `starship.toml`
-- `agents/plugins/` — the four personal plugins (`bruno`, `clojure`, `engineering`, `productivity`), each bundling its skills/hooks/rules. Shared by Claude Code and Cursor.
+- `agents/plugins/` — the four personal plugins (`bruno`, `clojure`, `engineering`, `productivity`), each bundling its skills/hooks/rules.
 - `.claude/` — Claude Code config: `commands/`, `themes/`, `rules/`, `workflows/`, `settings.json`
-- `.cursor/` — Cursor Agent config: `hooks.json` (session-tracking hooks merged into `~/.cursor/hooks.json`)
 
 ## Plugins (skills, hooks, rules)
 
 Skills no longer live under `.claude/skills/`. They ship as **plugins** under
 `agents/plugins/<name>/`, grouped into four: `bruno`, `clojure`, `engineering`,
-`productivity`. Each plugin is a directory with `.claude-plugin/plugin.json` (Claude) and
-`.cursor-plugin/plugin.json` (Cursor) plus auto-discovered `skills/`, `hooks/`, `rules/`,
-`scripts/`. The two marketplace manifests — `agents/plugins/.claude-plugin/marketplace.json`
-and `agents/plugins/.cursor-plugin/marketplace.json` — list all four under a marketplace
+`productivity`. Each plugin is a directory with `.claude-plugin/plugin.json` plus
+auto-discovered `skills/`, `hooks/`, `rules/`, `scripts/`. The marketplace manifest —
+`agents/plugins/.claude-plugin/marketplace.json` — lists all four under a marketplace
 named `personal`.
 
-Install (run by `setup.sh`):
-- **Claude Code** — `install-claude.sh` runs `claude plugin marketplace add agents/plugins`
-  then `claude plugin install <name>@personal` for each. Claude **copies** the plugin into
-  `~/.claude/plugins/cache/personal/<name>/<version>/` from the repo's committed HEAD (not
-  the working tree). `plugin update` is version-based and won't refresh a same-version
-  (`1.0.0`) edit, so the script compares each plugin's pinned commit to HEAD and
-  uninstall+reinstalls when they differ. After **committing** a skill change, re-run
-  `./setup.sh` (or `./scripts/install-claude.sh`) for it to take effect — uncommitted edits
-  are **not** loaded.
-- **Cursor** — `install-cursor.sh` symlinks each plugin into `~/.cursor/plugins/local/<name>`.
-  Edits are live; reload Cursor to pick them up.
+Install (run by `setup.sh`): `install-claude.sh` runs `claude plugin marketplace add
+agents/plugins` then `claude plugin install <name>@personal` for each. Claude **copies**
+the plugin into `~/.claude/plugins/cache/personal/<name>/<version>/` from the repo's
+committed HEAD (not the working tree). `plugin update` is version-based and won't refresh a
+same-version (`1.0.0`) edit, so the script compares each plugin's pinned commit to HEAD and
+uninstall+reinstalls when they differ. After **committing** a skill change, re-run
+`./setup.sh` (or `./scripts/install-claude.sh`) for it to take effect — uncommitted edits
+are **not** loaded.
+
+Cursor reuses these same skills/agents/hooks by loading Claude's config directly (configured
+outside this repo); the dotfiles no longer ship a Cursor-specific plugin install.
 
 Skills are namespaced once installed: `/engineering:checks`, `/productivity:issue`, etc.
 
 When adding a new skill, drop it under the right plugin's `skills/` dir and re-run
-`./setup.sh`. When adding a whole new plugin, also add it to both `marketplace.json` files
-and the `PLUGINS` list in `install-claude.sh`.
+`./setup.sh`. When adding a whole new plugin, also add it to
+`agents/plugins/.claude-plugin/marketplace.json` and the `PLUGINS` list in
+`install-claude.sh`.
 
 The `.claude/settings.json` merges into the global `~/.claude/settings.json` on install.
 Global settings win on scalar/object conflicts; `permissions.allow/deny/ask` arrays are
@@ -83,7 +81,7 @@ A single global registry, `~/.checks.yml`, enrolls the repositories that run che
 | `checks-runner` | Run a snapshot's checks; `--watch` for daemon mode |
 | `checks-status` | Show the latest result for a session/repo (`--json`, `--oneline`) |
 
-Session navigation is independent of checks, and spans both Claude Code and Cursor Agent. A `SessionStart`/`UserPromptSubmit` hook (`claude-hook-session-track`) registers *every* Claude session — however launched — into `~/.agent-sessions/<id>.json` with the exact tmux pane it runs in; `SessionEnd` (`claude-hook-session-end`) marks it ended. Cursor mirrors this: `~/.cursor/hooks.json` wires `sessionStart`/`beforeSubmitPrompt` → `cursor-hook-session-track` and `sessionEnd` → `cursor-hook-session-end`, which translate Cursor's `conversation_id`/`workspace_roots` into the *same* `~/.agent-sessions/<id>.json` schema (tagged `agent:"cursor"`). `beforeSubmitPrompt` creates-if-missing, so a session registers on its first prompt even if `sessionStart` is a no-op. Each agent turn also appends structured events to `~/.agent-sessions/<id>.jsonl` via `claude-hook-session-log` (`turn_end`, `message`, `file_change`, `session_start`, `session_end`). `claude-sessions` (`bind a` in tmux) lists both tools in one picker (a `cc`/`cu` tag distinguishes them), keys liveness on whether that pane still exists, previews the session log (plus live pane), and Enter jumps straight to the pane running the agent. Works for a bare `claude` or `cursor-agent` in any pane.
+Session navigation is independent of checks, and spans both Claude Code and Cursor Agent. A `SessionStart`/`UserPromptSubmit` hook (`claude-hook-session-track`) registers *every* Claude session — however launched — into `~/.agent-sessions/<id>.json` with the exact tmux pane it runs in; `SessionEnd` (`claude-hook-session-end`) marks it ended. Cursor can mirror this: the `cursor-hook-session-track`/`cursor-hook-session-end` scripts (kept in `bin/`, dispatched via `hooks-runner cursor <event>`) translate Cursor's `conversation_id`/`workspace_roots` into the *same* `~/.agent-sessions/<id>.json` schema (tagged `agent:"cursor"`), with `beforeSubmitPrompt` creating-if-missing so a session registers on its first prompt. The dotfiles no longer ship a `~/.cursor/hooks.json` to wire this — Cursor loads Claude's config instead, so wire those hooks there if you want Cursor sessions tracked. Each agent turn also appends structured events to `~/.agent-sessions/<id>.jsonl` via `claude-hook-session-log` (`turn_end`, `message`, `file_change`, `session_start`, `session_end`). `claude-sessions` (`bind a` in tmux) lists both tools in one picker (a `cc`/`cu` tag distinguishes them), keys liveness on whether that pane still exists, previews the session log (plus live pane), and Enter jumps straight to the pane running the agent. Works for a bare `claude` or `cursor-agent` in any pane.
 
 ## AI session token stats
 
