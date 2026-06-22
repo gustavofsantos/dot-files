@@ -1,6 +1,8 @@
 ---
 name: clojure-datomic
 description: Use this skill when working with Datomic from Clojure applications, REPLs, jobs, services, migrations, or admin tooling. It covers connection setup, querying, transactions, pull patterns, time travel, schema changes, entity modeling, and practical patterns for writing clear Datomic code in idiomatic Clojure.
+path:
+  - "**/db/*.edn"
 ---
 
 ## Assumptions
