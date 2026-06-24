@@ -191,7 +191,7 @@ If yes, generate a hook. If no, skip.
 
 Once all checklist items are confirmed, generate all files. No further questions unless the skill output path is unknown — ask once for that only.
 
-Default output path: `.claude/skills/business-[name]/`
+Default output path: `~/.claude/skills/business-[name]/`
 
 ---
 
@@ -323,7 +323,7 @@ Register it following the user's existing hook setup.
 
 After all files are created, one message only:
 
-> "`business-[name]` ready at `[path]`:
+> "`business-[name]` ready at `~/.claude/skills/business-[name]/`:
 > - `SKILL.md` — activation layer
 > - `references/domain.md` — domain model
 > - `references/source-map.md` — source index
