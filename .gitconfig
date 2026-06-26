@@ -1,6 +1,9 @@
 [user]
   name = Gustavo Santos
 
+[github]
+  user = gustavofsantos
+
 [alias]
   b             = branch
   c             = commit
@@ -52,9 +55,6 @@
   gpgsign = false
   template = ~/.gitmessage
 
-[github]
-  user = gustavofsantos
-
 [core]
   editor = nvim
 
@@ -85,6 +85,7 @@
 
 [rerere]
   enabled = true
+  autoupdate = true
 
 [branch]
   autosetuprebase = always
@@ -106,6 +107,9 @@
 
 [fetch]
   prune = true
+
+[help]
+  autocorrect = prompt
 
 [delta]
   ; features = side-by-side
