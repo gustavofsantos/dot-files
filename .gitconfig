@@ -2,19 +2,12 @@
   name = Gustavo Santos
 
 [alias]
-  aa            = add --all
-  az		= "!git ls-files -m -o --exclude-standard | fzf --print0 -m | xargs -0 -t -o git add"
   b             = branch
   c             = commit
   co            = checkout
-  cb	       	= "!. ~/.githelpers && checkout_git_branch"
   changed       = "!git-changed-files"
   st            = status
   s             = status --short
-  d             = diff
-  ds            = diff --staged
-  dw            = diff --color-words
-  dh1           = diff HEAD~1
   l             = log --color --abbrev-commit --branches --graph --date=relative --format='%C(auto,yellow)%<(12,trunc)%ar%C(auto,reset) %C(auto,green)%<(10)%h%C(auto,reset) %C(auto,blue)%<(20)%an%C(auto,reset) %s'
   lg            = log --color --graph --abbrev-commit --branches --date=relative --pretty=format:'%C(red)%h%C(reset) -%C(yellow)%d%C(reset) %s %C(green)(%cr) %C(bold blue)<%an>%C(reset)'
   ll		= log --pretty=deploy
@@ -22,36 +15,22 @@
   lc		= !git-branch-log
   mc		= !git-my-contributions
   rh            = reset --hard
-  dft           = difftool
   undo          = reset --soft HEAD~1
   compress	= gc --aggressive --prune=now
   tags          = tag -l
   amend         = commit --amend --reuse-message=HEAD --no-verify
   contributors  = shortlog --summary --numbered
   export        = archive --format=zip --output=repo.zip HEAD
-  su            = submodule update --init --recursive
   conflict	= !nvim +DiffviewOpen
   dash		= !gh dash
   nuke		= !git clean -fd && git reset --hard
   sm            = "!f() { default_branch=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD | sed 's#^origin/##'); test -n \"$default_branch\" || { echo 'origin/HEAD is not set; run git remote set-head origin --auto' >&2; return 1; }; git switch \"$default_branch\"; }; f"
 
-  # Add new branch as worktree
-  # git wta feature-branch
   wta		= "!git-add-worktree"
   wtp           = "!git-prune-worktrees"
   wtc           = "!git-checkout-worktree"
-  # git wtr feature-branch
   wtr		= "!git-remove-worktree"
-  # List all worktrees
-  wtl		= "worktree list"
-  # Remove merged branches, prune worktrees
-  tidy		= "!f() { git branch --merged | grep -v '\\*\\|main\\|master\\|develop\\|staging\\|forno' | xargs -r git branch -d; git worktree prune; }; f"
-  # Update everything
-  updateall	= "!f() { git fetch --all && git worktree prune && git status; }; f"
-  pushu		= "!f() { git push -u origin $(git rev-parse --abbrev-ref HEAD); }; f"
 
-  h             = !git head
-  hp            = "!. ~/.githelpers && show_git_head"
   r             = !GIT_NO_PAGER=1 git l -30 -- .
   ra            = !git r --all
   l             = "!. ~/.githelpers && pretty_git_log"
@@ -78,21 +57,24 @@
 
 [core]
   editor = nvim
-  ; pager = delta
 
 [merge]
   conflictstyle = diff3
 
+[diff]
+  algorithm = histogram
+
 [interactive]
-    diffFilter = delta --color-only
+  diffFilter = delta --color-only
 
 [pretty]
   default = format:"%C(yellow)%h %C(blue)%cs %C(reset)%s%C(red)%d %C(green)%an%C(reset), %C(cyan)%ar'"
   deploy = format:"%h  %cs  %<(24,trunc)%an  %s"
 
 [push]
-  config = default
-  default = current
+  default = simple
+  autoSetupRemote = true
+  followTags = true
 
 [pull]
   rebase = true
@@ -106,6 +88,7 @@
 
 [branch]
   autosetuprebase = always
+  sort = -committerdate
 
 [rebase]
   updateRefs = true
@@ -118,24 +101,11 @@
   ui = true
   pager = true
 
-[color "branch"]
-  current = yellow reverse
-  local   = yellow
-  remote  = green
-
-[color "diff"]
-  meta = blue
-  frag = magenta
-  old  = red
-  new  = green
-
-[color "status"]
-  added = yellow
-  changed = green
-  untracked = blue
-
 [init]
   defaultBranch = main
+
+[fetch]
+  prune = true
 
 [delta]
   ; features = side-by-side
