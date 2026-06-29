@@ -1,0 +1,25 @@
+agents/plugins/productivity/skills/create-business-skill/SKILL.md
+  s_d21304f46af740::t_e4f21c978803f5 196-197
+  s_d21304f46af740::t_98ad0be9838fe5 345-348,350-356
+  s_d21304f46af740::t_3133149c4d65e7 383
+  s_d21304f46af740::t_96551afe2b669a 224,227-241
+  s_d21304f46af740::t_8c4d215ddd6e64 324-344,349
+  s_d21304f46af740::t_7957ef0a408e4d 381
+  s_d21304f46af740::t_53f5c4a1eb7950 242
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "2b73c4ed7e20956f707d56119b6e65b0fdf2c631",
+  "prompts": {},
+  "sessions": {
+    "s_d21304f46af740": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c7a1e2bf-ed02-4e75-8caa-96c4539e9081",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Gustavo Santos <gustavogustav54@gmail.com>"
+    }
+  }
+}
