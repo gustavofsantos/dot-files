@@ -193,6 +193,8 @@ Once all checklist items are confirmed, generate all files. No further questions
 
 Default output path: `~/.claude/skills/business-[name]/`
 
+**Regeneration guard — never clobber memory.** If the target `business-[name]/` already exists, regenerate `SKILL.md`, `references/`, and `scripts/` freely, but treat `memory/` as append-only: never overwrite or delete existing `memory/*.md` notes. Create the `memory/` folder only when it is absent. The accumulated memory is the most valuable, least reproducible part of the skill.
+
 ---
 
 ### Output: `SKILL.md`
@@ -219,9 +221,25 @@ description: Business domain skill for [name]. Use when discussing [aggregate na
 | Full domain model, events, ACL | `references/domain.md` |
 | Source path index | `references/source-map.md` |
 | Current inventory from source | `scripts/discover.sh` |
+| Learned cases, gotchas, patterns | `memory/*.md` |
 
 Read `references/domain.md` before making domain-model decisions.  
-Run `scripts/discover.sh` to get the current state of the codebase.
+Run `scripts/discover.sh` to get the current state of the codebase.  
+Read `memory/` before acting — see Memory below.
+
+## Memory
+
+This skill keeps what it learns about the [name] domain as local notes in `memory/`. The folder is the skill's own memory — it persists and grows across sessions independently of the domain model.
+
+**Read — before acting in this domain:** scan the frontmatter of `memory/*.md` and open any note whose `triggers` match the task at hand. These are learned cases (what worked, what bit you), not the domain model — that lives in `references/domain.md`.
+
+**Write — after any of these concrete moments**, record a note:
+- a fix that took more than one attempt
+- a constraint or behavior that surprised you
+- a correction the user made to your approach
+- a pattern worth repeating next time
+
+Copy `references/memory_template.md` to `memory/<slug>.md` and fill it in — one case per file. Pick `triggers` from the words a future task would use. Don't restate the domain model here — only what you couldn't have known from reading it.
 ```
 
 ---
@@ -303,6 +321,39 @@ After writing: `chmod +x scripts/discover.sh`
 
 ---
 
+### Output: `references/memory_template.md`
+
+The note schema the skill copies for each learned case. Shipping it as a file (rather than inlining it in `SKILL.md`) keeps the activation layer thin and gives the write step something concrete to copy.
+
+```markdown
+---
+triggers: [keyword, keyword]
+outcome: gotcha            # gotcha | pattern | decision
+date: YYYY-MM-DD
+---
+
+# Short title of the case
+
+- **Context:** when this applies
+- **Observation:** what happened, or the approach that works
+- **Why:** root cause or rationale
+- **Apply:** what to do next time
+```
+
+---
+
+### Output: `memory/`
+
+Create the `memory/` folder (only if absent — see the regeneration guard). It starts **empty**: there are no learned cases yet. Do not seed placeholder notes — the read step scans `memory/*.md`, and an empty folder correctly yields nothing.
+
+The read/write protocol ships in `SKILL.md`'s `## Memory` section and the note schema in `references/memory_template.md`, so the folder needs no README of its own. The skill writes its first note the first time it hits one of the concrete write moments while working in this domain.
+
+```bash
+mkdir -p memory
+```
+
+---
+
 ### Output: hook (conditional)
 
 If the user confirmed hooks, create `.claude/hooks/business-[name]-watch.md` describing a PostToolUse hook that fires when files under the canonical paths are written. Content:
@@ -327,7 +378,9 @@ After all files are created, one message only:
 > - `SKILL.md` — activation layer
 > - `references/domain.md` — domain model
 > - `references/source-map.md` — source index
+> - `references/memory_template.md` — schema for learned-case notes
 > - `scripts/discover.sh` — live inventory
+> - `memory/` — learned cases (starts empty; grows as the skill works the domain)
 >
 > Install it where your other skills live."
 
