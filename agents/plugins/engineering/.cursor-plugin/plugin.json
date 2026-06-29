@@ -1,0 +1,9 @@
+{
+  "name": "engineering",
+  "description": "Personal Engineering plugin",
+  "version": "1.0.0",
+  "hooks": "hooks/cursor_hooks.json",
+  "author": {
+    "name": "Gustavo Santos"
+  }
+}

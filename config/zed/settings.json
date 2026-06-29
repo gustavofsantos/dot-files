@@ -7,8 +7,8 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
-  "proxy": "",
-  "disable_ai": false,
+  "ui_font_family": ".SystemUIFont",
+  "disable_ai": true,
   "project_panel": {
     "dock": "left",
   },
@@ -21,15 +21,15 @@
     "dock": "left",
     "tree_view": true,
   },
-  "agent_servers": {
-    "claude-acp": {
-      "type": "registry",
-    },
+  "agent_servers": {},
+  "ui_font_size": 15.0,
+  "buffer_font_size": 13.0,
+  "theme": {
+    "mode": "system",
+    "light": "One Light",
+    "dark": "Nord Dark"
   },
-  "ui_font_size": 16,
-  "buffer_font_size": 15,
-  "theme": "One Light",
-  "buffer_font_family": "Berkeley Mono",
+  "buffer_font_family": "MonoLisa Nerd Font",
   "vim_mode": true,
   "relative_line_numbers": "enabled",
   "gutter": {
