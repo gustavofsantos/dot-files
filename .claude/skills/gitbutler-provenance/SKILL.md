@@ -31,11 +31,11 @@ At turn end:
 3. `but commit <branch-id> -m "<subject>" -m "<body>"` — scope with
    `--changes <ids>` if only part of the tree belongs to this lane.
 
-A Stop hook reminds you to do this; a second Stop hook **blocks the turn from
-ending** while the tree is still dirty. So this is not optional — finish the
-commit before yielding. The one exception: when more than one lane is applied
-and you must ask the user which lane to use, the guard stands down so the
-question can reach them (see Lane discipline).
+A Stop hook (`claude-hook-gitbutler-stop`, wired in `.claude/settings.json`)
+**blocks the turn from ending** while the tree is still dirty. So this is not
+optional — finish the commit before yielding. The guard blocks at most once
+per turn, so when you must ask the user which lane to use, the question gets
+through on the retry instead of looping (see Lane discipline).
 
 ## Writing the message
 
@@ -56,9 +56,10 @@ exists to avoid. You hold the real reasoning; you write it.
 
 ## Git discipline
 
-Use `but` for every write. Raw `git commit/add/push/checkout/merge/rebase/
-stash/reset/branch` is blocked by a hook in GitButler repos. Read-only git
-(`status`, `log`, `blame`, `diff`, `show`) is fine and is the retrieval path.
+Use `but` for every write. Raw `git commit/add/push/checkout/switch/merge/
+rebase/stash/reset/branch/cherry-pick/revert` is blocked by a PreToolUse hook
+(`claude-hook-gitbutler-git`) in GitButler repos. Read-only git (`status`,
+`log`, `blame`, `diff`, `show`) is fine and is the retrieval path.
 
 Get current CLI ids from `but status --json` before any mutation — ids are
 short (2–3 chars) and can change between turns. Pass `--status-after` to chain
@@ -80,8 +81,8 @@ read from `but status --json`, and **ask rather than infer** when ambiguous:
   ask the user which lane these changes belong to, then commit to that lane by
   id. If the turn legitimately spans two lanes, ask, then commit each separately
   with `--changes <ids>` scoping each commit to that lane's ids, each with its
-  own why-focused message. (Asking ends the turn; the stop guard stands down
-  when multiple lanes are applied — see below — so it will not block the question.)
+  own why-focused message. (Asking ends the turn; the stop guard blocks at most
+  once per turn, so it will not block the question on the retry.)
 
 - **Zero lanes applied** → `but commit` would create a temp-named branch. Confirm
   with the user first rather than spawning a branch silently.
