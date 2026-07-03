@@ -1,10 +1,6 @@
 ---
 name: clojure-midje
-description: Guidance for editing Midje-based Clojure test files. Activate only for Midje test namespaces and test-file globs.
-globs:
-  - "test/**/*.clj"
-  - "**/*_test.clj"
-  - "**/*-test.clj"
+description: Guidance for editing Midje-based Clojure test files (test/**/*.clj, *_test.clj, *-test.clj). Activate only when a Clojure test file uses Midje — requires midje.sweet, or uses fact/facts/provided/=>.
 ---
 
 When a Clojure file is a Midje test file, prefer Midje idioms over clojure.test idioms.

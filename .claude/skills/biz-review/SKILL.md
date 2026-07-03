@@ -1,13 +1,9 @@
 ---
 name: biz-review
 description: >
-  Apply platform-engineering business optics to a spike document in ~/engineering/spikes/.
-  Evaluates the spike's finding across five platform dimensions: leverage multiplier,
-  adoption risk, cognitive load delta, TCO, and build/buy/adopt/do-nothing positioning.
-  Trigger on: "business review", "biz review", "review this spike for business value",
-  "platform optic", "/biz-review", or when asked to evaluate whether a spike finding is
-  worth acting on from a platform perspective.
-  Does NOT trigger on general code or architecture discussion not involving a specific spike.
+  Apply platform-engineering business optics to a spike in ~/engineering/spikes/ —
+  leverage multiplier, adoption risk, cognitive load delta, TCO, and
+  build/buy/adopt/do-nothing positioning.
 disable-model-invocation: true
 ---
 

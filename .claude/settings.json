@@ -102,5 +102,27 @@
   "theme": "custom:nord",
   "teammateMode": "tmux",
   "defaultMode": "auto",
-  "hooks": {}
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.bin/claude-hook-gitbutler-git\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.bin/claude-hook-gitbutler-stop\""
+          }
+        ]
+      }
+    ]
+  }
 }

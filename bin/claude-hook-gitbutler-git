@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# PreToolUse(Bash) hook: in GitButler-managed repos, deny raw git write
+# commands — mutations must go through the `but` CLI so lane state stays
+# coherent (gitbutler-provenance). Read-only git (status, log, blame,
+# diff, show) passes untouched.
+set -euo pipefail
+
+command -v jq >/dev/null 2>&1 || exit 0
+input=$(cat)
+
+cwd=$(jq -r '.cwd // empty' <<<"$input")
+[ -n "$cwd" ] || exit 0
+cd "$cwd" 2>/dev/null || exit 0
+
+git_dir=$(git rev-parse --git-common-dir 2>/dev/null) || exit 0
+[ -d "$git_dir/gitbutler" ] || exit 0
+
+cmd=$(jq -r '.tool_input.command // empty' <<<"$input")
+[ -n "$cmd" ] || exit 0
+
+# `git`, possibly after ;/&&/|/$( or global flags (-C dir, -c k=v, --git-dir),
+# followed by a mutating subcommand.
+write_re='(^|[;&|(`]|\$\()[[:space:]]*git([[:space:]]+(-C|--git-dir(=[^[:space:]]+)?|--work-tree(=[^[:space:]]+)?|-c)([[:space:]]+[^[:space:]]+)?)*[[:space:]]+(add|commit|push|checkout|switch|merge|rebase|stash|reset|branch|cherry-pick|revert)\b'
+
+if printf '%s' "$cmd" | grep -qE "$write_re"; then
+  echo "Raw git write blocked: this repo is under GitButler management. Use the \`but\` CLI for every mutation (see the gitbutler-provenance skill); read-only git — status, log, blame, diff, show — is allowed." >&2
+  exit 2
+fi
+exit 0

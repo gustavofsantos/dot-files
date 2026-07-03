@@ -3,16 +3,18 @@ set -euo pipefail
 
 DOTFILES_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-# Remove stale skill symlinks left by the old .claude/skills install.
-if [ -d "$HOME/.claude/skills" ]; then
-  find "$HOME/.claude/skills" -maxdepth 1 -type l | while read -r link; do
-    target=$(readlink "$link")
-    case "$target" in
-      "$DOTFILES_DIR"/.claude/skills/*) rm "$link" ;;
-      *) [ -e "$link" ] || rm "$link" ;;
-    esac
-  done
-fi
+echo "Installing skills..."
+mkdir -p "$HOME/.claude/skills"
+for skill in "$DOTFILES_DIR"/.claude/skills/*/; do
+  [ -f "$skill/SKILL.md" ] || continue
+  name=$(basename "$skill")
+  ln -sfn "${skill%/}" "$HOME/.claude/skills/$name"
+done
+# prune dangling skill symlinks (removed from dotfiles)
+find "$HOME/.claude/skills" -maxdepth 1 -type l | while read -r link; do
+  [ -e "$link" ] || rm "$link"
+done
+echo "Installing skills... OK"
 
 echo "Installing custom subagents..."
 mkdir -p "$HOME/.claude/agents"

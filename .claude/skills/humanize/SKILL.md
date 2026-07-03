@@ -1,12 +1,8 @@
 ---
 name: humanize
 description: >
-  Rewrites AI-generated or AI-sounding text to read like a thoughtful human wrote it.
-  Use when the user wants to clean up a document before sharing with leadership, executives,
-  or any audience where "this looks like ChatGPT wrote it" would be a credibility problem.
-  Triggers on phrases like "humanize this", "rewrite this to not sound like AI",
-  "clean up this doc for leadership", "make this less robotic", "remove AI slop",
-  "polish this for the exec team", or when the user pastes text and asks it to read better.
+  Rewrites AI-sounding text to read like a thoughtful senior professional wrote it —
+  for docs going to leadership or any audience where "ChatGPT wrote this" costs credibility.
 disable-model-invocation: true
 ---
 

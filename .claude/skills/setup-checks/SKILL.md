@@ -10,7 +10,7 @@ This skill manages `~/.checks.yml` — the global registry that controls which
 repositories run automated checks after each agent turn. It enrolls repos,
 adds/removes checks, and verifies the config is wired correctly.
 
-For reading check *results* during active work, use the `checks` skill instead.
+For reading check *results* during active work, run `checks-status` (in `~/.bin`) — this skill only manages the registry.
 
 ## Operations
 
@@ -141,7 +141,7 @@ won't *run* until the next agent turn fires the Stop hook — no further action
 needed.
 
 Tell the user: "Enrolled. Checks will run automatically after each agent turn.
-Use `checks-status` or `/checks` to read results."
+Use `checks-status` to read results."
 
 ---
 

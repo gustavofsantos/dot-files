@@ -43,24 +43,12 @@ That directory auto-commits to the vault, so ship a finished page — no throwaw
 4. **Verify it renders.** Open the file and look at it (both themes). It must read cleanly,
    stay calm, and actually work when clicked.
 
-## Design tokens (locked — copy verbatim, never re-pick)
+## Design rules (locked)
 
-Warm light is primary; warm dark is the toggle. Both are tuned for contrast and calm.
+The design tokens — warm light primary, warm dark toggle — live **only** in
+[references/template.html](references/template.html); copy them from there verbatim, never re-pick.
 
-```css
-:root {
-  --bg:#FAF9F5; --surface:#F3F1E9; --text:#232220; --muted:#6B6862;
-  --border:#E6E2D6; --accent:#C96442; --accent-ink:#A24B30; --accent-soft:#F6E7DF;
-  --code-bg:#F0EDE3; --code-text:#3A3833;
-}
-[data-theme="dark"] {
-  --bg:#262420; --surface:#2F2C27; --text:#ECE8DF; --muted:#A8A296;
-  --border:#3D3A33; --accent:#E08A6B; --accent-ink:#EFA98B; --accent-soft:#3A302A;
-  --code-bg:#211F1B; --code-text:#DAD5C8;
-}
-```
-
-- **Fonts (system only):** body `ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif`; display headings `ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif`; code `ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace`.
+- **Fonts (system only):** the template's body/heading/code stacks — no web fonts.
 - **Reading column:** `max-width: 720px`, centered, generous padding. Body `~18px`, `line-height 1.7`.
 - **Accent is a spice, not a sauce.** One accent color, used for links, the active step, one
   highlight per section. Color does not carry meaning the text doesn't already.

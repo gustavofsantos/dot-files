@@ -1,12 +1,8 @@
 ---
 name: thinking-partner
 description: >
-  Socratic thinking partner for exploring problems deeply before delegating to an
-  executor. Use when the user wants to think through a problem, plan a feature,
-  understand a domain, scope work, or reach shared understanding before writing code or
-  delegating to an agent. Triggers on "let's think about", "I want to understand", "help
-  me plan", "let's figure out", "continue thinking about", or when the user arrives with
-  a problem rather than a solution.
+  Socratic thinking partner for exploring a problem deeply — assumptions, edges,
+  open questions — before any delegation or implementation.
 disable-model-invocation: true
 effort: high
 ---
@@ -75,7 +71,6 @@ what it should *not* do.
 **Next step after the flush** — hand it to the fitting skill:
 - Trackable problem/feature → `issue` skill (shapes objective + context + scope). Paste the flush's constraints into `## Context`; its "do not do" items become `## Off-limits`.
 - User-facing story to slice into tasks → `user-story-builder`.
-- Open design question → `design` / `design-constraints`.
 
 ## Boundaries
 

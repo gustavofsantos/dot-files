@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Stop hook: in GitButler-managed repos, don't let a turn end with an
+# uncommitted tree — gitbutler-provenance requires a why-focused
+# `but commit` at every turn boundary.
+#
+# Blocks at most once per turn (stop_hook_active short-circuits), so an
+# agent that must ask the user something — e.g. which lane to commit to
+# when several are applied — gets through on the retry instead of looping.
+set -euo pipefail
+
+command -v jq >/dev/null 2>&1 || exit 0
+input=$(cat)
+
+# already continued once because of a stop hook → let the turn end
+[ "$(jq -r '.stop_hook_active // false' <<<"$input")" = "true" ] && exit 0
+
+cwd=$(jq -r '.cwd // empty' <<<"$input")
+[ -n "$cwd" ] || exit 0
+cd "$cwd" 2>/dev/null || exit 0
+
+git_dir=$(git rev-parse --git-common-dir 2>/dev/null) || exit 0
+[ -d "$git_dir/gitbutler" ] || exit 0
+
+[ -n "$(git status --porcelain 2>/dev/null)" ] || exit 0
+
+cat >&2 <<'MSG'
+GitButler repo with an uncommitted tree at turn end. Per the
+gitbutler-provenance skill: run `but status --json`, then commit this
+turn's changes with a why-focused message via
+`but commit <branch-id> -m "<subject>" -m "<body>"` (scope with
+`--changes <ids>` if only part of the tree belongs to the lane).
+Exactly one lane applied → commit to it. Multiple lanes (or none)
+applied → ask the user which lane to use instead of guessing; this
+guard will not block again this turn, so the question will reach them.
+MSG
+exit 2

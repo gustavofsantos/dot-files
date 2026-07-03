@@ -1,6 +1,6 @@
 ---
 name: readable
-description: "Reviews Kotlin code for readability, guided by the principle that code should hide mechanics and expose intention. Operates on a specified scope: file, class, function, or diff. Works in two phases — proposes a Change Contract for human review, then applies only approved changes. Activate when the user says things like 'readable', '/readable', 'review for readability', 'make this more readable', 'this is hard to read', 'hide the mechanics here', or points at Kotlin code and asks for a readability pass."
+description: "Reviews Kotlin code for readability — hide mechanics, expose intention. Two phases: proposes a Change Contract for human review, then applies only approved changes. Scope: file, class, function, or diff."
 disable-model-invocation: true
 ---
 
