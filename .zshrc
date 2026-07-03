@@ -48,6 +48,10 @@ if command -v "fnm" &> /dev/null; then
   eval "$(fnm env --use-on-cd --shell zsh)"
 fi
 
+if command -v "but" &> /dev/null; then
+  eval "$(but completions zsh)"
+fi
+
 if [ -e "$HOME/.local_envs" ]; then source "$HOME/.local_envs"; fi
 if [ -e "$HOME/.cargo/env" ]; then . "$HOME/.cargo/env";  fi
 if [ -e "$HOME/.deno/env" ]; then . "$HOME/.deno/env"; fi
