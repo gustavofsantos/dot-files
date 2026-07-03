@@ -12,8 +12,14 @@ description: >
 # hypothesize
 
 Settle a hypothesis by **observation, not argument**. A hypothesis is only "confirmed"
-or "falsified" when a test *ran* and the system *showed* the behavior. Reasoning about
-the code is how you form the hypothesis — never how you conclude it.
+or "falsified" when code *ran* and the system *showed* the behavior. Reasoning about the
+code is how you form the hypothesis — never how you conclude it.
+
+**Prefer running code over reading it.** Writing the smallest thing that makes the system
+answer is faster and cheaper than pulling legacy code into context to reason about —
+especially in a large or messy codebase. Read only enough to find where to drive the
+behavior; the moment a read turns into reasoning about what *would* happen, stop and make
+it happen — write the probe and run it.
 
 ## Loop — cheapest evidence first
 
@@ -25,17 +31,19 @@ the code is how you form the hypothesis — never how you conclude it.
    hypothesis was already settled and nothing about the code or data has changed, reuse
    that verdict — cite the recorded date and result, skip to step 5.
 
-3. **Run the existing test.** Search the integration tests for one that already exercises
-   this path (`rg` the behavior, the endpoint, the entity); prefer the outermost
-   end-to-end test over unit tests. Run the narrowest target and read the *actual* output
-   — pass/fail, values, side effects — not what you expect.
+3. **Run the existing test.** A quick `rg` for one that already exercises this path (the
+   behavior, the endpoint, the entity); prefer the outermost end-to-end test. Run the
+   narrowest target and read the *actual* output — values, side effects — not what you
+   expect. If you don't find one in a couple of searches, don't keep digging — go to 4.
 
-4. **No test observes it? Build a probe.** First ground the scenario in real data: if a
-   production/staging store is reachable (DB, warehouse, logs, read-only console),
-   **query it read-only** — never write — for the real distributions, edge cases, and
-   states the hypothesis must cover; if unreachable, note the assumption you substitute.
-   Then add a minimal, clearly throwaway integration test that drives the real path under
-   that scenario, and run it.
+4. **No test observes it? Write and run a probe.** Reach for the fastest executable form
+   that drives the real path and prints the observable outcome — a throwaway integration
+   test, a script, or a REPL / `-main` snippet. Ground the scenario in real data first: if
+   a production/staging store is reachable (DB, warehouse, logs, read-only console),
+   **query it read-only** — never write — for the real distributions and edge cases the
+   hypothesis must cover; if unreachable, note the assumption you substitute. In a
+   GitButler repo, spin the probe on its own virtual branch (via the `gitbutler-provenance`
+   skill) — cheap to keep as a running prototype or throw away.
 
 5. **Report the verdict from evidence.**
    - **Confirmed** / **Falsified** — cite the test and the observed result that decided it.
@@ -58,5 +66,6 @@ the code is how you form the hypothesis — never how you conclude it.
 ## Constraints
 
 - One hypothesis, one narrow observation. Don't build a suite or refactor test infra.
+- Reading is for finding where to drive, not reconstructing behavior. A run beats a read.
 - Don't fix the system here. A falsified hypothesis is a finding — report it and stop.
 - The memory file is a flat append log: one row per verdict, never reorganized.
