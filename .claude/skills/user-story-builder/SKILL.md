@@ -1,12 +1,8 @@
 ---
 name: user-story-builder
 description: >
-  Shapes a raw idea into a user story, then breaks it into scoped development tasks.
-  Use whenever a raw idea needs to become a story, or a ready story needs to be broken
-  into tasks. Triggers on "quero implementar", "monta uma story", "tenho um problema
-  que", "quebra essa história em tasks", "define as tasks para", "como implementar essa
-  história", or any raw idea or ready story before development begins. Always use before
-  starting implementation.
+  Shapes a raw idea into a user story (As a / I want / So that + acceptance criteria),
+  then breaks it into scoped development tasks and stores it as a tracked issue.
 disable-model-invocation: true
 ---
 

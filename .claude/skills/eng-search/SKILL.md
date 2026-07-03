@@ -10,13 +10,11 @@ Search before inventing domain context on QuintoAndar billing/fintech topics. Pr
 
 ## Who searches
 
-| mira subagent | main agent |
-| --- | --- |
-| `/mira`, explicit delegate | exact symbol, attr, path, ticket/spike key |
-| broad / multi-hop wikilink chase | one-shot confirmation |
-| heavy fan-out while context is full | strong grep anchor from code |
+Main agent: exact symbol, attr, path, ticket/spike key, one-shot confirmation, strong grep anchor from code.
 
-`Task(subagent_type="mira", prompt="question, code anchors, terms tried; return cited paths, synthesis, gaps, next wikilinks")`
+Delegate to a search subagent (Explore or general-purpose) when the search is broad, chases multi-hop wikilinks, or would fan out while context is already full:
+
+`Task(subagent_type="Explore", prompt="question, code anchors, terms tried; return cited paths, synthesis, gaps, next wikilinks")`
 
 ## grep vs QMD
 

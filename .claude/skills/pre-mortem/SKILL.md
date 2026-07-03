@@ -1,6 +1,6 @@
 ---
 name: pre-mortem
-description: Activate this skill when designing a new feature or system component, proposing a significant refactor, choosing between two or more implementation approaches, estimating effort or timelines, about to write code that touches critical paths (auth, data integrity, payments, etc.)
+description: Before implementing a non-trivial solution — assume it already failed, enumerate and score failure modes, mitigate the top ones before writing code.
 disable-model-invocation: true
 ---
 
@@ -31,4 +31,4 @@ Before implementing a non-trivial solution, project into a future where it has *
 
 ## Feeding back
 
-If tracked as an issue (`issue` skill): unresolved blockers → `## Open questions`; approach-constraining mitigations → `## Context` (with any `design-constraints` block); must-not-break modes → `## Off-limits`.
+If tracked as an issue (`issue` skill): unresolved blockers → `## Open questions`; approach-constraining mitigations → `## Context`; must-not-break modes → `## Off-limits`.

@@ -1,12 +1,8 @@
 ---
 name: tickets
 description: >
-  Turns context into well-structured Jira tickets following the team's templates.
-  Use whenever the user asks to create, write, or format a ticket of any type.
-  Triggers: "create a ticket", "open a bug", "write a story", "make an epic",
-  "create a task for", "document this as a ticket", or any request to register
-  work in Jira. Also triggers when the user describes a problem, feature, or
-  technical work and wants it turned into a trackable item.
+  Turns context into a well-structured Jira ticket (epic, story, task, or bug)
+  following the team's templates.
 disable-model-invocation: true
 ---
 

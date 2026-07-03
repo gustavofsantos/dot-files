@@ -101,8 +101,7 @@ For each move use `git mv` (preserve history); **never delete, never overwrite, 
 already-nested content**:
 - Create each `domain/<Domain>/` dir and, if absent, its `domain/<Domain>.md` folder-note —
   a 1–3 sentence overview, a `## Concepts` list of its children, and an empty
-  `## Relationships` (a stub to fill in a later curation pass; tidy does structure, not
-  relationship enrichment).
+  `## Relationships` stub.
 - `git mv` each `concept` into `domain/<Domain>/…`; each `artifact` into its type folder.
 - `git mv` each `triage` file into `_triage/`, and write `_triage/MANIFEST.md` (template in
   references) listing every quarantined file, its reason, and a suggested resolution.
