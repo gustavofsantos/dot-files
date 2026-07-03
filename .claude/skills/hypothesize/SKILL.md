@@ -21,6 +21,11 @@ the code is how you form the hypothesis — never how you conclude it.
    observable outcome: *"Given <input/state>, when <action>, then <measurable result>."*
    If it can't be phrased this way, say so and stop — it isn't empirically testable.
 
+   Then **check memory first** — `rg -i 'keyword' ~/engineering/hypotheses.md 2>/dev/null`.
+   If this hypothesis (or a near-identical one) was already settled and nothing about the
+   code or data has changed since, reuse that verdict instead of re-running — cite the
+   recorded date and result, and skip to the report. Re-test only if stale or in doubt.
+
 2. **Ground the scenario in real data.** Before inventing inputs, look for the real
    shape. If a production/staging data store is reachable (DB, warehouse, logs, API,
    read-only console), **query it read-only** to learn the actual distributions, edge
@@ -46,9 +51,29 @@ the code is how you form the hypothesis — never how you conclude it.
    - **Undetermined** — the observation was inconclusive or the scenario couldn't be
      reproduced; say exactly what blocked it. Never upgrade this to a verdict by reasoning.
 
+7. **Record it in memory.** Append one row to `~/engineering/hypotheses.md` (create the
+   file with the header below if missing) so the next investigation can skip the work:
+
+   ```
+   | 2026-07-03 | <the falsifiable hypothesis> | <Confirmed/Falsified/Undetermined> | <one-line evidence: test path + observed result> |
+   ```
+
+   File header, written once on first use:
+
+   ```markdown
+   # Hypotheses tested
+
+   Empirical verdicts from the `hypothesize` skill — Claude's caching memory. Check here before re-testing.
+
+   | Date | Hypothesis | Verdict | Evidence |
+   |------|------------|---------|----------|
+   ```
+
 ## Keep it low-effort
 
 - One hypothesis, one narrow observation. Don't build a suite; don't refactor test infra.
 - Reach for the existing integration harness before writing anything new.
 - A probe test is disposable — offer to delete it (or keep it) once the verdict is in.
 - Don't fix the system here. A falsified hypothesis is a finding; report it and stop.
+- Memory is a cache: read it before testing, append after. One flat file, one row per
+  verdict — don't reorganize or curate it.
