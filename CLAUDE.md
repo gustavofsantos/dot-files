@@ -21,7 +21,7 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 | `init-engineering-repo.sh` | Idempotently `git init`s `~/engineering`, writes its `.gitignore`, seeds the first commit |
 | `link-bin-files.sh` | Symlinks every file in `bin/` into `~/.bin/` |
 | `link-xdg-config.sh` | Symlinks each subdir of `config/` into `~/.config/` |
-| `install-claude.sh` | Registers the `personal` plugin marketplace and installs the four plugins for Claude Code; links agents/commands/themes/rules/workflows; merges `.claude/settings.json` into `~/.claude/settings.json` |
+| `install-claude.sh` | Symlinks `.claude/` skills/agents/commands/themes/rules/workflows into `~/.claude/`; merges `.claude/settings.json` into `~/.claude/settings.json` |
 
 Re-running `setup.sh` is idempotent (`ln -sf`).
 
@@ -34,36 +34,30 @@ Re-running `setup.sh` is idempotent (`ln -sf`).
 
 - `bin/` — personal scripts added to `$PATH` via `~/.bin/`
 - `config/` — XDG config dirs: `nvim/`, `ghostty/`, `bat/`, `lazygit/`, `zed/`, `wezterm/`, `tmux/`, `sheldon/`, `starship.toml`
-- `agents/plugins/` — the four personal plugins (`bruno`, `clojure`, `engineering`, `productivity`), each bundling its skills/hooks/rules.
-- `.claude/` — Claude Code config: `commands/`, `themes/`, `rules/`, `workflows/`, `settings.json`
+- `.claude/` — Claude Code config: `skills/`, `themes/`, `rules/`, `workflows/`, `settings.json`
 
-## Plugins (skills, hooks, rules)
+## Skills
 
-Skills no longer live under `.claude/skills/`. They ship as **plugins** under
-`agents/plugins/<name>/`, grouped into four: `bruno`, `clojure`, `engineering`,
-`productivity`. Each plugin is a directory with `.claude-plugin/plugin.json` plus
-auto-discovered `skills/`, `hooks/`, `rules/`, `scripts/`. The marketplace manifest —
-`agents/plugins/.claude-plugin/marketplace.json` — lists all four under a marketplace
-named `personal`.
+Skills live under `.claude/skills/<name>/` — a `SKILL.md` plus optional `references/`
+and `scripts/`. No plugins, no marketplace: `install-claude.sh` (run by `setup.sh`)
+symlinks each skill directory into `~/.claude/skills/`, so edits in the working tree
+take effect immediately (new/removed skills need a `./setup.sh` re-run to add/prune
+symlinks).
 
-Install (run by `setup.sh`): `install-claude.sh` runs `claude plugin marketplace add
-agents/plugins` then `claude plugin install <name>@personal` for each. Claude **copies**
-the plugin into `~/.claude/plugins/cache/personal/<name>/<version>/` from the repo's
-committed HEAD (not the working tree). `plugin update` is version-based and won't refresh a
-same-version (`1.0.0`) edit, so the script compares each plugin's pinned commit to HEAD and
-uninstall+reinstalls when they differ. After **committing** a skill change, re-run
-`./setup.sh` (or `./scripts/install-claude.sh`) for it to take effect — uncommitted edits
-are **not** loaded.
+Conventions the skills follow (keep them when editing):
+- **Trigger is deliberate.** Skills the model should auto-load (format references like
+  `bruno`, `clojure-datomic`; context-triggered workflows like `create-pull-request`)
+  have rich trigger descriptions. Explicit-command skills set
+  `disable-model-invocation: true` and keep the description to one line — it's only
+  shown to the human.
+- **Steps in `SKILL.md`, bulk reference behind pointers.** Branch-specific or
+  phase-specific material lives in `references/*.md`, loaded only when that path runs
+  (e.g. `bruno` detects the collection format and loads one of two format files).
+- **No dead pointers.** A skill may only reference skills, scripts, and agents that
+  exist in this repo.
 
-Cursor reuses these same skills/agents/hooks by loading Claude's config directly (configured
-outside this repo); the dotfiles no longer ship a Cursor-specific plugin install.
-
-Skills are namespaced once installed: `/engineering:checks`, `/productivity:issue`, etc.
-
-When adding a new skill, drop it under the right plugin's `skills/` dir and re-run
-`./setup.sh`. When adding a whole new plugin, also add it to
-`agents/plugins/.claude-plugin/marketplace.json` and the `PLUGINS` list in
-`install-claude.sh`.
+Cursor reuses these same skills/agents by loading Claude's config directly (configured
+outside this repo).
 
 The `.claude/settings.json` merges into the global `~/.claude/settings.json` on install.
 Global settings win on scalar/object conflicts; `permissions.allow/deny/ask` arrays are
@@ -71,7 +65,7 @@ unioned.
 
 ## Agent checks
 
-A single global registry, `~/.checks.yml`, enrolls the repositories that run checks after each agent turn and defines them — each check a `name` + a `command`, modeled on the hooks shape. Repos are matched by `path` (main working tree), so every worktree is covered; unregistered repos are skipped. After every agent turn the `Stop` hook fires `checks-snapshot`, which (for enrolled repos) hashes the changed tracked files (`checks-hash`), versions them under `~/.checks/<session>/<hash>/`, and spawns `checks-runner` detached to run the checks and write `results.json`. The agent reads them via `checks-status` (taught by the `checks` skill). `~/.checks.local.yml` (same shape) overlays a repo's checks by name for machine-specific checks. `create-local-files.sh` seeds an empty `~/.checks.yml`.
+A single global registry, `~/.checks.yml`, enrolls the repositories that run checks after each agent turn and defines them — each check a `name` + a `command`, modeled on the hooks shape. Repos are matched by `path` (main working tree), so every worktree is covered; unregistered repos are skipped. After every agent turn the `Stop` hook fires `checks-snapshot`, which (for enrolled repos) hashes the changed tracked files (`checks-hash`), versions them under `~/.checks/<session>/<hash>/`, and spawns `checks-runner` detached to run the checks and write `results.json`. The agent reads them via `checks-status`; enrollment is managed by the `setup-checks` skill. `~/.checks.local.yml` (same shape) overlays a repo's checks by name for machine-specific checks. `create-local-files.sh` seeds an empty `~/.checks.yml`.
 
 | Script | What it does |
 |--------|--------------|
@@ -120,4 +114,4 @@ Plugin configs live in `config/nvim/lua/plugins/*.config.lua`. Leader is `<Space
 
 ## Engineering knowledge base
 
-See `.claude/CLAUDE.md` (already loaded as project instructions) for the `~/engineering/` KB retrieval protocol.
+`~/engineering/` is the local KB vault (markdown + `[[wikilinks]]`). The `eng-search` skill defines the retrieval protocol; `issue`, `spike`, and `tidy-kb` manage its contents.
