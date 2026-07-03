@@ -66,7 +66,7 @@
     },
   },
   {
-    "context": "Editor && edit_prediction_conflict && !showing_completions && vim_mode == insert",
+    "context": "Editor && (edit_prediction && in_leading_whitespace) && vim_mode == insert",
     "bindings": {
       "alt-l": "editor::AcceptEditPrediction",
     },
