@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+"""Stop hook: block session close until a valid decision list exists.
+
+Contract:
+  - Doc lives at .claude/decisions/<session_id>.md (relative to cwd).
+  - Body must contain >=1 numbered item of the form:
+        N. <decision text> — <verification target>
+    (em-dash separator; both sides non-empty)
+  - Missing / empty / malformed  -> exit 2 (blocks Stop, feeds reason to agent).
+  - Valid                        -> exit 0 (session may close).
+
+Claude Code passes hook input as JSON on stdin. We read session_id from it.
+Exit-2 stderr is surfaced back to the model so it knows what to fix.
+"""
+import json
+import re
+import sys
+from pathlib import Path
+
+# N. <decision> — <verification target>   (em dash, both sides non-empty)
+ITEM = re.compile(r"^\s*\d+\.\s+(?P<decision>.+?)\s+—\s+(?P<target>.+?)\s*$")
+
+
+def fail(msg: str) -> None:
+    print(msg, file=sys.stderr)
+    sys.exit(2)
+
+
+def main() -> None:
+    try:
+        payload = json.load(sys.stdin)
+    except (json.JSONDecodeError, ValueError):
+        payload = {}
+
+    # Don't deadlock: if the stop is itself a hook-driven continuation, allow.
+    if payload.get("stop_hook_active"):
+        sys.exit(0)
+
+    session_id = payload.get("session_id")
+    if not session_id:
+        fail("decision-gate: no session_id on stdin; cannot locate decision doc.")
+
+    doc = Path.cwd() / ".claude" / "decisions" / f"{session_id}.md"
+    if not doc.exists():
+        fail(
+            f"decision-gate: no decision doc at {doc}.\n"
+            "Before finishing, write the decisions you made this session as a "
+            "numbered list, one per line:\n"
+            "    1. <what you decided> — <what the human must verify>\n"
+            "Each item needs a concrete decision and a checkable verification target."
+        )
+
+    valid, malformed = [], []
+    for line in doc.read_text(encoding="utf-8").splitlines():
+        if not re.match(r"^\s*\d+\.", line):
+            continue  # prose / headers ignored
+        m = ITEM.match(line)
+        if m and m.group("decision").strip() and m.group("target").strip():
+            valid.append(line.strip())
+        else:
+            malformed.append(line.strip())
+
+    if malformed:
+        bad = "\n".join(f"    {l}" for l in malformed)
+        fail(
+            "decision-gate: malformed decision line(s):\n"
+            f"{bad}\n"
+            "Each numbered item must be:  N. <decision> — <verification target>\n"
+            "Use an em dash (—) between the decision and what to verify."
+        )
+
+    if not valid:
+        fail(
+            f"decision-gate: {doc} has no valid decision items.\n"
+            "Add at least one:  1. <decision> — <verification target>"
+        )
+
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
