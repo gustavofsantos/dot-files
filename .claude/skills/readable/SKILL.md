@@ -1,38 +1,45 @@
 ---
 name: readable
-description: "Reviews Kotlin code for readability — hide mechanics, expose intention. Two phases: proposes a Change Contract for human review, then applies only approved changes. Scope: file, class, function, or diff."
-disable-model-invocation: true
+description: "Reviews a slice of code (usually a diff between two revisions) for readability — hide mechanics, expose intention. Language-agnostic. Two phases: proposes a Change Contract for human review, then applies only approved changes."
 ---
 
 # Readable
 
 Guiding principle: **code should hide the mechanics and expose the intention.**
 
+The model is not bound to any programming language. It hunts for **bad readability signals** within a **slice** of code — most often a diff between two revisions. The slice, not the language, defines the working surface.
+
 Two phases. Never apply changes before explicit human confirmation.
 
 ---
 
-## Activation
+## Scope — work from a slice
 
-Ask if the user hasn't specified:
+A *slice* is the smallest contiguous region that carries one change of intent: a diff between two revisions (the common case), or a single function/hunk handed over explicitly. The model:
 
-> "What's the scope? File, class, function, or diff?"
+1. Reads the slice (and just enough surrounding context to understand it).
+2. Scans for readability signals — see the reference files below — *within the slice and its immediate context*, not across the whole file.
+3. Treats everything outside the slice as background; never proposes changes there unless it is the only way to make the slice readable, and even then flags it.
 
-Before analyzing, read both reference files:
-- `references/heuristics.md` — readability heuristics (names, functions, structure, idioms)
-- `references/syntax-sugar.md` — Kotlin syntax sugar cases
+When no slice is given, ask:
+
+> "What's the slice? A diff (default), or a specific file/class/function?"
+
+Before analyzing, read both reference files — they are language-agnostic:
+- `references/heuristics.md` — readability signals (names, functions, structure, idioms)
+- `references/syntax-sugar.md` — per-language syntax-sugar calibration (when to keep vs. flag a construct)
 
 ---
 
 ## Phase 1 — Contract
 
-Analyze the scope against the heuristics. Produce a Change Contract.
+Analyze the slice against the heuristics. Produce a Change Contract.
 
 ```
 ## Readability Contract
 
-**Scope:** {file | class | function | diff}
-**Target:** {path or name}
+**Slice:** {diff <base..head> | file | class | function}
+**Language:** {the source language of the slice}
 
 ---
 
@@ -42,14 +49,16 @@ Analyze the scope against the heuristics. Produce a Change Contract.
 **Proposed change:** {What will be done and why it exposes intention better}
 
 **Before:**
-```kotlin
+```{lang}
 // current code
 ```
 **After:**
-```kotlin
+```{lang}
 // proposed code
 ```
 ```
+
+Use the slice's own language for the code fences (e.g. `clojure`, `kotlin`, `python`); never assume a fixed language.
 
 After the full contract, ask:
 
@@ -68,11 +77,14 @@ touching behavior — the human decides those explicitly.
 
 ---
 
-## Diff mode
+## Whole-file scope (not the default)
 
-Apply heuristics only to changed lines and their immediate context. If a readability
-problem existed before the diff and the diff is a clean opportunity to fix it, include
-it marked as **[pre-existing]** — opt-in, never applied by default.
+When the human explicitly hands over an entire file/class/function instead of a diff, the
+same signal scan applies — but treat the whole region as the slice. Keep changes minimal and
+local to the named region; do not cascade into unrelated parts of the file.
+
+If a readability problem existed *before* the slice and the slice is a clean opportunity to
+fix it, include it marked as **[pre-existing]** — opt-in, never applied by default.
 
 ---
 

@@ -1,25 +1,28 @@
 ---
 name: deslop
-description: Checks the diff against master and removes AI-generated slop from this codebase. Use when cleaning up a branch before merge or when the user asks to remove AI slop from the diff.
+description: Removes AI-generated slop from the current branch diff. Use when cleaning up a branch before merge or when the user asks to remove AI slop from the diff.
 disable-model-invocation: true
 ---
 
 # Diff Slop Cleanup
 
-Remove AI-generated cruft from the branch diff against `master`, touching **only changed lines** (`+`/`-`), without altering behavior.
+Remove AI-generated cruft from the branch diff, touching **only changed lines**, without altering behavior.
 
 ## Workflow
 
-`git diff master...HEAD` → scan only added/removed lines → fix clearest cases → summarize in 1–3 sentences.
+1. Determine the base branch for the current branch. It is often `master`, but not always — this repo uses GitButler, so consult GitButler state to find the real base rather than assuming.
+2. Get the diff of the current branch against that base.
+3. Scan only the added/removed lines for the slop patterns below.
+4. Fix the clearest cases, then summarize in 1–3 sentences.
 
 ## What counts as slop here
 
-- **Comments** that narrate the code, restate syntax, or reference Jira tickets. Keep comments that carry domain *why*.
+- **Comments** that narrate the code, restate syntax, or reference tickets. Keep comments that carry domain *why*.
 - **Docstrings** that merely restate the function name. Keep ones explaining complex returns or business logic.
 - **Defensive code** (try/catch, nil checks, impossible-state guards) that doesn't mirror an existing pattern on the same path. Keep checks required for external inputs, DB results, API responses.
-- **Nesting** that fights the file's style — flatten toward the surrounding file's `cond`/`when`/`if-let` idiom.
-- **Naming** that breaks local conventions — predicate `?` suffix, keyword namespacing (`:entity/status`), existing namespace aliases.
-- **Midje tests** — drop narrating comments and unused `provided` stubs; keep the scenario string in `fact`.
+- **Nesting** that fights the file's style — flatten toward the surrounding file's idioms.
+- **Naming** that breaks local conventions — drop or rename to match what the file/namespace already uses.
+- **Tests** — drop narrating comments and unused stubs/mocks; keep the scenario descriptions that explain intent.
 
 ## Guardrails
 
