@@ -1,4 +1,13 @@
-# Test Philosophy
+---
+name: rules-of-testing
+description: Use when writing tests.
+paths:
+  - "**/*test.{clj,kt,kts,java,py,ts,js,go,rb}"
+  - "**/*IT.{kt,java}"
+  - "**/*Test.{kt,java}"
+---
+
+# Testing
 
 - **Integration-first.** Start from the outermost test that exercises a real end-to-end path. Add unit tests only when a component is complex enough to warrant isolated verification.
 - **BDD structure.** Given → When → Then. The test name alone should say what behavior broke.

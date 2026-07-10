@@ -1,3 +1,8 @@
+---
+name: rules-of-suftware-design
+description: Use when designing a softwarem either when in plan mode or execution mode.
+---
+
 # Design Defaults
 
 - **Vertical slice first.** Build the thinnest end-to-end path for one real behavior. Hardcoding is valid to unblock the slice; generalize only when a second concrete case forces it. No utilities or infrastructure before behavior exists.

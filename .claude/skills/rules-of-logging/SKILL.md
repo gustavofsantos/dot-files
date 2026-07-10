@@ -1,4 +1,6 @@
 ---
+name: rules-of-logging
+description: Use when handling log tasks.
 paths:
   - "**/*.{clj,kt,kts,java,py,ts,js,go,rb}"
 ---
