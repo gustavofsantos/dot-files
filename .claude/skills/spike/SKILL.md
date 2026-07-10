@@ -1,30 +1,40 @@
 ---
 name: spike
 description: >
-  Capture a research result or investigation finding as a spike in ~/engineering/spikes/.
-  Trigger on: "write a spike", "document this research", "spike for issue NNN",
-  "capture findings", "/spike", or when a skill says to invoke the spike skill.
-  Does NOT trigger on casual mentions of "investigation" or "research" in code discussion.
+  Resolve one unknown with the cheapest throwaway experiment, then leave a durable
+  finding in ~/Documents/Spikes/. The experiment is disposable; the finding is the artifact.
+  Trigger on "spike <unknown>", "/spike", "capture this finding", or when another skill
+  hands off an unresolved question. NOT for casual mentions of "research"/"investigation".
 ---
-
 # spike
 
-Capture research results in `~/engineering/spikes/`.
+A spike answers **one** unknown with throwaway work and keeps only the answer.
+You are the investigator, not the scribe: run the experiment, then leave the receipt.
 
-## Operating loop
+## Loop
+1. **Sharpen the unknown** — one question, phrased so it can be answered *wrong*. Fuzzy → sharpen before touching code.
+2. **Cheapest experiment** — read source, run a probe, write disposable code. Ignore quality, edges, error handling. This code does not survive.
+3. **Leave the receipt** — `scripts/new.sh "<slug>" [issue-id]` returns the path with stamped frontmatter. Fill Question / Answer / Evidence. Link the throwaway commit; don't paste it.
+4. **Discard the scaffold** — the answer lives in the file; the experiment doesn't.
 
-1. **Search first** — `rg -il 'term' ~/engineering/spikes/ -l 2>/dev/null` — update an existing spike if the same question is already tracked.
-2. **Determine ID**:
-   - If tied to an issue: use that issue's ID as the spike prefix (multiple spikes per issue share the same NNN prefix — distinguish by slug).
-   - If standalone: find the next ID from the combined max of issues and spikes:
-     ```bash
-     ls ~/engineering/issues/ ~/engineering/issues/archive/ ~/engineering/spikes/ 2>/dev/null \
-       | grep -oE '^[0-9]+' | sort -n | tail -1
-     # increment by 1 and zero-pad to 3 digits
-     ```
-3. **Fill missing fields conversationally** — ask only what cannot be inferred.
-4. **Write** — if creating or updating a file, load [references/templates.md](references/templates.md) first and follow the template exactly.
+## Dedup
+`rg -il '<term>' ~/Documents/Spikes/` first. Same unknown → update, don't fork.
 
-## File location
+## The artifact
+```markdown
+---
+status: resolved   # resolved | inconclusive | deferred
+created: <stamped>
+---
+## Question
+The one unknown. Answerable, falsifiable.
 
-`~/engineering/spikes/NNN-descriptive-slug.md` — lowercase-hyphenated slug, specific enough to distinguish from sibling spikes on the same issue.
+## Answer
+One sentence — what you now know that you didn't.
+
+## Evidence
+What convinced you. Link files, commits, probe output. Prose, not a log.
+
+## Context
+Why it mattered. 2–3 sentences. Last, because it ages fastest.
+```
