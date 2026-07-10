@@ -6,7 +6,8 @@ Detect, then rewrite in place. Pseudocode is language-agnostic — translate to 
 Name repeats the implementation, so failure teaches nothing about the domain.
 ```
 BAD:   applyDiscountWorks()
-GOOD:  loyaltyDiscountAppliesOnlyAboveMinimumSpend()
+GOOD:  "loyalty discount applies only above minimum spend"   // preferred: natural string
+       loyaltyDiscountAppliesOnlyAboveMinimumSpend()        // fallback: camelCase when strings aren't supported
 ```
 
 ## 2. Assertion on internals / restated arithmetic
@@ -24,17 +25,17 @@ If no domain predicate exists to assert against, the domain is missing a concept
 One giant equality over a result covering many rules. On failure: "something changed," no signal which promise broke.
 ```
 BAD:   assertEquals(expectedOrder, checkout(cart))   // total, tax, shipping, status at once
-GOOD:  taxIsChargedAtDestinationStateRate()
-       freeShippingAppliesAboveThreshold()
-       expiredCouponIsRejected()
+GOOD:  "tax is charged at destination state rate"
+       "free shipping applies above threshold"
+       "expired coupon is rejected"
 ```
 Keep whole-object equality only for atomic value objects where the shape *is* the one rule.
 
 ## 4. Hidden deciding value
 The fact that makes the scenario meaningful is buried in a default, so the reader can't see why this case exercises this rule. Name the condition too.
 ```
-BAD:   refundIsRejected()  with  standardAccount()
-GOOD:  refundIsRejectedAfterReturnWindowCloses()
+BAD:   "refund is rejected"  with  standardAccount()
+GOOD:  "refund is rejected after return window closes"
          order = anOrderDeliveredDaysAgo(31)   // window is 30 — boundary visible
 ```
 
@@ -44,6 +45,7 @@ Asserts on collaborator calls, documenting how the code is wired instead of what
 BAD:   verify(repo).save(any()); verify(gateway).charge(any())
 GOOD:  assertThat(order).isConfirmed()
        assertThat(customer.availableCredit).isEqualTo(0)   // credit consumed
+       // name: "order is confirmed and customer credit is consumed"
 ```
 Mock only true boundaries (external services, clock, randomness); assert on observable domain state.
 

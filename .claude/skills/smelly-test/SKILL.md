@@ -12,7 +12,14 @@ Apply one filter to every test: **does this protect a promise the business is ma
 ## The steer
 
 **Name the rule, not the method.** The test name is a sentence about the domain. If you can derive it from the method signature, rewrite it from the requirement.
-`testCalculateInterest` → `interestAccruesDailyOnOutstandingPrincipal`
+
+Prefer a **natural-language string** that reads like a spec sentence — lowercase, no camelCase, punctuation only when it helps clarity:
+
+`"interest accrues daily on outstanding principal"`
+
+Use **camelCase as an identifier** only when the framework or convention requires it (e.g. JUnit method names) or when a string name is not available. Even then, the identifier should still read as a domain sentence, not a method mirror:
+
+`testCalculateInterest` → `"interest accrues daily on outstanding principal"` (preferred) or `interestAccruesDailyOnOutstandingPrincipal` (fallback)
 
 **One promise per test, asserted on the domain.** Split bundled checks so a failure names *which* rule broke. Assert on the domain concept (`isOverdrawn()`), not the internal field or the recomputed formula (`balance < 0`, `price * 1.08`).
 
