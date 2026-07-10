@@ -1,6 +1,6 @@
 ---
 name: readable
-description: "Reviews a slice of code (usually a diff between two revisions) for readability — hide mechanics, expose intention. Language-agnostic. Two phases: proposes a Change Contract for human review, then applies only approved changes."
+description: Reviews a slice of code (usually a diff between two revisions) for readability — hide mechanics, expose intention. Language-agnostic. Two phases: proposes a Change Contract for human review, then applies only approved changes.
 ---
 
 # Readable
@@ -35,7 +35,7 @@ Before analyzing, read both reference files — they are language-agnostic:
 
 Analyze the slice against the heuristics. Produce a Change Contract.
 
-```
+<contract>
 ## Readability Contract
 
 **Slice:** {diff <base..head> | file | class | function}
@@ -56,7 +56,7 @@ Analyze the slice against the heuristics. Produce a Change Contract.
 ```{lang}
 // proposed code
 ```
-```
+</contract>
 
 Use the slice's own language for the code fences (e.g. `clojure`, `kotlin`, `python`); never assume a fixed language.
 

@@ -1,6 +1,6 @@
 ---
 name: change-frame
-description: "Align the causal model of a change between the user and the agent BEFORE writing any code. Use when the user arrives with a change request and wants shared understanding of the system — before/after — instead of jumping to implementation. Trigger on \"I want to change\", \"I need the system to\", \"let's align before I code\", \"understand what I want\", or when the user describes a goal without having decided the implementation. Do NOT use for execution, writing tests, or generating code — the output is a minimal model frame, not an implementation artifact. Use even if the user doesn't explicitly ask for \"alignment\" when the request is a behavior change whose model isn't yet clear."
+description: Align the causal model of a change between the user and the agent BEFORE writing any code. Use when the user arrives with a change request and wants shared understanding of the system — before/after — instead of jumping to implementation. Trigger on "I want to change", "I need the system to", "let's align before I code", "understand what I want", or when the user describes a goal without having decided the implementation. Do NOT use for execution, writing tests, or generating code — the output is a minimal model frame, not an implementation artifact. Use even if the user doesn't explicitly ask for "alignment" when the request is a behavior change whose model isn't yet clear.
 ---
  
 # Change Frame
