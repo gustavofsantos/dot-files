@@ -1,0 +1,204 @@
+#!/usr/bin/env ruby
+# skills-sync — derive harness-specific skill trees from the Claude-native source.
+#
+# The source of truth is one SKILL.md per skill (Claude-native, maximal
+# frontmatter). Each harness in harness-profiles.yml gets a generated tree whose
+# SKILL.md frontmatter is filtered/renamed to what that harness understands; the
+# body and references/ / scripts/ assets are shared verbatim (symlinked back to
+# the source, so editing a skill reflects immediately — only frontmatter needs a
+# re-run to regenerate).
+#
+# Usage:
+#   skills-sync [--source DIR] [--profiles FILE] [--harness NAME] [--dry-run]
+#
+# Defaults:
+#   --source    ~/.claude/skills
+#   --profiles  ~/.claude/harness-profiles.yml
+#
+# Idempotent. Each generated skill carries a `.skills-sync` marker; pruning of
+# stale skills only ever touches marked dirs, so hand-made skills living in the
+# same destination are left alone.
+#
+# See CLAUDE.md ("Cross-harness skills") and harness-profiles.yml for the model.
+
+require "fileutils"
+require "yaml"
+
+MARKER = ".skills-sync".freeze
+
+def home
+  ENV.fetch("HOME", Dir.home)
+end
+
+def parse_args(argv)
+  opts = {
+    source: File.join(home, ".claude", "skills"),
+    profiles: File.join(home, ".claude", "harness-profiles.yml"),
+    harness: nil,
+    dry_run: false,
+  }
+  until argv.empty?
+    arg = argv.shift
+    case arg
+    when "--source"   then opts[:source] = argv.shift
+    when "--profiles" then opts[:profiles] = argv.shift
+    when "--harness"  then opts[:harness] = argv.shift
+    when "--dry-run"  then opts[:dry_run] = true
+    when "-h", "--help"
+      puts File.read(__FILE__).lines[1..24].map { |l| l.sub(/^# ?/, "") }.join
+      exit 0
+    else
+      warn "skills-sync: unknown argument #{arg.inspect}"
+      exit 2
+    end
+  end
+  opts
+end
+
+# Split "---\n<frontmatter>\n---\n<body>" into [frontmatter_text, body], where
+# frontmatter_text keeps its trailing newline. Returns [nil, text] when the file
+# has no leading frontmatter block. We operate on the frontmatter as text (not a
+# parsed YAML tree) so descriptions are preserved byte-for-byte — some SKILL.md
+# descriptions are plain scalars with ": " that strict YAML rejects but Claude
+# accepts, and a YAML round-trip would also reflow long values.
+def split_skill(text)
+  m = text.match(/\A---[ \t]*\n(.*?\n)---[ \t]*\n?(.*)\z/m)
+  return [nil, text] unless m
+
+  [m[1], m[2]]
+end
+
+# Name of the top-level key a frontmatter line opens (e.g. "description"), or nil
+# for continuation lines: indented block values, list items, blanks, comments.
+def top_level_key(line)
+  m = line.match(/\A([A-Za-z0-9_-]+):(?:\s|$)/)
+  m && m[1]
+end
+
+# Rewrite a frontmatter block per profile, line by line, preserving formatting.
+# A dropped/renamed decision on a top-level key carries through its continuation
+# lines. keep is an allowlist compared against the post-rename key name.
+def transform_frontmatter(frontmatter_text, profile)
+  rename = profile["rename"] || {}
+  keep = profile["keep"]
+  drop = profile["drop"] || []
+  allowlist = keep.is_a?(Array) && !keep.empty? ? keep : nil
+
+  out = []
+  dropping = false
+  frontmatter_text.each_line do |line|
+    key = top_level_key(line)
+    if key
+      new_key = rename.fetch(key, key)
+      dropping = drop.include?(key) || (allowlist && !allowlist.include?(new_key))
+      next if dropping
+
+      line = line.sub(/\A#{Regexp.escape(key)}:/, "#{new_key}:") if new_key != key
+      out << line
+    elsif !dropping
+      out << line
+    end
+  end
+  out.join
+end
+
+def render_skill(frontmatter_text, body)
+  "---\n#{frontmatter_text}---\n#{body}"
+end
+
+def source_skill_names(source)
+  Dir.children(source).select do |name|
+    File.file?(File.join(source, name, "SKILL.md"))
+  end.sort
+rescue Errno::ENOENT
+  []
+end
+
+# Mirror every asset in the source skill (references/, scripts/, …) except
+# SKILL.md as a symlink into the generated skill dir.
+def link_assets(src_skill, dest_skill, dry_run)
+  real_src = File.realpath(src_skill)
+  Dir.children(src_skill).each do |entry|
+    next if entry == "SKILL.md"
+
+    target = File.join(real_src, entry)
+    link = File.join(dest_skill, entry)
+    puts "  link  #{entry} -> #{target}" if dry_run
+    next if dry_run
+
+    FileUtils.rm_rf(link)
+    FileUtils.ln_s(target, link)
+  end
+end
+
+def prune_stale(dest, live_names, dry_run)
+  return unless File.directory?(dest)
+
+  Dir.children(dest).each do |entry|
+    path = File.join(dest, entry)
+    next unless File.directory?(path)
+    next unless File.file?(File.join(path, MARKER)) # only ever our own output
+    next if live_names.include?(entry)
+
+    puts "  prune #{entry}"
+    FileUtils.rm_rf(path) unless dry_run
+  end
+end
+
+def sync_harness(name, profile, source, dry_run)
+  dest = File.expand_path(profile["dir"] || raise("harness #{name}: missing dir"))
+  names = source_skill_names(source)
+  puts "harness #{name} -> #{dest} (#{names.length} skills)"
+  FileUtils.mkdir_p(dest) unless dry_run
+
+  names.each do |skill|
+    src_skill = File.join(source, skill)
+    dest_skill = File.join(dest, skill)
+    raw = File.read(File.join(src_skill, "SKILL.md"), encoding: "UTF-8")
+    frontmatter, body = split_skill(raw)
+    if frontmatter.nil?
+      warn "  skip  #{skill} (no parseable frontmatter)"
+      next
+    end
+
+    rendered = render_skill(transform_frontmatter(frontmatter, profile), body)
+    puts "  gen   #{skill}/SKILL.md"
+    unless dry_run
+      FileUtils.mkdir_p(dest_skill)
+      File.write(File.join(dest_skill, "SKILL.md"), rendered)
+      File.write(File.join(dest_skill, MARKER), File.realpath(src_skill) + "\n")
+    end
+    link_assets(src_skill, dest_skill, dry_run)
+  end
+
+  prune_stale(dest, names, dry_run)
+end
+
+def main(argv)
+  opts = parse_args(argv)
+
+  unless File.directory?(opts[:source])
+    warn "skills-sync: source not found: #{opts[:source]}"
+    return 1
+  end
+  unless File.file?(opts[:profiles])
+    warn "skills-sync: profiles not found: #{opts[:profiles]}"
+    return 1
+  end
+
+  config = YAML.safe_load(File.read(opts[:profiles], encoding: "UTF-8")) || {}
+  harnesses = config["harnesses"] || {}
+  if harnesses.empty?
+    warn "skills-sync: no harnesses defined in #{opts[:profiles]}"
+    return 1
+  end
+
+  harnesses.each do |name, profile|
+    next if opts[:harness] && opts[:harness] != name
+
+    sync_harness(name, profile, opts[:source], opts[:dry_run])
+  end
+  0
+end
+
+exit(main(ARGV)) if File.realpath($PROGRAM_NAME) == File.realpath(__FILE__)

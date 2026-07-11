@@ -1,0 +1,29 @@
+# harness-profiles.yml — how skills-sync derives per-harness skill trees.
+#
+# Source of truth: .claude/skills/<name>/SKILL.md (Claude-native, maximal
+# frontmatter). skills-sync generates one tree per harness below, rewriting only
+# the SKILL.md frontmatter; the body and references/ / scripts/ assets are shared
+# verbatim (symlinked back to the source). Generated skills carry a `.skills-sync`
+# marker so stale ones can be pruned without touching hand-made skills that share
+# the destination.
+#
+# Per-harness keys (all optional except dir):
+#   dir      destination skill tree (generated; ~ expanded)
+#   rename   map of old frontmatter key -> new key (applied first)
+#   keep     allowlist: if set, ONLY these frontmatter keys survive
+#   drop     denylist: these frontmatter keys are removed (applied after keep)
+#
+# Adding a harness = adding an entry here. Never edit a SKILL.md to fit a harness;
+# if the body names a specific subagent or tool a harness lacks, fix the source to
+# be harness-agnostic instead (see CLAUDE.md, "Cross-harness skills").
+
+harnesses:
+  cursor:
+    dir: ~/.cursor/skills
+    # Cursor reads .claude-style skills but only acts on name + description.
+    # Strip the Claude-only knobs so they don't leak as misapplied config.
+    drop:
+      - disable-model-invocation   # Claude: hide skill from model auto-invoke
+      - allowed-tools              # Claude/SDK tool-gating; ignored elsewhere
+      - context                    # Claude-only (e.g. context: fork)
+      - model                      # Claude-only model pin

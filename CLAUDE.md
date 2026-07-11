@@ -56,8 +56,35 @@ Conventions the skills follow (keep them when editing):
 - **No dead pointers.** A skill may only reference skills, scripts, and agents that
   exist in this repo.
 
+## Cross-harness skills
+
+`.claude/skills/` is the Claude-native source of truth (maximal frontmatter). Other
+harnesses can't consume it as-is: Cursor reads `.claude`-style skills but only acts on
+`name` + `description`, and Claude-only frontmatter (`disable-model-invocation`,
+`allowed-tools`, `context: fork`) leaks as misapplied config. `bin/skills-sync` derives a
+per-harness tree from the one source: it rewrites only the SKILL.md frontmatter (dropping
+/ renaming keys per `.claude/harness-profiles.yml`) and symlinks the body's `references/`
+and `scripts/` back to the source, so editing a skill reflects immediately — only
+frontmatter changes need a re-run. `install-claude.sh` (run by `setup.sh`) symlinks
+`harness-profiles.yml` into `~/.claude/` and runs the sync; the default Cursor target is a
+generated `~/.cursor/skills/` tree.
+
+The frontmatter transform is **textual**, not a YAML round-trip: descriptions are
+preserved byte-for-byte (some are plain scalars with `": "` that strict YAML rejects but
+Claude accepts). Generated skills carry a `.skills-sync` marker; pruning of stale skills
+only ever touches marked dirs, so hand-made skills in the same destination are left alone.
+Adding a harness = adding an entry to `harness-profiles.yml`, never editing a SKILL.md to
+fit a harness. Because a skill's *body* is shared verbatim across harnesses, keep bodies
+harness-agnostic: don't name a specific subagent (say "use a subagent to explore X" so each
+harness picks the agent that fits) or a Claude-only tool.
+
+| Script | What it does |
+|--------|--------------|
+| `skills-sync` | Derive per-harness skill trees from `.claude/skills/` per `harness-profiles.yml`. Idempotent; `--source`, `--profiles`, `--harness NAME`, `--dry-run`. |
+
 Cursor reuses these same skills/agents by loading Claude's config directly (configured
-outside this repo).
+outside this repo). Hooks are *not* yet unified into the harness — that work is scoped
+separately (see the hooks handoff / the `hooks-runner` output-adapter gap).
 
 The `.claude/settings.json` merges into the global `~/.claude/settings.json` on install.
 Global settings win on scalar/object conflicts; `permissions.allow/deny/ask` arrays are

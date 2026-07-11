@@ -25,7 +25,7 @@ Show the measurement and the `modules` list sorted by size as candidate scopes. 
 
 ## 4. Dispatch
 
-Spawn a subagent in a read-only research/exploration role, briefed with `references/survey-procedure.md` verbatim plus: target paths, ignore paths, repo name, the measurement JSON, output file path (default `<repo-root>/ddd-survey.md`; ask if writing inside the repo is unwanted), and any prior context map to extend. Any general-purpose subagent works — the procedure is self-contained, so no specific named agent is required.
+Spawn a subagent in a read-only research/exploration role, briefed with `references/survey-procedure.md` verbatim plus: target paths, ignore paths, repo name, the measurement JSON, output file path (default `<repo-root>/ddd-survey.md`; ask if writing inside the repo is unwanted), and any prior context map to extend. Use whichever subagent fits the context for read-only exploration — the procedure is self-contained, so no specific named agent is required.
 
 ## 5. After
 
