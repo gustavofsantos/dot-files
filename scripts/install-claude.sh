@@ -16,6 +16,18 @@ find "$HOME/.claude/skills" -maxdepth 1 -type l | while read -r link; do
 done
 echo "Installing skills... OK"
 
+echo "Syncing skills to other harnesses..."
+ln -sf "$DOTFILES_DIR/.claude/harness-profiles.yml" "$HOME/.claude/harness-profiles.yml"
+if command -v ruby >/dev/null 2>&1; then
+  ruby "$DOTFILES_DIR/bin/skills-sync" \
+    --source "$DOTFILES_DIR/.claude/skills" \
+    --profiles "$DOTFILES_DIR/.claude/harness-profiles.yml" >/dev/null \
+    && echo "Syncing skills to other harnesses... OK" \
+    || echo "Syncing skills to other harnesses... FAILED (non-fatal)"
+else
+  echo "Syncing skills to other harnesses... skipped (no ruby)"
+fi
+
 echo "Installing custom subagents..."
 mkdir -p "$HOME/.claude/agents"
 for agent in "$DOTFILES_DIR"/.claude/agents/*; do
