@@ -10,6 +10,12 @@
 #   - Local entry with enabled: false: disables the base hook on this machine
 
 hooks:
+  # session-track keeps the claude-run window marker fresh (clears the ⊡
+  # waiting prefix on a new turn) and records track_name for checks
+  # correlation. It is NOT what the `claude-sessions` navigator reads —
+  # that discovers live agents by scanning tmux pane processes, so there is
+  # no SessionEnd hook to un-stale: a session exists exactly while its
+  # process is alive.
   - name: session-track
     on: [session_start, prompt_submit]
     command: claude-hook-session-track
@@ -17,14 +23,6 @@ hooks:
   - name: cursor-session-track
     on: [session_start, prompt_submit]
     command: cursor-hook-session-track
-    harness: [cursor]
-  - name: session-end
-    on: [session_end]
-    command: claude-hook-session-end
-    harness: [claude]
-  - name: cursor-session-end
-    on: [session_end]
-    command: cursor-hook-session-end
     harness: [cursor]
   - name: notify
     on: [turn_end, notification]

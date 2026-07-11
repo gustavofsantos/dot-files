@@ -1,146 +1,231 @@
 #!/usr/bin/env python3
 """
-claude-sessions — interactive fzf picker for live Claude Code sessions.
+claude-sessions — interactive fzf picker for live AI coding sessions in tmux.
 
 Usage:
   claude-sessions          # fzf picker → jump to the agent's pane on Enter
   claude-sessions --list   # print sessions to stdout and exit
 
-State files live in ~/.agent-sessions/<session_id>.json, written by the
-SessionStart/UserPromptSubmit hook (claude-hook-session-track) for *every*
-Claude session — however it was launched. Each file records the exact tmux
-pane the session runs in: { session_id, track_name, task, dir, pane, status,
-started_at, last_activity, notifications }.
+Discovery is entirely process-based: there is NO state file and NO hook to
+keep in sync. Every tmux pane is inspected for a running agent CLI (Claude
+Code, Cursor Agent, aider, codex, …) by walking the pane's process subtree.
+A session exists exactly when its process is alive, so the list can never go
+stale and needs no configuration — a bare `claude` in any pane just shows up.
 
-Liveness and jumping are pane-based: a session is alive if its recorded pane
-still exists, and Enter switches to that pane's session and selects the pane —
-so this works for a bare `claude` in any pane, not just claude-run sessions.
+Add a new agent by extending AGENTS below.
 
 Keybindings in fzf:
   Enter   jump to the agent's pane
   Esc/q   dismiss
 """
 
-import json
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
-from pathlib import Path
+from collections import defaultdict, deque
 
-_sessions_env = os.environ.get("AGENT_SESSIONS_DIR")
-SESSIONS_DIR = Path(_sessions_env).expanduser() if _sessions_env else Path.home() / ".agent-sessions"
+# (tag, display name, [executable basenames to match]).
+# Matched against a pane's foreground command and its whole process subtree,
+# so both `exec claude` and shell→claude layouts are found.
+AGENTS = [
+    ("cc", "claude",   ["claude"]),
+    ("cu", "cursor",   ["cursor-agent"]),
+    ("ai", "aider",    ["aider"]),
+    ("cx", "codex",    ["codex"]),
+    ("gm", "gemini",   ["gemini"]),
+    ("go", "goose",    ["goose"]),
+    ("oc", "opencode", ["opencode"]),
+]
+# Interpreters that may launch an agent as their script argument
+# (e.g. `node /usr/local/bin/claude`). We inspect only the script token, so a
+# flag value like `--model claude-opus-4-8` never counts as a match.
+INTERPRETERS = {"node", "node22", "bun", "deno", "python", "python3", "ruby"}
+
+WAIT_MARK = "⊡"  # window-name prefix set by the notify hook while waiting
 
 GREEN  = "\033[0;32m"
 YELLOW = "\033[0;33m"
-RED    = "\033[0;31m"
 DIM    = "\033[2m"
 RESET  = "\033[0m"
-ALIVE  = f"{GREEN}●{RESET}"
-DEAD   = f"{DIM}○{RESET}"
-AGENT_TAG = {"claude": "cc", "cursor": "cu"}
-
-STATUS_ORDER = {"running": 0, "waiting": 1, "gone": 2, "ended": 3, "done": 4, "unknown": 5}
-STATUS_COLOR = {
-    "running": f"{GREEN}running{RESET}",
-    "waiting": f"{YELLOW}waiting{RESET}",
-    "gone":    f"{DIM}gone{RESET}",
-    "ended":   f"{DIM}ended{RESET}",
-    "done":    f"{DIM}done{RESET}",
-    "unknown": f"{DIM}?{RESET}",
-}
 
 
-def tmux_live_panes() -> set[str]:
-    """All currently-existing tmux pane ids (e.g. '%12')."""
-    try:
-        out = subprocess.check_output(
-            ["tmux", "list-panes", "-a", "-F", "#{pane_id}"],
-            stderr=subprocess.DEVNULL, text=True,
-        )
-        return set(out.strip().splitlines())
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return set()
+def _basename(tok: str) -> str:
+    return os.path.basename(tok.rstrip("/"))
 
 
-def pane_session(pane: str) -> str | None:
-    """The tmux session name owning a pane id, or None."""
-    try:
-        out = subprocess.check_output(
-            ["tmux", "display-message", "-p", "-t", pane, "#{session_name}"],
-            stderr=subprocess.DEVNULL, text=True,
-        )
-        return out.strip() or None
-    except (subprocess.CalledProcessError, FileNotFoundError):
+def match_agent(args: str) -> tuple[str, str] | None:
+    """Return (tag, name) if this argv looks like an agent CLI, else None."""
+    toks = args.split()
+    if not toks:
         return None
+    b0 = _basename(toks[0])
+    for tag, name, names in AGENTS:
+        if b0 in names:
+            return (tag, name)
+    if b0 in INTERPRETERS:
+        for tok in toks[1:]:
+            if tok.startswith("-"):
+                continue
+            b = _basename(tok)
+            for tag, name, names in AGENTS:
+                if b in names:
+                    return (tag, name)
+            break  # only the first non-flag token is the script
+    return None
 
 
-def age(ts: float) -> str:
-    delta = int(datetime.now(timezone.utc).timestamp() - ts)
-    if delta < 60:     return f"{delta}s"
-    if delta < 3600:   return f"{delta // 60}m"
-    if delta < 86400:  return f"{delta // 3600}h"
-    return f"{delta // 86400}d"
-
-
-def load_tracked(live_panes: set[str]) -> list[dict]:
-    if not SESSIONS_DIR.exists():
-        return []
-    now = datetime.now(timezone.utc).timestamp()
-    sessions = []
-    for path in sorted(SESSIONS_DIR.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
+def read_processes() -> tuple[dict[int, dict], dict[int, list[int]]]:
+    """Snapshot the process table: pid -> {ppid, etime, args}, and children map."""
+    procs: dict[int, dict] = {}
+    children: dict[int, list[int]] = defaultdict(list)
+    for flags in (["-axww"], ["-eww"], ["ax"]):
         try:
-            data = json.loads(path.read_text())
-        except (json.JSONDecodeError, OSError):
+            out = subprocess.check_output(
+                ["ps", *flags, "-o", "pid=,ppid=,etime=,args="],
+                stderr=subprocess.DEVNULL, text=True,
+            )
+            break
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            out = ""
+    for line in out.splitlines():
+        parts = line.split(None, 3)
+        if len(parts) < 4:
             continue
-        session_id = data.get("session_id") or path.stem
-        pane       = data.get("pane", "")
-        is_alive   = bool(pane) and pane in live_panes
-        last_ts    = float(data.get("last_activity") or data.get("started_at") or 0)
-        if not is_alive and last_ts and (now - last_ts) > 3600:
+        try:
+            pid, ppid = int(parts[0]), int(parts[1])
+        except ValueError:
             continue
-        status     = data.get("status", "unknown")
-        if not is_alive and status not in ("ended", "done"):
-            status = "gone"
-        sessions.append({
-            "session_id":    session_id,
-            "agent":         data.get("agent") or "claude",
-            "track_name":    data.get("track_name") or path.stem,
-            "task":          data.get("task", ""),
-            "dir":           data.get("dir", ""),
-            "status":        status,
-            "alive":         is_alive,
-            "pane":          pane,
-            "checks":        "",
-            "last_ts":       float(data.get("last_activity") or data.get("started_at") or 0),
-            "notifications": data.get("notifications", 0),
+        procs[pid] = {"ppid": ppid, "etime": etime_to_secs(parts[2]), "args": parts[3]}
+        children[ppid].append(pid)
+    return procs, children
+
+
+def etime_to_secs(e: str) -> int:
+    """Parse ps etime ([[DD-]HH:]MM:SS) into seconds."""
+    e = e.strip()
+    days = 0
+    if "-" in e:
+        d, e = e.split("-", 1)
+        try:
+            days = int(d)
+        except ValueError:
+            days = 0
+    try:
+        nums = [int(p) for p in e.split(":")]
+    except ValueError:
+        return 0
+    while len(nums) < 3:
+        nums.insert(0, 0)
+    h, m, s = nums[-3], nums[-2], nums[-1]
+    return days * 86400 + h * 3600 + m * 60 + s
+
+
+def find_agent(pane_pid: int, current_cmd: str,
+               procs: dict[int, dict], children: dict[int, list[int]]):
+    """Locate an agent in a pane: search the process subtree, then fall back to
+    the pane's foreground command. Returns (pid, tag, name) or None."""
+    seen: set[int] = set()
+    q: deque[int] = deque([pane_pid])
+    while q:  # BFS returns the shallowest agent (the pane's own, not a subagent)
+        pid = q.popleft()
+        if pid in seen:
+            continue
+        seen.add(pid)
+        p = procs.get(pid)
+        if p:
+            m = match_agent(p["args"])
+            if m:
+                return (pid, m[0], m[1])
+        q.extend(children.get(pid, []))
+    # Fallback: tmux's reported foreground command (survives a ps snapshot race).
+    b = _basename(current_cmd)
+    for tag, name, names in AGENTS:
+        if b in names:
+            return (pane_pid, tag, name)
+    return None
+
+
+def tmux_panes() -> list[dict]:
+    fmt = "\t".join([
+        "#{pane_id}", "#{pane_pid}", "#{pane_current_command}",
+        "#{pane_current_path}", "#{session_name}", "#{window_index}",
+        "#{window_name}",
+    ])
+    try:
+        out = subprocess.check_output(
+            ["tmux", "list-panes", "-a", "-F", fmt],
+            stderr=subprocess.DEVNULL, text=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return []
+    panes = []
+    for line in out.strip().splitlines():
+        f = line.split("\t")
+        if len(f) < 7:
+            continue
+        panes.append({
+            "pane": f[0], "pid": f[1], "cmd": f[2], "dir": f[3],
+            "session": f[4], "window": f[5], "window_name": f[6],
         })
+    return panes
+
+
+def discover() -> list[dict]:
+    procs, children = read_processes()
+    sessions = []
+    for p in tmux_panes():
+        try:
+            pane_pid = int(p["pid"])
+        except ValueError:
+            continue
+        hit = find_agent(pane_pid, p["cmd"], procs, children)
+        if not hit:
+            continue
+        pid, tag, name = hit
+        wname = p["window_name"]
+        waiting = wname.startswith(WAIT_MARK)
+        label = wname[len(WAIT_MARK):].strip() if waiting else wname
+        if not label or label in ("claude", name):
+            label = os.path.basename(p["dir"]) or name
+        sessions.append({
+            "pane": p["pane"], "tag": tag, "agent": name,
+            "session": p["session"], "window": p["window"],
+            "label": label, "dir": p["dir"],
+            "waiting": waiting,
+            "age": procs.get(pid, {}).get("etime", 0),
+        })
+    # Waiting sessions (need attention) first, then most-recently-started.
+    sessions.sort(key=lambda s: (not s["waiting"], s["age"]))
     return sessions
 
 
+def age(secs: int) -> str:
+    if secs < 60:    return f"{secs}s"
+    if secs < 3600:  return f"{secs // 60}m"
+    if secs < 86400: return f"{secs // 3600}h"
+    return f"{secs // 86400}d"
+
+
 def render_line(s: dict) -> str:
-    """Render the visible columns (the hidden session_id key is prepended in run_fzf)."""
-    dot        = ALIVE if s["alive"] else DEAD
-    tag        = f"{DIM}{AGENT_TAG.get(s.get('agent', 'claude'), '··')}{RESET}"
-    label      = s["track_name"] or (os.path.basename(s["dir"]) if s["dir"] else s["session_id"][:8])
-    name       = label[:36]
-    status_str = STATUS_COLOR.get(s["status"], s["status"])
-    checks_str = s.get("checks") or f"{DIM}—{RESET}"
-    age_str    = age(s["last_ts"]) if s["last_ts"] else "?"
-    task_str   = s["task"][:40] if s["task"] else f"{DIM}{os.path.basename(s['dir'])}{RESET}"
-    return f"{dot} {tag}  {name:<38}  {status_str:<24}  {checks_str:<16}  {age_str:<5}  {task_str}"
+    dot    = f"{YELLOW}●{RESET}" if s["waiting"] else f"{GREEN}●{RESET}"
+    tag    = f"{DIM}{s['tag']}{RESET}"
+    name   = s["label"][:36]
+    status = f"{YELLOW}waiting{RESET}" if s["waiting"] else f"{GREEN}active{RESET}"
+    loc    = f"{s['session']}:{s['window']}"
+    dirs   = f"{DIM}{s['dir']}{RESET}"
+    return f"{dot} {tag}  {name:<38}  {status:<18}  {age(s['age']):<5}  {loc:<20}  {dirs}"
 
 
 def run_fzf(sessions: list[dict]) -> dict | None:
-    # Each line is "<session_id>\t<rendered>"; fzf shows fields 2.. and uses
-    # field 1 for the preview command, so selection carries the id unambiguously.
-    by_id = {s["session_id"]: s for s in sessions}
-    lines = [f"{s['session_id']}\t{render_line(s)}" for s in sessions]
+    # Each line is "<pane_id>\t<rendered>"; fzf shows fields 2.. and passes
+    # field 1 to the preview, so the selection carries the pane id.
+    by_pane = {s["pane"]: s for s in sessions}
+    lines = [f"{s['pane']}\t{render_line(s)}" for s in sessions]
     try:
         r = subprocess.run(
             ["fzf", "--ansi", "--no-sort", "--reverse", "--border=rounded",
              "--delimiter=\t", "--with-nth=2..",
-             "--prompt=  claude › ", "--header=Enter: jump to agent   Esc: dismiss",
+             "--prompt=  agents › ", "--header=Enter: jump to agent   Esc: dismiss",
              "--height=100%", "--margin=1,2",
              "--preview", "claude-session-preview {1}",
              "--preview-window", "right:50%:wrap"],
@@ -152,22 +237,41 @@ def run_fzf(sessions: list[dict]) -> dict | None:
         sys.exit(1)
     if r.returncode != 0:
         return None
-    sid = r.stdout.decode().split("\t", 1)[0].strip()
-    return by_id.get(sid)
+    pane = r.stdout.decode().split("\t", 1)[0].strip()
+    return by_pane.get(pane)
 
 
-def attach(s: dict, live_panes: set[str]) -> None:
-    pane = s.get("pane", "")
-    if not pane or pane not in live_panes:
-        print(f"Session '{s['track_name']}' is no longer live.", file=sys.stderr)
+def pane_exists(pane: str) -> bool:
+    try:
+        out = subprocess.check_output(
+            ["tmux", "list-panes", "-a", "-F", "#{pane_id}"],
+            stderr=subprocess.DEVNULL, text=True,
+        )
+        return pane in out.split()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
+
+
+def pane_session(pane: str) -> str | None:
+    try:
+        out = subprocess.check_output(
+            ["tmux", "display-message", "-p", "-t", pane, "#{session_name}"],
+            stderr=subprocess.DEVNULL, text=True,
+        )
+        return out.strip() or None
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+
+
+def attach(s: dict) -> None:
+    pane = s["pane"]
+    if not pane_exists(pane):
+        print(f"Session '{s['label']}' is no longer live.", file=sys.stderr)
         sys.exit(1)
-
     session = pane_session(pane)
     if not session:
         print(f"Pane {pane} vanished.", file=sys.stderr)
         sys.exit(1)
-
-    # Jump straight to the agent's pane: its session, then its window + pane.
     if os.environ.get("TMUX"):
         subprocess.run(["tmux", "switch-client", "-t", session], stderr=subprocess.DEVNULL)
         subprocess.run(["tmux", "select-window", "-t", pane], stderr=subprocess.DEVNULL)
@@ -179,23 +283,20 @@ def attach(s: dict, live_panes: set[str]) -> None:
 
 
 def main() -> None:
-    list_only = "--list" in sys.argv
-    live      = tmux_live_panes()
-    sessions  = load_tracked(live)
-    sessions.sort(key=lambda s: (STATUS_ORDER.get(s["status"], 99), -s["last_ts"]))
+    sessions = discover()
 
     if not sessions:
-        print("No agent sessions found.")
+        print("No live agent sessions found.")
         sys.exit(0)
 
-    if list_only:
+    if "--list" in sys.argv:
         for s in sessions:
             print(render_line(s))
         sys.exit(0)
 
     selected = run_fzf(sessions)
     if selected:
-        attach(selected, live)
+        attach(selected)
 
 
 if __name__ == "__main__":
