@@ -8,6 +8,20 @@
 #   - Local entry with a new name: adds the hook
 #   - Local entry with an existing name: replaces the base entry wholesale
 #   - Local entry with enabled: false: disables the base hook on this machine
+#
+# Entry fields:
+#   name       unique id (merge key)
+#   on         canonical events: session_start, prompt_submit, turn_end,
+#              session_end, notification, tool_pre
+#   command    executable run with the CanonicalEvent envelope on stdin
+#   harness    optional allowlist: [claude], [cursor], or both (default: all)
+#   enabled    optional; false disables the hook
+#   decision   optional; true = this hook's stdout is a canonical decision
+#              ({"decision":"block"|"allow","reason","context"}). hooks-runner
+#              picks the first block (registry order) and translates it into the
+#              invoking harness's native deny/block contract. Observers omit this
+#              and stay on the neutral exit-0 path. Note: a turn_end block is
+#              Claude-only — Cursor's stop hook is observe-only and cannot block.
 
 hooks:
   - name: session-track
@@ -42,3 +56,10 @@ hooks:
     on: [turn_end]
     command: engineering-autocommit
     harness: [claude, cursor]
+  # Decision hook: deny raw git writes in GitButler repos, cross-harness.
+  # Claude PreToolUse(Bash) and Cursor beforeShellExecution both map to tool_pre.
+  - name: gitbutler-git
+    on: [tool_pre]
+    command: claude-hook-gitbutler-git
+    harness: [claude, cursor]
+    decision: true

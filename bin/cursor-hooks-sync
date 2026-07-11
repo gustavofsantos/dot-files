@@ -1,0 +1,199 @@
+#!/usr/bin/env ruby
+# cursor-hooks-sync — generate ~/.cursor/hooks.json from the unified registry.
+#
+# The source of truth is ~/.agent-hooks.yml (+ local overlay), the same registry
+# hooks-runner dispatches from. Cursor can't consume it directly, so this derives
+# the thin hooks.json Cursor needs: for every canonical event that has at least
+# one Cursor-applicable hook, it wires the matching Cursor event name(s) to
+# `hooks-runner cursor <event>`. The runner then normalises Cursor's payload,
+# dispatches the registry hooks, and (for decision hooks) speaks Cursor's native
+# deny/block contract back out. Adding a hook = editing .agent-hooks.yml; re-run
+# this to regenerate the wiring. Mirrors skills-sync.
+#
+# Usage:
+#   cursor-hooks-sync [--source FILE] [--local FILE] [--dest FILE] [--dry-run]
+#
+# Defaults:
+#   --source  ~/.agent-hooks.yml
+#   --local   ~/.agent-hooks.local.yml
+#   --dest    ~/.cursor/hooks.json
+#
+# Idempotent, and safe next to hand-made Cursor config: only entries whose
+# command is `hooks-runner cursor …` (our sentinel) are ever added, replaced, or
+# pruned. Hand-written commands and hand-written event keys are left untouched.
+#
+# See CLAUDE.md ("agent-hooks" / "Cross-harness skills") for the model.
+
+require "date"
+require "json"
+require "fileutils"
+require "time"
+require "yaml"
+
+SENTINEL_PREFIX = "hooks-runner cursor ".freeze
+
+# One canonical event maps to one or more raw Cursor event names. notification
+# has no Cursor equivalent, so it is intentionally absent.
+CANONICAL_TO_CURSOR = {
+  "turn_end" => %w[stop],
+  "session_start" => %w[sessionStart],
+  "prompt_submit" => %w[beforeSubmitPrompt],
+  "session_end" => %w[sessionEnd],
+  "tool_pre" => %w[beforeShellExecution beforeMCPExecution],
+}.freeze
+
+def home
+  ENV.fetch("HOME", Dir.home)
+end
+
+def parse_args(argv)
+  opts = {
+    source: File.join(home, ".agent-hooks.yml"),
+    local: File.join(home, ".agent-hooks.local.yml"),
+    dest: File.join(home, ".cursor", "hooks.json"),
+    dry_run: false,
+  }
+  until argv.empty?
+    arg = argv.shift
+    case arg
+    when "--source" then opts[:source] = argv.shift
+    when "--local"  then opts[:local] = argv.shift
+    when "--dest"   then opts[:dest] = argv.shift
+    when "--dry-run" then opts[:dry_run] = true
+    when "-h", "--help"
+      puts File.read(__FILE__).lines[1..27].map { |l| l.sub(/^# ?/, "") }.join
+      exit 0
+    else
+      warn "cursor-hooks-sync: unknown argument #{arg.inspect}"
+      exit 2
+    end
+  end
+  opts
+end
+
+# YAML parses a bare `on:` key as the boolean `true` (the Norway/boolean-key
+# gotcha), so retag it back to the string "on" — same normalisation hooks-runner
+# applies, keeping the two readers of this registry in agreement.
+def normalize_hook(hook)
+  return hook unless hook.is_a?(Hash)
+
+  hook.each_with_object({}) do |(key, value), normalized|
+    normalized[key == true ? "on" : key.to_s] = value
+  end
+end
+
+def load_hooks_yaml(path)
+  return [] unless File.file?(path)
+
+  data = YAML.safe_load_file(path, permitted_classes: [Date, Time], aliases: true) || {}
+  hooks = data["hooks"] || []
+  return [] unless hooks.is_a?(Array)
+
+  hooks.select { |h| h.is_a?(Hash) }.map { |h| normalize_hook(h) }
+rescue StandardError
+  []
+end
+
+# Merge base + local by name (local replaces base wholesale; local enabled:false
+# disables) — same semantics as hooks-runner.
+def merge_hooks(source, local)
+  base = load_hooks_yaml(source)
+  overlay = load_hooks_yaml(local)
+  local_names = overlay.filter_map { |h| h["name"] }
+  base.reject { |h| local_names.include?(h["name"]) } + overlay
+end
+
+def applies_to_cursor?(hook)
+  enabled = hook.key?("enabled") ? hook["enabled"] : true
+  return false unless enabled == true
+
+  harness = hook["harness"]
+  harness.nil? || (harness.is_a?(Array) && harness.include?("cursor"))
+end
+
+# The set of raw Cursor event names that need wiring, derived from the registry.
+def cursor_events(source, local)
+  events = []
+  merge_hooks(source, local).each do |hook|
+    next unless applies_to_cursor?(hook)
+
+    Array(hook["on"]).each do |canonical|
+      events.concat(CANONICAL_TO_CURSOR.fetch(canonical, []))
+    end
+  end
+  events.uniq.sort
+end
+
+def load_existing(dest)
+  return {} unless File.file?(dest)
+
+  parsed = JSON.parse(File.read(dest))
+  parsed.is_a?(Hash) ? parsed : {}
+rescue JSON::ParserError
+  {}
+end
+
+def sentinel?(entry, event)
+  entry.is_a?(Hash) && entry["command"] == "#{SENTINEL_PREFIX}#{event}"
+end
+
+def ours?(entry)
+  entry.is_a?(Hash) && entry["command"].is_a?(String) && entry["command"].start_with?(SENTINEL_PREFIX)
+end
+
+# Merge desired generated wiring into any existing (possibly hand-made) config:
+#   - strip every entry we previously generated (sentinel command) so stale ones
+#     are pruned and live ones are refreshed,
+#   - keep all hand-made entries and hand-made event keys verbatim,
+#   - append our sentinel entry for each desired event.
+def build_config(existing, desired_events)
+  config = existing.dup
+  config["version"] = existing.fetch("version", 1)
+  hooks = (existing["hooks"].is_a?(Hash) ? existing["hooks"] : {}).dup
+
+  # Drop our previously-generated entries from every event key.
+  hooks = hooks.each_with_object({}) do |(event, entries), acc|
+    kept = Array(entries).reject { |e| ours?(e) }
+    acc[event] = kept unless kept.empty?
+  end
+
+  # Re-add the desired sentinel entries.
+  desired_events.each do |event|
+    entries = hooks[event] || []
+    entries << { "command" => "#{SENTINEL_PREFIX}#{event}" } unless entries.any? { |e| sentinel?(e, event) }
+    hooks[event] = entries
+  end
+
+  config["hooks"] = hooks
+  config
+end
+
+def main(argv)
+  opts = parse_args(argv)
+
+  unless File.file?(opts[:source])
+    warn "cursor-hooks-sync: source not found: #{opts[:source]}"
+    return 1
+  end
+
+  desired = cursor_events(opts[:source], opts[:local])
+  existing = load_existing(opts[:dest])
+  config = build_config(existing, desired)
+
+  puts "cursor-hooks-sync -> #{opts[:dest]}"
+  desired.each { |e| puts "  wire  #{e} -> #{SENTINEL_PREFIX}#{e}" }
+
+  rendered = JSON.pretty_generate(config) + "\n"
+  if opts[:dry_run]
+    puts rendered
+    return 0
+  end
+
+  FileUtils.mkdir_p(File.dirname(opts[:dest]))
+  tmp = "#{opts[:dest]}.#{Process.pid}.tmp"
+  File.write(tmp, rendered)
+  File.rename(tmp, opts[:dest])
+  0
+end
+
+exit(main(ARGV)) if File.realpath($PROGRAM_NAME) == File.realpath(__FILE__)

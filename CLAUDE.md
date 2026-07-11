@@ -83,12 +83,55 @@ harness picks the agent that fits) or a Claude-only tool.
 | `skills-sync` | Derive per-harness skill trees from `.claude/skills/` per `harness-profiles.yml`. Idempotent; `--source`, `--profiles`, `--harness NAME`, `--dry-run`. |
 
 Cursor reuses these same skills/agents by loading Claude's config directly (configured
-outside this repo). Hooks are *not* yet unified into the harness — that work is scoped
-separately (see the hooks handoff / the `hooks-runner` output-adapter gap).
+outside this repo). Hooks are unified on the same one-source/per-harness-adapter model
+— see "Agent hooks" below: `hooks-runner` is the input+output adapter, `.agent-hooks.yml`
+the single registry, and `cursor-hooks-sync` the generated Cursor wiring (the analog of
+`skills-sync`). Observers run cross-harness; blocking hooks that both harnesses can veto
+(tool-use) do too. Turn-end blocking stays Claude-only because Cursor's stop hook is
+observe-only (can't block a turn from ending).
 
 The `.claude/settings.json` merges into the global `~/.claude/settings.json` on install.
 Global settings win on scalar/object conflicts; `permissions.allow/deny/ask` arrays are
 unioned.
+
+## Agent hooks
+
+`~/.agent-hooks.yml` is the single registry of hooks run across harnesses, dispatched by
+`bin/hooks-runner` (Ruby). Each harness invokes `hooks-runner <harness> <event>`; the
+runner maps the raw event to a canonical name (`Stop`/`stop` → `turn_end`, Claude
+`PreToolUse` / Cursor `beforeShellExecution`,`beforeMCPExecution` → `tool_pre`, …),
+normalises the payload into one `CanonicalEvent` envelope (Claude `session_id`/`cwd`/
+`tool_input` vs Cursor `conversation_id`/`workspace_roots[0]`/`command`), and runs each
+matching hook — filtered by a `harness: [claude, cursor]` allowlist — with the envelope on
+stdin. Local machine hooks overlay by name via `~/.agent-hooks.local.yml`.
+
+**Input adapter (observers).** Most hooks just observe: their stdout is suppressed and the
+runner stays neutral (exit 0), so they never block a harness. session-track, session-log,
+notify, checks-snapshot, engineering-autocommit are all observers, cross-harness already.
+
+**Output adapter (decision hooks).** A hook with `decision: true` in the registry emits a
+canonical decision on stdout — `{"decision":"block"|"allow","reason","context"}` — and the
+runner translates the first block (registry order) into the invoking harness's *native*
+contract: Claude `tool_pre` → `permissionDecision:"deny"`; Claude `turn_end`/`prompt_submit`
+→ `decision:"block"` (+ `additionalContext`); Cursor `tool_pre` → `permission:"deny"`
+(`agentMessage`/`userMessage`); Cursor `prompt_submit` → `continue:false`. A `turn_end`
+block is Claude-only: Cursor's stop hook is observe-only and can't block a turn from ending,
+so such a decision is dropped with a logged note. This is why turn-end blockers stay native
+in `settings.json` (see "GitButler provenance hooks"), while the tool-veto (`gitbutler-git`)
+runs on the unified path and blocks in *both* harnesses from one registry entry.
+
+**Generated Cursor wiring.** `cursor-hooks-sync` derives `~/.cursor/hooks.json` from the
+registry the way `skills-sync` derives skills: for every canonical event with a
+Cursor-applicable hook it wires the matching Cursor event(s) to `hooks-runner cursor
+<event>`. Only its own `hooks-runner cursor …` entries are added/replaced/pruned, so
+hand-made Cursor hooks in the same file are never touched. `install-claude.sh` runs it
+after `skills-sync`. (Cursor also loads Claude's config directly for skills/agents; the
+generated `hooks.json` is what wires the hook *events*.)
+
+| Script | What it does |
+|--------|--------------|
+| `hooks-runner` | Dispatch `~/.agent-hooks.yml` hooks for a `<harness> <event>`; input+output adapter (envelope in, canonical decision → native contract out). |
+| `cursor-hooks-sync` | Generate `~/.cursor/hooks.json` from the registry. Idempotent; `--source`, `--local`, `--dest`, `--dry-run`. |
 
 ## Agent checks
 
@@ -102,11 +145,15 @@ A single global registry, `~/.checks.yml`, enrolls the repositories that run che
 | `checks-runner` | Run a snapshot's checks; `--watch` for daemon mode |
 | `checks-status` | Show the latest result for a session/repo (`--json`, `--oneline`) |
 
-Session navigation is independent of checks, and spans both Claude Code and Cursor Agent. A `SessionStart`/`UserPromptSubmit` hook (`claude-hook-session-track`) registers *every* Claude session — however launched — into `~/.agent-sessions/<id>.json` with the exact tmux pane it runs in; `SessionEnd` (`claude-hook-session-end`) marks it ended. Cursor can mirror this: the `cursor-hook-session-track`/`cursor-hook-session-end` scripts (kept in `bin/`, dispatched via `hooks-runner cursor <event>`) translate Cursor's `conversation_id`/`workspace_roots` into the *same* `~/.agent-sessions/<id>.json` schema (tagged `agent:"cursor"`), with `beforeSubmitPrompt` creating-if-missing so a session registers on its first prompt. The dotfiles no longer ship a `~/.cursor/hooks.json` to wire this — Cursor loads Claude's config instead, so wire those hooks there if you want Cursor sessions tracked. Each agent turn also appends structured events to `~/.agent-sessions/<id>.jsonl` via `claude-hook-session-log` (`turn_end`, `message`, `file_change`, `session_start`, `session_end`). `claude-sessions` (`bind a` in tmux) lists both tools in one picker (a `cc`/`cu` tag distinguishes them), keys liveness on whether that pane still exists, previews the session log (plus live pane), and Enter jumps straight to the pane running the agent. Works for a bare `claude` or `cursor-agent` in any pane.
+Session navigation is independent of checks, and spans both Claude Code and Cursor Agent. A `SessionStart`/`UserPromptSubmit` hook (`claude-hook-session-track`) registers *every* Claude session — however launched — into `~/.agent-sessions/<id>.json` with the exact tmux pane it runs in; `SessionEnd` (`claude-hook-session-end`) marks it ended. Cursor can mirror this: the `cursor-hook-session-track`/`cursor-hook-session-end` scripts (kept in `bin/`, dispatched via `hooks-runner cursor <event>`) translate Cursor's `conversation_id`/`workspace_roots` into the *same* `~/.agent-sessions/<id>.json` schema (tagged `agent:"cursor"`), with `beforeSubmitPrompt` creating-if-missing so a session registers on its first prompt. The `~/.cursor/hooks.json` that wires these Cursor events is generated by `cursor-hooks-sync` from the shared registry (see "Agent hooks"), so Cursor session tracking is wired on install without hand-editing. Each agent turn also appends structured events to `~/.agent-sessions/<id>.jsonl` via `claude-hook-session-log` (`turn_end`, `message`, `file_change`, `session_start`, `session_end`). `claude-sessions` (`bind a` in tmux) lists both tools in one picker (a `cc`/`cu` tag distinguishes them), keys liveness on whether that pane still exists, previews the session log (plus live pane), and Enter jumps straight to the pane running the agent. Works for a bare `claude` or `cursor-agent` in any pane.
 
 ## GitButler provenance hooks
 
-Two hooks in `bin/`, wired via `.claude/settings.json` (merged into the global settings on install), enforce the `gitbutler-provenance` skill in repos with a `.git/gitbutler/` dir — and no-op instantly everywhere else. `claude-hook-gitbutler-stop` (`Stop`) blocks a turn from ending while the tree is dirty, at most once per turn (`stop_hook_active`), so a lane question can still reach the user. `claude-hook-gitbutler-git` (`PreToolUse` on Bash) denies raw git write commands (`commit`, `add`, `push`, `checkout`, `rebase`, …) — mutations must go through the `but` CLI; read-only git passes.
+Two hooks in `bin/` enforce the `gitbutler-provenance` skill in repos with a `.git/gitbutler/` dir — and no-op instantly everywhere else.
+
+`claude-hook-gitbutler-git` denies raw git write commands (`commit`, `add`, `push`, `checkout`, `rebase`, …) — mutations must go through the `but` CLI; read-only git passes. It runs on the **unified path** as a `tool_pre` decision hook (`.agent-hooks.yml`, `harness: [claude, cursor]`): `settings.json` wires `PreToolUse` on Bash to `hooks-runner claude PreToolUse`, and the generated `~/.cursor/hooks.json` wires `beforeShellExecution`/`beforeMCPExecution` — so the same guard denies raw git writes whether GitButler is driven from Claude Code or Cursor. The hook emits a canonical `{"decision":"block",…}`; the runner translates it to each harness's deny contract.
+
+`claude-hook-gitbutler-stop` (`Stop`) blocks a turn from ending while the tree is dirty, at most once per turn (`stop_hook_active`), so a lane question can still reach the user. It stays wired **natively** in `.claude/settings.json` and is Claude-only by necessity: Cursor's stop hook is observe-only and cannot block a turn from ending, so routing it through the runner would gain nothing cross-harness.
 
 ## AI session token stats
 

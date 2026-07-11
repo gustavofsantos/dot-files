@@ -28,6 +28,19 @@ else
   echo "Syncing skills to other harnesses... skipped (no ruby)"
 fi
 
+echo "Generating Cursor hooks wiring..."
+# Derive ~/.cursor/hooks.json from ~/.agent-hooks.yml (+ local overlay), so the
+# unified registry drives Cursor's hooks the way skills-sync drives its skills.
+# Reads the linked ~/.agent-hooks.yml (link-home-files.sh runs earlier), so local
+# overlays are honoured; only our `hooks-runner cursor …` entries are touched.
+if command -v ruby >/dev/null 2>&1; then
+  ruby "$DOTFILES_DIR/bin/cursor-hooks-sync" >/dev/null \
+    && echo "Generating Cursor hooks wiring... OK" \
+    || echo "Generating Cursor hooks wiring... FAILED (non-fatal)"
+else
+  echo "Generating Cursor hooks wiring... skipped (no ruby)"
+fi
+
 echo "Installing custom subagents..."
 mkdir -p "$HOME/.claude/agents"
 for agent in "$DOTFILES_DIR"/.claude/agents/*; do

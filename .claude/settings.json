@@ -109,7 +109,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "claude-hook-gitbutler-git"
+            "command": "hooks-runner claude PreToolUse"
           }
         ]
       }

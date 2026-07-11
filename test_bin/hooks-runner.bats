@@ -685,3 +685,335 @@ YAML
   [ "$status" -eq 0 ]
   [ -f "$MARKER/notify" ]
 }
+
+# ── tool_pre canonical event mapping ──────────────────────────────────────────
+
+@test "claude PreToolUse maps to tool_pre" {
+  write_base <<YAML
+hooks:
+  - name: gate
+    on: [tool_pre]
+    command: "touch \$MARKER/tool_pre"
+YAML
+
+  echo '{"tool_name":"Bash","tool_input":{"command":"ls"}}' | "$SCRIPT" claude PreToolUse
+  [ -f "$MARKER/tool_pre" ]
+}
+
+@test "cursor beforeShellExecution maps to tool_pre" {
+  write_base <<YAML
+hooks:
+  - name: gate
+    on: [tool_pre]
+    command: "touch \$MARKER/tool_pre"
+YAML
+
+  echo '{"conversation_id":"c1","command":"ls","workspace_roots":["/proj"]}' \
+    | "$SCRIPT" cursor beforeShellExecution
+  [ -f "$MARKER/tool_pre" ]
+}
+
+@test "cursor beforeMCPExecution maps to tool_pre" {
+  write_base <<YAML
+hooks:
+  - name: gate
+    on: [tool_pre]
+    command: "touch \$MARKER/tool_pre"
+YAML
+
+  echo '{"conversation_id":"c1","tool_name":"search"}' | "$SCRIPT" cursor beforeMCPExecution
+  [ -f "$MARKER/tool_pre" ]
+}
+
+@test "claude tool_pre envelope carries tool and tool_input.command" {
+  write_base <<YAML
+hooks:
+  - name: capture
+    on: [tool_pre]
+    command: "cat > \$MARKER/payload"
+YAML
+
+  echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m x"}}' \
+    | "$SCRIPT" claude PreToolUse
+
+  jq -e '.tool == "Bash"' "$MARKER/payload" >/dev/null
+  jq -e '.tool_input.command == "git commit -m x"' "$MARKER/payload" >/dev/null
+}
+
+@test "cursor beforeShellExecution envelope normalises command into tool_input.command" {
+  write_base <<YAML
+hooks:
+  - name: capture
+    on: [tool_pre]
+    command: "cat > \$MARKER/payload"
+YAML
+
+  echo '{"conversation_id":"c1","command":"git push","workspace_roots":["/proj"]}' \
+    | "$SCRIPT" cursor beforeShellExecution
+
+  jq -e '.tool == "Bash"' "$MARKER/payload" >/dev/null
+  jq -e '.tool_input.command == "git push"' "$MARKER/payload" >/dev/null
+  jq -e '.cwd == "/proj"' "$MARKER/payload" >/dev/null
+}
+
+# ── Decision protocol: output adapter ─────────────────────────────────────────
+# A decision hook prints {"decision":"block","reason":...} on stdout; the runner
+# translates it into each harness's native contract on the runner's stdout.
+
+# Emit a canonical block decision from stdin's command.
+block_hook() { echo 'echo "{\"decision\":\"block\",\"reason\":\"nope\"}"'; }
+
+@test "claude tool_pre block → permissionDecision deny JSON on stdout, exit 0" {
+  write_base <<YAML
+hooks:
+  - name: gate
+    on: [tool_pre]
+    decision: true
+    command: $(block_hook)
+YAML
+
+  run "$SCRIPT" claude PreToolUse <<< '{"tool_name":"Bash","tool_input":{"command":"git commit"}}'
+  [ "$status" -eq 0 ]
+  jq -e '.hookSpecificOutput.hookEventName == "PreToolUse"' <<< "$output" >/dev/null
+  jq -e '.hookSpecificOutput.permissionDecision == "deny"' <<< "$output" >/dev/null
+  jq -e '.hookSpecificOutput.permissionDecisionReason == "nope"' <<< "$output" >/dev/null
+}
+
+@test "cursor tool_pre block → permission deny JSON with agentMessage/userMessage" {
+  write_base <<YAML
+hooks:
+  - name: gate
+    on: [tool_pre]
+    decision: true
+    command: $(block_hook)
+YAML
+
+  run "$SCRIPT" cursor beforeShellExecution <<< '{"conversation_id":"c1","command":"git commit","workspace_roots":["/p"]}'
+  [ "$status" -eq 0 ]
+  jq -e '.permission == "deny"' <<< "$output" >/dev/null
+  jq -e '.agentMessage == "nope"' <<< "$output" >/dev/null
+  jq -e '.userMessage == "nope"' <<< "$output" >/dev/null
+}
+
+@test "claude turn_end block → decision block JSON on stdout" {
+  write_base <<YAML
+hooks:
+  - name: gate
+    on: [turn_end]
+    decision: true
+    command: 'echo "{\"decision\":\"block\",\"reason\":\"finish first\",\"context\":\"do X\"}"'
+YAML
+
+  run "$SCRIPT" claude Stop <<< '{"session_id":"s1"}'
+  [ "$status" -eq 0 ]
+  jq -e '.decision == "block"' <<< "$output" >/dev/null
+  jq -e '.reason == "finish first"' <<< "$output" >/dev/null
+  jq -e '.hookSpecificOutput.hookEventName == "Stop"' <<< "$output" >/dev/null
+  jq -e '.hookSpecificOutput.additionalContext == "do X"' <<< "$output" >/dev/null
+}
+
+@test "cursor prompt_submit block → continue false JSON" {
+  write_base <<YAML
+hooks:
+  - name: gate
+    on: [prompt_submit]
+    decision: true
+    command: $(block_hook)
+YAML
+
+  run "$SCRIPT" cursor beforeSubmitPrompt <<< '{"conversation_id":"c1","workspace_roots":["/p"]}'
+  [ "$status" -eq 0 ]
+  jq -e '.continue == false' <<< "$output" >/dev/null
+  jq -e '.agentMessage == "nope"' <<< "$output" >/dev/null
+}
+
+@test "cursor turn_end block → dropped (stop is observe-only), neutral exit 0, no stdout JSON" {
+  write_base <<YAML
+hooks:
+  - name: gate
+    on: [turn_end]
+    decision: true
+    command: $(block_hook)
+YAML
+
+  run "$SCRIPT" cursor stop <<< '{"conversation_id":"c1"}'
+  [ "$status" -eq 0 ]
+  # Nothing parseable on stdout — the block cannot be honored by Cursor stop.
+  run bash -c "$SCRIPT cursor stop <<< '{\"conversation_id\":\"c1\"}' 2>/dev/null"
+  [ -z "$output" ]
+}
+
+@test "no decision hook → runner stays neutral (exit 0, no stdout)" {
+  write_base <<YAML
+hooks:
+  - name: observer
+    on: [tool_pre]
+    command: "true"
+YAML
+
+  run bash -c "$SCRIPT claude PreToolUse <<< '{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}' 2>/dev/null"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "decision hook that allows (empty stdout) → neutral, no block emitted" {
+  write_base <<YAML
+hooks:
+  - name: gate
+    on: [tool_pre]
+    decision: true
+    command: "true"
+YAML
+
+  run bash -c "$SCRIPT claude PreToolUse <<< '{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}' 2>/dev/null"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "first block wins when multiple decision hooks return block" {
+  write_base <<YAML
+hooks:
+  - name: gate-a
+    on: [tool_pre]
+    decision: true
+    command: 'echo "{\"decision\":\"block\",\"reason\":\"first\"}"'
+  - name: gate-b
+    on: [tool_pre]
+    decision: true
+    command: 'echo "{\"decision\":\"block\",\"reason\":\"second\"}"'
+YAML
+
+  run "$SCRIPT" claude PreToolUse <<< '{"tool_name":"Bash","tool_input":{"command":"x"}}'
+  jq -e '.hookSpecificOutput.permissionDecisionReason == "first"' <<< "$output" >/dev/null
+}
+
+@test "an allowing decision hook before a blocking one does not veto the block" {
+  write_base <<YAML
+hooks:
+  - name: gate-allow
+    on: [tool_pre]
+    decision: true
+    command: 'echo "{\"decision\":\"allow\"}"'
+  - name: gate-block
+    on: [tool_pre]
+    decision: true
+    command: 'echo "{\"decision\":\"block\",\"reason\":\"blocked\"}"'
+YAML
+
+  run "$SCRIPT" claude PreToolUse <<< '{"tool_name":"Bash","tool_input":{"command":"x"}}'
+  jq -e '.hookSpecificOutput.permissionDecision == "deny"' <<< "$output" >/dev/null
+}
+
+@test "observer runs alongside a decision hook and the block is still emitted" {
+  write_base <<YAML
+hooks:
+  - name: observer
+    on: [tool_pre]
+    command: "touch \$MARKER/observed"
+  - name: gate
+    on: [tool_pre]
+    decision: true
+    command: $(block_hook)
+YAML
+
+  run "$SCRIPT" claude PreToolUse <<< '{"tool_name":"Bash","tool_input":{"command":"x"}}'
+  [ -f "$MARKER/observed" ]
+  jq -e '.hookSpecificOutput.permissionDecision == "deny"' <<< "$output" >/dev/null
+}
+
+@test "decision hook stdout is not leaked as stderr diagnostics" {
+  write_base <<YAML
+hooks:
+  - name: gate
+    on: [tool_pre]
+    decision: true
+    command: 'echo "{\"decision\":\"allow\"}"; exit 1'
+YAML
+
+  # Exit 1 marks the hook failed; its stdout (the decision JSON) must not appear
+  # on the runner's stderr as if it were an error message.
+  run bash -c "$SCRIPT claude PreToolUse <<< '{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"x\"}}' 2>&1 1>/dev/null"
+  [[ "$output" != *"decision"* ]]
+}
+
+@test "decision trace records decision and blocked_by in summary" {
+  write_base <<YAML
+hooks:
+  - name: gate
+    on: [tool_pre]
+    decision: true
+    command: $(block_hook)
+YAML
+
+  echo '{"session_id":"dsess","tool_name":"Bash","tool_input":{"command":"x"}}' \
+    | "$SCRIPT" claude PreToolUse >/dev/null
+
+  TRACE=$(find "$AGENT_HOOKS_LOG_DIR/dsess" -name '*-claude-tool_pre.json' | head -1)
+  [ -n "$TRACE" ]
+  jq -e '.summary.decision == "block"' "$TRACE" >/dev/null
+  jq -e '.summary.blocked_by == "gate"' "$TRACE" >/dev/null
+}
+
+# ── Integration: real gitbutler-git decision hook through the runner ───────────
+
+@test "integration: gitbutler-git denies git commit via runner in a gitbutler repo (claude)" {
+  REPO=$(mktemp -d)
+  git -C "$REPO" init -q
+  mkdir -p "$REPO/.git/gitbutler"
+
+  write_base <<YAML
+hooks:
+  - name: gitbutler-git
+    on: [tool_pre]
+    decision: true
+    command: claude-hook-gitbutler-git
+    harness: [claude, cursor]
+YAML
+
+  run "$SCRIPT" claude PreToolUse <<< "{\"cwd\":\"$REPO\",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"git commit -m x\"}}"
+  [ "$status" -eq 0 ]
+  jq -e '.hookSpecificOutput.permissionDecision == "deny"' <<< "$output" >/dev/null
+
+  rm -rf "$REPO"
+}
+
+@test "integration: gitbutler-git allows read-only git via runner (cursor)" {
+  REPO=$(mktemp -d)
+  git -C "$REPO" init -q
+  mkdir -p "$REPO/.git/gitbutler"
+
+  write_base <<YAML
+hooks:
+  - name: gitbutler-git
+    on: [tool_pre]
+    decision: true
+    command: claude-hook-gitbutler-git
+    harness: [claude, cursor]
+YAML
+
+  run bash -c "$SCRIPT cursor beforeShellExecution <<< '{\"conversation_id\":\"c1\",\"command\":\"git status\",\"workspace_roots\":[\"$REPO\"]}' 2>/dev/null"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+
+  rm -rf "$REPO"
+}
+
+@test "integration: gitbutler-git no-ops via runner outside a gitbutler repo" {
+  REPO=$(mktemp -d)
+  git -C "$REPO" init -q
+
+  write_base <<YAML
+hooks:
+  - name: gitbutler-git
+    on: [tool_pre]
+    decision: true
+    command: claude-hook-gitbutler-git
+    harness: [claude, cursor]
+YAML
+
+  run bash -c "$SCRIPT claude PreToolUse <<< '{\"cwd\":\"$REPO\",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"git commit -m x\"}}' 2>/dev/null"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+
+  rm -rf "$REPO"
+}

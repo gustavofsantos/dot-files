@@ -1,5 +1,21 @@
 # Handoff: unify hooks across Claude Code and Cursor
 
+> **Status: implemented.** The output adapter, the `tool_pre` canonical event,
+> the `cursor-hooks-sync` generator (wired into `install-claude.sh`), and the
+> migration of `gitbutler-git` onto the unified path all landed. See CLAUDE.md
+> "Agent hooks" for the shipped model, and `test_bin/hooks-runner.bats` /
+> `test_bin/cursor-hooks-sync.bats` for coverage.
+>
+> **Key finding that reshaped the plan:** Cursor's `stop` hook response type is
+> `void` — it *cannot* block a turn from ending, and Cursor supports no context
+> injection. So the handoff's "dirty-tree Stop blocks in both harnesses" goal is
+> not achievable. The genuine cross-harness blocker is **tool vetoing** (Claude
+> `PreToolUse` ↔ Cursor `beforeShellExecution`), which is what `gitbutler-git`
+> now proves end-to-end in both harnesses. `gitbutler-stop` and `decision-gate`
+> are turn-end blockers and stay native/Claude-only, documented as such.
+>
+> The rest of this doc is the original spec, kept for provenance.
+
 Paste this into a fresh session working in the dotfiles repo. It is the hooks
 counterpart to the skills work already landed (`bin/skills-sync` +
 `.claude/harness-profiles.yml`). Start with review, not code.

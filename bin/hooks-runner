@@ -4,11 +4,27 @@
 # Reads the raw event payload on stdin, normalises it into a CanonicalEvent
 # envelope, exports HOOK_HARNESS and HOOK_EVENT, looks up matching hooks from
 # ~/.agent-hooks.yml (+ local overlay), and runs each one with the envelope on
-# stdin. Hook stdout is suppressed; hook stderr is kept for debuggability.
-# The runner always exits 0 (neutral) — it never blocks the harness regardless
-# of individual hook outcomes.
+# stdin.
 #
-# See agent-hooks skill for envelope shape, registry format, dispatch logging.
+# Two kinds of hook:
+#   - Observers (default): stdout is suppressed, exit code ignored; they only
+#     watch. The runner stays neutral for them (exit 0, no stdout).
+#   - Decision hooks (`decision: true` in the registry): their stdout is parsed
+#     as a canonical decision — {"decision":"block"|"allow", "reason", "context"}.
+#     The runner picks the first block (registry order) and translates it into
+#     the *native* contract of the invoking harness (output adapter):
+#       Claude tool_pre     -> stdout permissionDecision:"deny"
+#       Claude turn_end      -> stdout decision:"block" (+ additionalContext)
+#       Claude prompt_submit -> stdout decision:"block" (+ additionalContext)
+#       Cursor tool_pre      -> stdout permission:"deny" (agentMessage/userMessage)
+#       Cursor prompt_submit -> stdout continue:false
+#       Cursor turn_end      -> cannot block (its stop hook is observe-only);
+#                               the decision is dropped with a logged note.
+# When no decision hook blocks, the runner stays neutral (exit 0, no stdout),
+# exactly as before — so observers are unaffected.
+#
+# See CLAUDE.md ("agent-hooks" / "GitButler provenance hooks") for envelope
+# shape, registry format, the decision protocol, and dispatch logging.
 
 require "digest"
 require "fileutils"
@@ -23,10 +39,13 @@ CANONICAL_EVENTS = {
   %w[claude UserPromptSubmit] => "prompt_submit",
   %w[claude SessionEnd] => "session_end",
   %w[claude Notification] => "notification",
+  %w[claude PreToolUse] => "tool_pre",
   %w[cursor stop] => "turn_end",
   %w[cursor sessionStart] => "session_start",
   %w[cursor beforeSubmitPrompt] => "prompt_submit",
   %w[cursor sessionEnd] => "session_end",
+  %w[cursor beforeShellExecution] => "tool_pre",
+  %w[cursor beforeMCPExecution] => "tool_pre",
 }.freeze
 
 def home
@@ -72,7 +91,9 @@ def build_envelope(harness, canonical, raw_event, payload)
       "cwd" => raw["cwd"],
       "transcript_path" => raw["transcript_path"],
       "model" => raw["model"],
-      "prompt" => raw["prompt"]
+      "prompt" => raw["prompt"],
+      "tool" => raw["tool_name"],
+      "tool_input" => raw["tool_input"]
     )
   when "cursor"
     roots = raw["workspace_roots"]
@@ -84,6 +105,7 @@ def build_envelope(harness, canonical, raw_event, payload)
       "model" => nil,
       "prompt" => raw["prompt"]
     )
+    envelope.merge!(cursor_tool_fields(raw_event, raw))
   else
     envelope.merge!(
       "session_id" => nil,
@@ -95,6 +117,20 @@ def build_envelope(harness, canonical, raw_event, payload)
   end
 
   JSON.generate(envelope)
+end
+
+# Normalise a Cursor tool event into the same tool/tool_input shape a Claude
+# PreToolUse payload carries, so a decision hook can read .tool_input.command
+# regardless of harness.
+def cursor_tool_fields(raw_event, raw)
+  case raw_event
+  when "beforeShellExecution"
+    { "tool" => "Bash", "tool_input" => { "command" => raw["command"] } }
+  when "beforeMCPExecution"
+    { "tool" => raw["tool_name"] || "mcp", "tool_input" => raw["tool_input"] || raw }
+  else
+    {}
+  end
 end
 
 def file_stamp(path)
@@ -216,12 +252,73 @@ end
 def run_hook(command, envelope, env)
   started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
   stdout, stderr, status = Open3.capture3(env, "bash", "-c", command, stdin_data: envelope)
-  output = "#{stdout}#{stderr}"
   duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).to_i
-  [status.exitstatus, output, duration_ms]
+  # Hooks emit UTF-8 (decision reasons carry em/en dashes); capture3 hands back
+  # bytes tagged with the external encoding, so retag before any string op.
+  [status.exitstatus, stdout.force_encoding("UTF-8"), stderr.force_encoding("UTF-8"), duration_ms]
 rescue StandardError => e
   duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).to_i
-  [1, e.message, duration_ms]
+  [1, "", e.message, duration_ms]
+end
+
+# Parse a decision hook's stdout into a canonical decision, or nil if it emitted
+# nothing parseable (treated as "no decision" → allow / defer). Recognised shape:
+#   {"decision": "block"|"allow", "reason": "...", "context": "..."}
+def parse_decision(stdout)
+  return nil if stdout.nil? || stdout.strip.empty?
+
+  parsed = JSON.parse(stdout)
+  return nil unless parsed.is_a?(Hash)
+
+  decision = parsed["decision"]
+  return nil unless %w[block allow].include?(decision)
+
+  {
+    "decision" => decision,
+    "reason" => parsed["reason"].to_s,
+    "context" => parsed["context"].to_s,
+  }
+rescue JSON::ParserError
+  nil
+end
+
+# Output adapter: translate a canonical block decision into the invoking
+# harness's native contract, printing to stdout/stderr as required. Returns the
+# process exit code to use. A block is always carried by stdout JSON (exit 0)
+# where the harness supports it, so the runner keeps its neutral exit code.
+def emit_block(harness, canonical, reason, context)
+  reason = "blocked by hooks-runner" if reason.nil? || reason.empty?
+  ctx = context.to_s.empty? ? nil : context.to_s
+
+  case [harness, canonical]
+  when %w[claude tool_pre]
+    out = { "hookSpecificOutput" => {
+      "hookEventName" => "PreToolUse",
+      "permissionDecision" => "deny",
+      "permissionDecisionReason" => reason,
+    } }
+    out["hookSpecificOutput"]["additionalContext"] = ctx if ctx
+    puts JSON.generate(out)
+    0
+  when %w[cursor tool_pre]
+    puts JSON.generate("permission" => "deny", "agentMessage" => reason, "userMessage" => reason)
+    0
+  when %w[claude turn_end], %w[claude prompt_submit]
+    event_name = canonical == "turn_end" ? "Stop" : "UserPromptSubmit"
+    out = { "decision" => "block", "reason" => reason }
+    out["hookSpecificOutput"] = { "hookEventName" => event_name, "additionalContext" => ctx } if ctx
+    puts JSON.generate(out)
+    0
+  when %w[cursor prompt_submit]
+    puts JSON.generate("continue" => false, "agentMessage" => reason, "userMessage" => reason)
+    0
+  when %w[cursor turn_end]
+    warn "hooks-runner: block decision dropped — Cursor's stop hook is observe-only (cannot block turn end): #{reason}"
+    0
+  else
+    warn "hooks-runner: no decision translation for #{harness}/#{canonical}; ignoring block: #{reason}"
+    0
+  end
 end
 
 def tail_lines(text, n = 20)
@@ -234,10 +331,10 @@ def dispatch(harness, raw_event, payload, base_config, local_config, cache_dir, 
   ENV["HOOK_EVENT"] = canonical
 
   hooks = load_hooks(base_config, local_config, cache_dir)
-  return if hooks.nil? || hooks.empty?
+  return 0 if hooks.nil? || hooks.empty?
 
   matched = select_hooks(hooks, canonical, harness)
-  return if matched.empty?
+  return 0 if matched.empty?
 
   envelope = build_envelope(harness, canonical, raw_event, payload)
   envelope = payload if envelope.nil? || envelope.empty?
@@ -283,19 +380,31 @@ def dispatch(harness, raw_event, payload, base_config, local_config, cache_dir, 
   passed = 0
   failed = 0
   hook_env = ENV.to_h
+  block = nil # first block decision wins (registry order)
 
   matched.each_with_index do |hook, i|
     command = hook["command"]
     next if command.nil? || command.to_s.empty?
 
-    exit_code, output, duration_ms = run_hook(command.to_s, envelope, hook_env)
+    exit_code, stdout, stderr, duration_ms = run_hook(command.to_s, envelope, hook_env)
+    is_decision = hook["decision"] == true
+
+    # A decision hook's stdout is its verdict, not diagnostic noise — keep it out
+    # of the re-emitted stderr. Everything else is suppressed as before.
+    combined = is_decision ? stderr : "#{stdout}#{stderr}"
+
     if exit_code.zero?
       passed += 1
       status = "pass"
     else
       failed += 1
       status = "fail"
-      warn output.rstrip unless output.nil? || output.empty?
+      warn combined.rstrip unless combined.nil? || combined.empty?
+    end
+
+    if is_decision && block.nil?
+      decision = parse_decision(stdout)
+      block = { "name" => hook["name"], "reason" => decision["reason"], "context" => decision["context"] } if decision && decision["decision"] == "block"
     end
 
     next unless log_file
@@ -304,20 +413,26 @@ def dispatch(harness, raw_event, payload, base_config, local_config, cache_dir, 
       "status" => status,
       "exit_code" => exit_code,
       "duration_ms" => duration_ms,
-      "output_tail" => tail_lines(output)
+      "output_tail" => tail_lines(combined)
     )
     trace["summary"]["passed"] = passed
     trace["summary"]["failed"] = failed
     write_json_atomic(log_file, trace)
   end
 
-  return unless log_file
+  if log_file
+    trace["finished_at"] = Time.now.to_i
+    trace["summary"]["status"] = failed.positive? ? "fail" : "pass"
+    trace["summary"]["passed"] = passed
+    trace["summary"]["failed"] = failed
+    trace["summary"]["decision"] = block ? "block" : "allow"
+    trace["summary"]["blocked_by"] = block ? block["name"] : nil
+    write_json_atomic(log_file, trace)
+  end
 
-  trace["finished_at"] = Time.now.to_i
-  trace["summary"]["status"] = failed.positive? ? "fail" : "pass"
-  trace["summary"]["passed"] = passed
-  trace["summary"]["failed"] = failed
-  write_json_atomic(log_file, trace)
+  return 0 unless block
+
+  emit_block(harness, canonical, block["reason"], block["context"])
 end
 
 def main(argv)
@@ -336,8 +451,8 @@ def main(argv)
   cache_dir = ENV.fetch("AGENT_HOOKS_CACHE_DIR", File.join(xdg_cache, "agent-hooks"))
   log_dir = ENV.fetch("AGENT_HOOKS_LOG_DIR", File.join(xdg_data, "agent-hooks", "logs"))
 
-  dispatch(harness, raw_event, payload, base_config, local_config, cache_dir, log_dir)
-  0
+  exit_code = dispatch(harness, raw_event, payload, base_config, local_config, cache_dir, log_dir)
+  exit_code.is_a?(Integer) ? exit_code : 0
 end
 
 if File.realpath($PROGRAM_NAME) == File.realpath(__FILE__)

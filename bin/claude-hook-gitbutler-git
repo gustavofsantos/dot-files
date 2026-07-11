@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
-# PreToolUse(Bash) hook: in GitButler-managed repos, deny raw git write
-# commands — mutations must go through the `but` CLI so lane state stays
-# coherent (gitbutler-provenance). Read-only git (status, log, blame,
-# diff, show) passes untouched.
+# tool_pre decision hook (Claude PreToolUse ∪ Cursor beforeShellExecution): in
+# GitButler-managed repos, deny raw git write commands — mutations must go
+# through the `but` CLI so lane state stays coherent (gitbutler-provenance).
+# Read-only git (status, log, blame, diff, show) passes untouched.
+#
+# Runs via hooks-runner, so it reads the canonical envelope on stdin (.cwd,
+# .tool_input.command) and speaks the canonical decision protocol on stdout:
+# a block is {"decision":"block","reason":...}; anything else (empty stdout) is
+# "no decision" → allow. hooks-runner translates the block into each harness's
+# native deny contract. This is harness-agnostic: the same guard fires whether
+# GitButler is driven from Claude Code or Cursor.
 set -euo pipefail
 
 command -v jq >/dev/null 2>&1 || exit 0
@@ -23,7 +30,7 @@ cmd=$(jq -r '.tool_input.command // empty' <<<"$input")
 write_re='(^|[;&|(`]|\$\()[[:space:]]*git([[:space:]]+(-C|--git-dir(=[^[:space:]]+)?|--work-tree(=[^[:space:]]+)?|-c)([[:space:]]+[^[:space:]]+)?)*[[:space:]]+(add|commit|push|checkout|switch|merge|rebase|stash|reset|branch|cherry-pick|revert)\b'
 
 if printf '%s' "$cmd" | grep -qE "$write_re"; then
-  echo "Raw git write blocked: this repo is under GitButler management. Use the \`but\` CLI for every mutation (see the gitbutler-provenance skill); read-only git — status, log, blame, diff, show — is allowed." >&2
-  exit 2
+  reason="Raw git write blocked: this repo is under GitButler management. Use the \`but\` CLI for every mutation (see the gitbutler-provenance skill); read-only git — status, log, blame, diff, show — is allowed."
+  jq -n --arg reason "$reason" '{decision:"block",reason:$reason}'
 fi
 exit 0
