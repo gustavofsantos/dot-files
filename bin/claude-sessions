@@ -29,7 +29,7 @@ from collections import defaultdict, deque
 # so both `exec claude` and shell→claude layouts are found.
 AGENTS = [
     ("cc", "claude",   ["claude"]),
-    ("cu", "cursor",   ["cursor-agent"]),
+    ("cu", "cursor",   ["cursor-agent", "agent"]),
     ("ai", "aider",    ["aider"]),
     ("cx", "codex",    ["codex"]),
     ("gm", "gemini",   ["gemini"]),
