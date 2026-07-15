@@ -1,26 +1,28 @@
 ---
 name: smelly-code
-description: Steer production code toward code where the business rule is visible and named. Use whenever writing or reviewing production code that carries domain logic (calculations, invariants, state transitions, validation, policy). Trigger even on a bare "implement this" or "clean this up" — the steer is that the rule a domain expert cares about should be readable in one place, in domain words, not reconstructed from control flow. Pairs with smelly-test: smelly-test asserts the promise, smelly-code names it. Skip for pure plumbing (wiring, config, adapters, serialization) with no rule inside.
+description: Steer production code toward classical readability — name conditions, tell don't ask, keep policy out of persistence, one abstraction level per function. Use whenever writing or reviewing production code (services, domain, handlers, repositories, jobs). Trigger even on a bare "implement this", "clean this up", or "refactor" — the steer is that a reader should see intention without reconstructing it from control flow and layer leaks. Pairs with smelly-test: smelly-code makes the production code readable; smelly-test makes the promise enforceable. Skip for test code (use smelly-test) and for pure wiring with no decision inside.
 ---
 
 # Smelly Code
 
-You already know how to write code. This skill only redirects the *target*: make the **business rule** the most visible thing in the file, so a domain expert reading it recognizes their own policy — not a sequence of steps that happens to produce the right number.
+You already know how to write code. This skill only redirects the *target*: make production code **read as intention**, so the next reader sees what the system means — not a sequence of mechanics they must reverse-engineer into a policy.
 
-Apply one filter to every unit of production code: **can I point to the line that *is* the rule?** If the rule only exists as an emergent property of five branches, it isn't named — and it will be duplicated, drifted, and violated.
+Apply one filter to every unit of production code: **must the reader reconstruct the idea from expressions, getters, and layer-crossing branches?** If yes, name it and put it where it belongs until the idea is visible in one place.
+
+Scope is **production code only**. For tests, use `smelly-test`.
 
 ## The steer
 
-**Name the concept, not the step.** If a rule has a name in the business ("overdrawn", "within return window", "eligible for loyalty tier"), that name must exist in the code as a function, predicate, or type. A `boolean` returned from an inline comparison is a rule the domain never got to name.
+**Name the condition, not the expression.** A boolean that takes a breath to read aloud is a missing concept. Extract a predicate, explaining variable, or domain method whose name *is* the rule (`overdrawn?`, `withinReturnWindow`, `eligibleForLoyalty`). Inline `a && !b || c` is policy the codebase never got to discuss.
 
-**One rule, one home.** Each rule lives in exactly one place. If a threshold, a rate, or a condition appears twice, one of them will be wrong later. The duplication is not a style issue — it's a second, unmaintained copy of the policy.
+**Tell, don't ask.** Don't pull an object's guts out, decide elsewhere, then push a result back. Ask the object that owns the data to do the work (`order.refund()`), not `if (order.getStatus() == PAID && order.getDays() <= 30) order.setStatus(REFUNDED)`. Feature envy and getter chains are the same smell: the decision lives away from the knowledge.
 
-**Separate deciding from doing.** The rule (pure, testable, nameable) is not the same as the effect (persisting, charging, emailing). When they're braided, the rule can't be read without reading the IO — and can't be tested without mocking it. Functional core, imperative shell: the core decides, the shell obeys.
+**Keep policy out of the infrastructure.** Repositories, queries, SQL/`where` clauses, and adapters load and store — they do not decide eligibility, pricing, or workflow. A conditional that encodes a business rule inside a database layer belongs in the domain/service; the persistence code receives an already-decided criterion or writes an already-decided state.
 
-**Make the illegal state unrepresentable where cheap.** A validation you must remember to call is a rule that will be forgotten. A type or constructor that refuses the bad value is a rule that cannot be.
+**One abstraction level per function.** A function that mixes "why we do this" with "how the bytes move" forces the reader to hold both. Extract until each function is either orchestration (named steps) or a single concrete step — not a nest of both.
 
 ## Reviewing
 
-Scan for the gap that matters most: a rule the business *has* that the code *doesn't name*. Read the branches, ask "what would a domain expert call this condition?", and check whether that word appears anywhere. If it doesn't, the concept is missing — the code enforces the rule by accident of arrangement, and the next change will break it silently.
+Scan for the gap that matters most: a place where meaning exists only as an accident of arrangement — an unnamed compound boolean, a caller that interrogates another object's fields, a business `if` inside a query builder, a comment that narrates what the next five lines do. Read those spots and ask what a colleague would *call* that idea. If the name isn't in the code, the next change will break the idea silently while leaving the mechanics looking fine.
 
 For the catalogue of smells with before/after rewrites, see `references/smells.md`.
