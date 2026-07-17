@@ -16,11 +16,7 @@ require("lazy").setup({
     "nvim-lua/plenary.nvim",
     "nvim-tree/nvim-web-devicons",
     "christoomey/vim-tmux-runner",
-    {
-      "e-q/okcolors.nvim",
-      name = "okcolors",
-    },
-    "wtfox/jellybeans.nvim",
+    { "miikanissi/modus-themes.nvim", priority = 1000 },
     "tpope/vim-sleuth",
     "tpope/vim-surround",
     "tpope/vim-repeat",
@@ -28,7 +24,7 @@ require("lazy").setup({
     "tpope/vim-fugitive",
     "tpope/vim-rhubarb",
     "mbbill/undotree",
-    { "nvim-mini/mini.jump2d", enabled = not vim.pack },
+    { "nvim-mini/mini.jump2d",        enabled = not vim.pack },
     { import = "plugins" }
 
   },
