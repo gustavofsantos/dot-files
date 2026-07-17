@@ -2,7 +2,7 @@
 name: spike
 description: >
   Resolve one unknown with the cheapest throwaway experiment, then leave a durable
-  finding in ~/Documents/Spikes/. The experiment is disposable; the finding is the artifact.
+  finding in ~/engineering/spikes/. The experiment is disposable; the finding is the artifact.
   Trigger on "spike <unknown>", "/spike", "capture this finding", or when another skill
   hands off an unresolved question. NOT for casual mentions of "research"/"investigation".
 ---
@@ -18,7 +18,7 @@ You are the investigator, not the scribe: run the experiment, then leave the rec
 4. **Discard the scaffold** — the answer lives in the file; the experiment doesn't.
 
 ## Dedup
-`rg -il '<term>' ~/Documents/Spikes/` first. Same unknown → update, don't fork.
+`rg -il '<term>' ~/engineering/spikes/` first. Same unknown → update, don't fork.
 
 ## The artifact
 ```markdown
