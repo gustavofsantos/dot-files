@@ -16,7 +16,6 @@ require("lazy").setup({
     "nvim-lua/plenary.nvim",
     "nvim-tree/nvim-web-devicons",
     "christoomey/vim-tmux-runner",
-    { "miikanissi/modus-themes.nvim", priority = 1000 },
     "tpope/vim-sleuth",
     "tpope/vim-surround",
     "tpope/vim-repeat",
@@ -29,7 +28,7 @@ require("lazy").setup({
 
   },
   install = {
-    colorscheme = { "nord" },
+    colorscheme = { "default" },
   },
   checker = {
     notify = false,
