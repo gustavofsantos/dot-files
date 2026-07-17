@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# tap-hook — usage: tap-hook <real-hook> [args...]
+input="$(cat)"
+
+# Parse scope from the payload (jq; fall back gracefully if a field is absent)
+sid="$(printf '%s' "$input"  | jq -r '.session_id // "no-session"' 2>/dev/null)"
+cwd="$(printf '%s' "$input"  | jq -r '.cwd // .workspace_roots[0] // empty' 2>/dev/null)"
+repo="$(basename "$(git -C "${cwd:-$PWD}" rev-parse --show-toplevel 2>/dev/null || echo unknown)")"
+hook="$(basename "${!#}")"          # last arg = the actual script, not python3
+
+LOG="$HOME/.agents/hook-taps/$repo/$sid/$hook.log"
+mkdir -p "$(dirname "$LOG")"
+
+ts() { date -Iseconds; }
+
+# Capture stdin once (it's a stream — you only get to read it once)
+input="$(cat)"
+
+{
+  echo "=== $(ts) INVOKE: $* ==="
+  echo "--- stdin ---"; printf '%s\n' "$input"
+} >> "$LOG"
+
+# Feed the captured stdin to the real hook, capture its outputs separately
+out="$(printf '%s' "$input" | "$@" 2> >(tee -a "$LOG" >&2))"
+code=$?
+
+{
+  echo "--- stdout ---"; printf '%s\n' "$out"
+  echo "--- exit: $code ---"
+} >> "$LOG"
+
+# Re-emit the real hook's stdout and exit code UNCHANGED downstream
+printf '%s' "$out"
+exit $code

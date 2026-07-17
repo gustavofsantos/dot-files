@@ -109,7 +109,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "claude-hook-gitbutler-git"
+            "command": "tap-hook claude-hook-gitbutler-git"
           }
         ]
       }
