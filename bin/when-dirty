@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+# when-dirty — run a command only when the working tree has uncommitted changes.
+# Supports plain git and GitButler (virtual branches / unapplied changes).
+#
+# Usage:  when-dirty [--untracked] [--verbose] -- <command> [args...]
+#         when-dirty <command> [args...]
+#
+# Exit codes: passthrough from <command>; 0 when clean (skipped); 2 on usage error.
+
+set -euo pipefail
+
+INCLUDE_UNTRACKED=1
+VERBOSE=0
+
+usage() {
+  cat >&2 <<'EOF'
+usage: when-dirty [--no-untracked] [--verbose] [--] <command> [args...]
+
+  --no-untracked  ignore untracked files when deciding dirtiness
+  --verbose       report why it ran or skipped (to stderr)
+EOF
+  exit 2
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --no-untracked) INCLUDE_UNTRACKED=0; shift ;;
+    --verbose|-v)   VERBOSE=1; shift ;;
+    --)             shift; break ;;
+    -h|--help)      usage ;;
+    -*)             echo "when-dirty: unknown option $1" >&2; usage ;;
+    *)              break ;;
+  esac
+done
+
+[[ $# -gt 0 ]] || usage
+
+log() { [[ $VERBOSE -eq 1 ]] && echo "when-dirty: $*" >&2 || true; }
+
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
+  log "not a git repo; skipping"
+  exit 0
+}
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+GIT_DIR="$(git rev-parse --git-dir)"
+
+# --- detection ---------------------------------------------------------------
+
+git_dirty() {
+  local flags=(--porcelain)
+  [[ $INCLUDE_UNTRACKED -eq 1 ]] && flags+=(--untracked-files=normal) \
+                                 || flags+=(--untracked-files=no)
+  [[ -n "$(git status "${flags[@]}" 2>/dev/null)" ]]
+}
+
+# GitButler keeps work on virtual branches. Depending on version/mode the real
+# HEAD may sit on gitbutler/workspace (or gitbutler/integration) while committed
+# virtual-branch work is *not* visible in `git status`. Ask the CLI when present,
+# and fall back to inspecting the workspace refs.
+gitbutler_present() {
+  [[ -d "$GIT_DIR/gitbutler" ]] || \
+  [[ -f "$REPO_ROOT/.git/gitbutler.json" ]] || \
+  git show-ref --verify --quiet refs/heads/gitbutler/workspace || \
+  git show-ref --verify --quiet refs/heads/gitbutler/integration
+}
+
+gitbutler_dirty() {
+  # 1) Official CLI, if installed.
+  if command -v but >/dev/null 2>&1; then
+    local out
+    if out="$(but status 2>/dev/null)"; then
+      # Any file listed under a virtual branch means uncommitted assignment.
+      if grep -Eq '^[[:space:]]*[MADRCU?]{1,2}[[:space:]]+' <<<"$out"; then
+        log "gitbutler: uncommitted changes reported by \`but status\`"
+        return 0
+      fi
+      return 1
+    fi
+  fi
+
+  # 2) Fallback: compare workspace head against its integration base.
+  local ws base
+  for ws in refs/heads/gitbutler/workspace refs/heads/gitbutler/integration; do
+    git show-ref --verify --quiet "$ws" || continue
+    base="$(git rev-parse --verify --quiet "${ws}@{1}" || true)"
+    [[ -n "$base" ]] || continue
+    if [[ "$(git rev-parse "$ws")" != "$base" ]]; then
+      log "gitbutler: workspace ref moved since last integration"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# --- decide ------------------------------------------------------------------
+
+DIRTY=0
+if git_dirty; then
+  log "git working tree is dirty"
+  DIRTY=1
+elif gitbutler_present && gitbutler_dirty; then
+  DIRTY=1
+fi
+
+if [[ $DIRTY -eq 0 ]]; then
+  log "clean; skipping: $*"
+  exit 0
+fi
+
+exec "$@"
