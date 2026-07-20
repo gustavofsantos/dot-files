@@ -3,6 +3,6 @@ return {
   priority = 1000,
   config = function()
     require("modus-themes").setup()
-    vim.cmd.colorscheme("modus")
+    -- vim.cmd.colorscheme("modus")
   end
 }
