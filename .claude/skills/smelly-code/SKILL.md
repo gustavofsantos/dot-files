@@ -1,6 +1,6 @@
 ---
 name: smelly-code
-description: Steer production code toward classical readability — name conditions, tell don't ask, keep policy out of persistence, one abstraction level per function. Use whenever writing or reviewing production code (services, domain, handlers, repositories, jobs). Trigger even on a bare "implement this", "clean this up", or "refactor" — the steer is that a reader should see intention without reconstructing it from control flow and layer leaks. Pairs with smelly-test: smelly-code makes the production code readable; smelly-test makes the promise enforceable. Skip for test code (use smelly-test) and for pure wiring with no decision inside.
+description: Steer production code toward classical readability — name conditions, tell don't ask, keep policy out of persistence, one abstraction level per function. Use whenever writing or reviewing production code (services, domain, handlers, repositories, jobs). Trigger even on a bare "implement this", "clean this up", or "refactor" — the steer is that a reader should see intention without reconstructing it from control flow and layer leaks. Pairs with smelly-test where smelly-code makes the production code readable; smelly-test makes the promise enforceable. Skip for test code (use smelly-test) and for pure wiring with no decision inside.
 ---
 
 # Smelly Code
