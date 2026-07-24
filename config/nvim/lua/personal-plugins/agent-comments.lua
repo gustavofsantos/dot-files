@@ -250,28 +250,32 @@ function M.edit_at_cursor()
   M.edit_comment(comment)
 end
 
---- Jump to the location a comment refers to: open its file and place the
---- cursor on the first line of its range.
---- @param comment AgentComment
-function M.jump_to(comment)
-  vim.cmd("edit " .. vim.fn.fnameescape(comment.filepath))
-  local line_count = vim.api.nvim_buf_line_count(0)
-  local target = math.min(comment.start_line, line_count)
-  pcall(vim.api.nvim_win_set_cursor, 0, { target, 0 })
-end
-
---- Open a Telescope picker over all pending comments.
-function M.picker()
+--- Populate the (window-local) location list with all pending comments and
+--- open it. <CR> on an entry jumps to that file/line natively; from there,
+--- use :AgentCommentDelete / :AgentCommentEdit (or their keymaps) on the
+--- cursor as usual.
+function M.list()
   if #M._comments == 0 then
     vim.notify("AgentComments: no pending comments", vim.log.levels.INFO)
     return
   end
 
-  require("personal-plugins.agent-comments-picker").show(M._comments, {
-    on_select = M.jump_to,
-    on_delete = M.delete_comment,
-    on_edit = M.edit_comment,
+  local items = {}
+  for _, c in ipairs(M._comments) do
+    local first_line = vim.split(c.text, "\n", { plain = true })[1] or ""
+    table.insert(items, {
+      filename = c.filepath,
+      lnum = c.start_line,
+      col = 1,
+      text = string.format("[%s] %s", format_range(c), first_line),
+    })
+  end
+
+  vim.fn.setloclist(0, {}, " ", {
+    title = "Agent Comments",
+    items = items,
   })
+  vim.cmd("lopen")
 end
 
 --- Remove all stored comments and their signs without writing anything out.
@@ -389,10 +393,10 @@ end, {
   desc = "Edit the agent comment nearest the cursor",
 })
 
-vim.api.nvim_create_user_command("AgentCommentsPicker", function()
-  M.picker()
+vim.api.nvim_create_user_command("AgentCommentsList", function()
+  M.list()
 end, {
-  desc = "Browse pending agent comments in a Telescope picker",
+  desc = "Open the location list of all pending agent comments",
 })
 
 return M

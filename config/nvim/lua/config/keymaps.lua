@@ -50,5 +50,5 @@ vim.keymap.set("n", "<leader>cd", "<cmd>AgentCommentDelete<CR>",
   { desc = "Delete agent comment near cursor", noremap = true, silent = true })
 vim.keymap.set("n", "<leader>ce", "<cmd>AgentCommentEdit<CR>",
   { desc = "Edit agent comment near cursor", noremap = true, silent = true })
-vim.keymap.set("n", "<leader>co", "<cmd>AgentCommentsPicker<CR>",
-  { desc = "Open agent comments picker", noremap = true, silent = true })
+vim.keymap.set("n", "<leader>co", "<cmd>AgentCommentsList<CR>",
+  { desc = "Open agent comments location list", noremap = true, silent = true })

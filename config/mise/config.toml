@@ -1,0 +1,6 @@
+[tools]
+btop = "latest"
+eza = "latest"
+neovim = "latest"
+node = "20"
+tmux = "latest"
