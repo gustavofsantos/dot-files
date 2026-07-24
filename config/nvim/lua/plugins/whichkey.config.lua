@@ -6,6 +6,7 @@ return {
       wk.setup({})
 
       wk.add({
+        { "<leader>c", group = "Agent Comments" },
         { "<leader>d", group = "Diff" },
         { "<leader>q", group = "Query" },
         { "<leader>t", group = "Test" },
