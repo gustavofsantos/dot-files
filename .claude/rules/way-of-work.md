@@ -1,14 +1,14 @@
 When implementing a feature or behavior change requested by the user, follow this outer acceptance loop with an inner unit TDD cycle.
 
-**Planning:** sequence plans as vertical tracer-bullet slices — one end-to-end behavior per iteration — before entering this loop. Do not plan horizontal layer stacks that only connect at the end.
+**Planning:** slice sequencing happens upstream, in `way-of-planning`. Enter this loop once per approved slice, never with a horizontal layer stack spanning several slices.
 
-**After green:** commit the behavior change first, then flock alike code per rule of refactoring and land a separate `refactor:` commit — do not mix structural cleanup into the behavior commit.
+**After green:** commit the behavior change first. Then flock alike code per rule of refactoring and land a separate `refactor:` commit. Do not mix structural cleanup into the behavior commit.
 
-Do **not** jump straight into production code. Start with an acceptance test, validate it with the user, then drive the inner red-green loop until that acceptance test passes (refactor pass is post-commit; use `rules-of-refactoring`).
+Do **not** jump straight into production code. Start with an acceptance test and validate it with the user. Then drive the inner red-green loop until that acceptance test passes. The refactor pass comes after the commit, per `rules-of-refactoring`.
 
 ```mermaid
 flowchart LR
-  Ask["User asks AI agent<br/>for a feature"]
+  Ask["Slice from<br/>way-of-planning"]
   WriteAT["Agent writes<br/>failing acceptance test"]
   Validate{"User validates<br/>acceptance test?"}
   Adjust["Agent adjusts<br/>acceptance test"]
@@ -33,9 +33,9 @@ flowchart LR
 
 ## Rules
 
-1. **User ask** — Treat the request as a feature/outcome, not an implementation plan.
+1. **Take a slice** — Take one approved slice from `way-of-planning` (or a direct ask too small to need a plan). Do not treat it as an implementation plan.
 2. **Write a failing acceptance test** — Prefer an integration/acceptance-style test that expresses the desired external behavior. It must fail for the right reason before any production change.
 3. **Validate with the user** — Stop and show the acceptance test (and what it asserts). Wait for explicit approval or adjustment feedback. Do not enter the inner loop until approved.
 4. **Adjustments** — If the user asks for changes, revise the acceptance test and prompt again. Repeat until approved.
-5. **Inner TDD loop** — After approval: write a failing unit test → make it pass. Stay in this loop while the acceptance test still fails. Prefer keeping the green fix minimal; do not open a structural cleanup campaign mid-red/green.
+5. **Inner TDD loop** — After approval: write a failing unit test → make it pass. Stay in this loop while the acceptance test still fails. Prefer keeping the green fix minimal. Do not open a structural cleanup campaign mid-red/green.
 6. **Outer completion** — When the acceptance test passes: commit the behavior change on the branch, then follow the rules of refactoring (flocking → separate `refactor:` commit). Then stop (or wait for the next user ask). Do not invent the next feature.
