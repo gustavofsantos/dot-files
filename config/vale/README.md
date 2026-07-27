@@ -10,18 +10,29 @@ grammar) that don't transfer to spec-writing.
 
 ## Run it
 
+This directory is symlinked to `$XDG_CONFIG_HOME/vale` (`~/.config/vale`) by
+`scripts/link-xdg-config.sh` (part of `./setup.sh`). Vale looks for
+`$XDG_CONFIG_HOME/vale/.vale.ini` by default on Unix, so once linked, plain
+`vale somefile.md` picks this style up from anywhere — no `--config` flag
+needed.
+
 ```bash
 mise use vale   # once, if not already installed
-vale --config vale/.vale.ini vale/fixtures/bad.md   # should report violations
-vale --config vale/.vale.ini vale/fixtures/good.md  # should be clean
+./setup.sh      # symlinks config/vale -> ~/.config/vale, among other things
+
+vale ~/.config/vale/fixtures/bad.md   # should report violations
+vale ~/.config/vale/fixtures/good.md  # should be clean
+
+# Or, working straight from the repo without the symlink installed yet:
+vale --config config/vale/.vale.ini config/vale/fixtures/bad.md
 ```
 
 ## Layout
 
 ```
-vale/
-  .vale.ini            StylesPath + MinAlertLevel=suggestion, applies to *.md
-  styles/STE/*.yml      one rule file per concern, `extends:` a Vale check type
+config/vale/            symlinked to ~/.config/vale
+  .vale.ini              StylesPath + MinAlertLevel=suggestion, applies to *.md
+  styles/STE/*.yml        one rule file per concern, `extends:` a Vale check type
   fixtures/{good,bad}.md  hand-written regression fixtures
 ```
 

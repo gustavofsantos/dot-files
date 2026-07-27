@@ -1,0 +1,3 @@
+# Vale's own runtime asset cache — it writes this into $XDG_CONFIG_HOME/vale,
+# which resolves into this directory once symlinked. Not our content.
+native/
