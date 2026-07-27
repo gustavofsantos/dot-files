@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# PostToolUse(Edit|Write|MultiEdit) hook: lint markdown files with vale after
+# every edit, feeding warning+ prose issues back to Claude via stderr so it
+# can fix them inline. Suggestion-level alerts (Vocab, PassiveVoice, ...) are
+# dropped — see config/vale/README.md's "Dogfood results" on why nothing in
+# this style set is at error level yet, so vale's own exit code can't be
+# trusted as the blocking signal.
+set -euo pipefail
+
+command -v jq >/dev/null 2>&1 || exit 0
+command -v vale >/dev/null 2>&1 || exit 0
+
+input=$(cat)
+
+cwd=$(jq -r '.cwd // empty' <<<"$input")
+[ -n "$cwd" ] || exit 0
+cd "$cwd" 2>/dev/null || exit 0
+
+file=$(jq -r '.tool_input.file_path // empty' <<<"$input")
+[ -n "$file" ] || exit 0
+
+case "$file" in
+  *.md|*.markdown) ;;
+  *) exit 0 ;;
+esac
+
+[ -f "$file" ] || exit 0
+
+report=$(vale --output=JSON "$file" 2>/dev/null) || exit 0
+[ -n "$report" ] || exit 0
+
+alerts=$(jq -c '[.[][] | select(.Severity == "warning" or .Severity == "error")]' <<<"$report" 2>/dev/null) || exit 0
+count=$(jq 'length' <<<"$alerts")
+[ "$count" -gt 0 ] || exit 0
+
+{
+  echo "vale flagged $count issue(s) in $file:"
+  jq -r '.[] | "  \(.Line):\(.Span[0]) [\(.Severity)] \(.Check): \(.Message)"' <<<"$alerts"
+} >&2
+
+exit 2
