@@ -33,6 +33,7 @@ return {
       automatic_enable = true,
       ensure_installed = {
         "lua_ls",
+        "vale_ls",
         "vtsls",
         "pyright",
         "dockerls",
