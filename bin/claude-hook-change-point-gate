@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+# change-point-gate — PreToolUse gate: no edit to an existing file until its
+# behavior is pinned. Install anywhere on PATH. Location-independent: the repo is
+# resolved from the file under edit, never from $0 or $PWD.
+#
+#   hook mode   : reads PreToolUse JSON on stdin, writes decision JSON on stdout
+#   check mode  : change-point-gate --check <path>   (human-readable, no caching)
+#   debug       : GATE_DEBUG=1 traces every resolution step to stderr
+set -u
+
+VERSION="1.1.0"
+
+log()   { [ "${GATE_DEBUG:-0}" = "1" ] && printf 'gate: %s\n' "$*" >&2; return 0; }
+allow() { log "allow (${1:-no reason})"; exit 0; }   # exit 0, no stdout = defer to normal flow
+
+MODE=hook
+case "${1:-}" in
+  --check)   MODE=check; TARGET=${2:-} ;;
+  --version) printf '%s\n' "$VERSION"; exit 0 ;;
+  -h|--help) sed -n '2,10p' "$0"; exit 0 ;;
+esac
+
+# A gate that crashes must not become a gate that blocks. Degrade to allow.
+command -v jq  >/dev/null 2>&1 || allow "jq not on PATH"
+command -v git >/dev/null 2>&1 || allow "git not on PATH"
+
+if [ "$MODE" = check ]; then
+  [ -n "${TARGET:-}" ] || { echo "usage: change-point-gate --check <path>" >&2; exit 64; }
+  [ -e "$TARGET" ]     || { echo "no such file: $TARGET" >&2; exit 66; }
+  FILE=$(cd "$(dirname "$TARGET")" && pwd)/$(basename "$TARGET")
+  SESSION="check-$$"
+  HOOK_CWD=""
+else
+  IN=$(cat)
+  FILE=$(jq -r '.tool_input.file_path // empty' <<<"$IN")
+  SESSION=$(jq -r '.session_id // "nosession"' <<<"$IN")
+  HOOK_CWD=$(jq -r '.cwd // empty' <<<"$IN")
+fi
+
+emit() {  # emit <allow|deny> <message>
+  if [ "$MODE" = check ]; then
+    printf '%s\t%s\n%s\n' "$1" "${REL:-$FILE}" "$2"
+  elif [ "$1" = allow ]; then
+    jq -n --arg m "$2" '{hookSpecificOutput:{hookEventName:"PreToolUse",
+      permissionDecision:"allow", additionalContext:$m}}'
+  else
+    jq -n --arg m "$2" '{hookSpecificOutput:{hookEventName:"PreToolUse",
+      permissionDecision:"deny", permissionDecisionReason:$m}}'
+  fi
+  exit 0
+}
+
+# ---- resolve the repo from the FILE, then fall back to the session's idea of it
+[ -n "$FILE" ] || allow "no file_path in payload"
+[ -f "$FILE" ] || allow "new file, nothing to characterize"
+
+DIR=$(cd "$(dirname "$FILE")" 2>/dev/null && pwd) || allow "unreadable dirname"
+ROOT=$(git -C "$DIR" rev-parse --show-toplevel 2>/dev/null) \
+  || ROOT=$(git -C "${CLAUDE_PROJECT_DIR:-${HOOK_CWD:-$DIR}}" rev-parse --show-toplevel 2>/dev/null) \
+  || allow "not inside a git repo"
+log "root=$ROOT"
+
+REL=${FILE#"$ROOT"/}
+
+# ---- config: nearest .claude/legacy.json walking up from the file to the root
+CFG=""
+probe=$DIR
+while :; do
+  [ -f "$probe/.claude/legacy.json" ] && { CFG="$probe/.claude/legacy.json"; break; }
+  [ "$probe" = "$ROOT" ] && break
+  parent=$(dirname "$probe"); [ "$parent" = "$probe" ] && break; probe=$parent
+done
+[ -n "$CFG" ] || allow "no .claude/legacy.json between $DIR and $ROOT"
+log "config=$CFG"
+
+[ "$(jq -r '.gate // "on"' "$CFG" 2>/dev/null)" = "on" ] || allow "gate off in config"
+
+TESTISH=$(jq -r '.testPathPattern // empty' "$CFG" 2>/dev/null)
+TESTISH=${TESTISH:-'(^|/)(tests?|specs?|__tests__)/|[._-](test|spec)s?\.'}
+RUNCMD=$(jq -r '.runTests // "not declared in .claude/legacy.json"' "$CFG" 2>/dev/null)
+
+printf '%s' "$REL" | grep -Eq "$TESTISH" && allow "target is itself a test"
+
+# ---- adjudicate each change point once per session, per worktree
+if [ "$MODE" = hook ]; then
+  GITDIR=$(git -C "$ROOT" rev-parse --absolute-git-dir 2>/dev/null) || GITDIR="${TMPDIR:-/tmp}"
+  STATE="$GITDIR/cc-gate/$SESSION"; mkdir -p "$STATE" 2>/dev/null
+  KEY="$STATE/$(printf '%s' "$REL" | cksum | tr -d ' /')"
+  [ -f "$KEY" ] && allow "already adjudicated this session"
+  [ -f "$ROOT/.claude/state/sprout-$(basename "$KEY")" ] && allow "sprout decision on record"
+  : >"$KEY"
+fi
+
+# ---- evidence
+STEM=$(basename "$REL"); STEM=${STEM%%.*}
+HITS=$(git -C "$ROOT" grep -lI -F -- "$STEM" 2>/dev/null | grep -E "$TESTISH" | head -3)
+[ -n "$HITS" ] || HITS=$(git -C "$ROOT" log -n 30 --format=%H -- "$REL" 2>/dev/null \
+  | xargs -r -n1 git -C "$ROOT" show --name-only --format= 2>/dev/null \
+  | grep -E "$TESTISH" | sort -u | head -3)
+log "hits=${HITS:-none}"
+
+if [ -n "$HITS" ]; then
+  emit allow "Change point $REL has candidate pinning tests:
+$HITS
+Run them BEFORE editing to establish a green baseline ($RUNCMD). If they do not
+actually exercise the behavior you are about to change, treat this file as
+uncovered and characterize first."
+else
+  emit deny "$REL is an unpinned change point: no test names it and it has never
+co-changed with a test. Do not edit it yet. Choose one:
+1. Write a characterization test capturing CURRENT behavior (bugs included), run it
+   green ($RUNCMD), then edit.
+2. If it is untestable in place, find the seam or pinch point and pin there.
+3. If neither is affordable, sprout the new behavior into a new unit and record the
+   decision at .claude/state/sprout-<name>.md explaining why this change point stays
+   unpinned.
+Report which option you took before proceeding."
+fi
