@@ -1,0 +1,17 @@
+text := import("text")
+
+pattern := `(?:^|[.!?\n]\s*)[^a-z]*(?:(?:when|while|where|if)\b[^,]+,\s+)?(?:then\s+)?the\b.+?\bshall\b`
+
+matches := []
+
+lower_scope := text.to_lower(scope)
+if text.re_match(`\bshall\b`, lower_scope) {
+    if !text.re_match(pattern, lower_scope) {
+        idx := text.index(lower_scope, "shall")
+        if idx != -1 {
+            matches = append(matches, {begin: idx, end: idx + 5})
+        }
+    }
+}
+
+matches

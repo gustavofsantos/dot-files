@@ -1,0 +1,44 @@
+---
+extends: existence
+message: "Weak word '%s' found. EARS requirements should be precise and unambiguous."
+level: warning
+ignorecase: true
+tokens:
+  - approximately
+  - about
+  - basically
+  - generally
+  - normally
+  - typically
+  - usually
+  - often
+  - sometimes
+  - probably
+  - possibly
+  - maybe
+  - might
+  - could
+  - fast
+  - slow
+  - quick
+  - quickly
+  - slow
+  - slowly
+  - good
+  - bad
+  - user-friendly
+  - easy
+  - simple
+  - robust
+  - reliable
+  - secure
+  - fast
+  - several
+  - many
+  - few
+  - some
+  - various
+  - ample
+  - adequate
+  - sufficient
+  - mostly

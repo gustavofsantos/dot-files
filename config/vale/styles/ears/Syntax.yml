@@ -1,0 +1,6 @@
+---
+extends: script
+message: "Requirement containing 'shall' does not match EARS templates."
+level: error
+scope: paragraph
+script: ears-syntax.tengo

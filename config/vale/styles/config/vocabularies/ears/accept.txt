@@ -1,0 +1,14 @@
+(?i)EARS
+(?i)ubiquitous
+(?i)event-driven
+(?i)state-driven
+(?i)unwanted behavior
+(?i)optional feature
+(?i)precondition
+(?i)trigger
+(?i)system response
+(?i)shall
+(?i)must
+(?i)should
+(?i)will
+(?i)may

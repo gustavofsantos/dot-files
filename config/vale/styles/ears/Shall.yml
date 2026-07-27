@@ -1,0 +1,13 @@
+---
+extends: substitution
+message: "EARS requires 'shall' for requirements. Consider using '%s'."
+level: warning
+ignorecase: true
+# We only want to warn on these words if they look like they're being used in a requirement context.
+# But for a strict EARS package, we can just suggest "shall" for them broadly,
+# or we can use a conditional. Let's just do a simple substitution for must/will.
+swap:
+  \bmust\b: shall
+  \bwill\b: shall
+  \bshould\b: shall
+  \bmay\b: shall
