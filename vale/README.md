@@ -38,6 +38,7 @@ vale/
 | `AmericanSpelling.yml` | 1.14 | substitution | suggestion |
 | `MissingThat.yml` | GR-1 | existence (heuristic) | suggestion |
 | `PassiveVoice.yml` | 3.6 | existence (heuristic) | suggestion |
+| `Consistency.yml` | 1.11 / 9.4 (same term for the same item) | consistency | warning |
 
 ## Deliberately left out
 
@@ -92,6 +93,12 @@ fire:
   over "don't" vs. "do not" is disproportionate for a style rule, and the
   future hook's blocking semantics aren't decided yet. Revisit deliberately
   when that hook exists, not by leaving a level unexamined.
+- `Consistency.yml`'s first draft included `repo: repository` and fired
+  **8 times** on `CLAUDE.md` alone — pure register variation, not genuine
+  reader confusion. Dropped that pair; the other seven (frontend/front end,
+  backend/back end, etc.) fired zero times on the same file. The lesson:
+  a consistency pair only earns a place here if switching between the two
+  forms would actually confuse a reader, not just read informally.
 
 ## Notes on the Vale mechanics
 
@@ -105,3 +112,8 @@ fire:
 - Go's `regexp` (RE2) has no lookahead/lookbehind — heuristics like
   `MissingThat.yml` use a positive list of risky follow-up words instead of
   a negative lookahead for `that`.
+- `consistency`'s `message` takes exactly one `%s` (the term that broke
+  consistency) — unlike `substitution`'s two. It flags whichever spelling in
+  an `either:` pair shows up *after* the other has already been established
+  as accepted; when both spellings land in the same paragraph it flags both
+  occurrences rather than just the second — cosmetic, not a bug.

@@ -13,3 +13,5 @@ Make sure the feature flag is enabled before you deploy this change to productio
 We colour-code the logs so operators can triage issues faster (e.g., red for errors, yellow for warnings, etc.) and this behaviour is documented elsewhere.
 
 This paragraph has too many sentences on purpose. Sentence two. Sentence three. Sentence four. Sentence five. Sentence six. Sentence seven pushes it over the limit.
+
+The frontend calls the API first. Later, the front end retries on failure.

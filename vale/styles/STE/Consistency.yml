@@ -1,0 +1,23 @@
+# STE Rule 1.11 / 9.4 — do not use different terms for the same item. Flags
+# whichever spelling variant is used *second* in the document; the first
+# occurrence sets the accepted spelling for the rest of the doc.
+#
+# Only pairs that are pure spelling variants of the same noun — never a pair
+# that's grammatically distinct (e.g. "login" the noun vs. "log in" the verb
+# phrase, "setup" vs. "set up") — those legitimately coexist in one doc and
+# would make this rule noisy rather than useful. Also excludes
+# abbreviation/register pairs like "repo"/"repository" — dogfooded against
+# CLAUDE.md and it fired 8 times on that one pair alone, all register
+# variation rather than genuine reader confusion.
+extends: consistency
+message: "Inconsistent spelling: also saw '%s' elsewhere in this doc — pick one and use it everywhere (STE 1.11 / 9.4)."
+level: warning
+ignorecase: true
+either:
+  frontend: front end
+  backend: back end
+  codebase: code base
+  filepath: file path
+  webpage: web page
+  metadata: meta data
+  email: e-mail

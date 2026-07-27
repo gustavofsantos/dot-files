@@ -32,3 +32,5 @@ The indicator should be red. Short "-ed" lookalikes like this must not be flagge
 - The sixth item ends with a period.
 - The seventh item ends with a period, testing the boundary.
 
+The frontend calls the API first. Later, the frontend retries on failure.
+
