@@ -4,7 +4,7 @@ When implementing a feature or behavior change requested by the user, follow thi
 
 **After green:** commit the behavior change first, then flock alike code per rule of refactoring and land a separate `refactor:` commit — do not mix structural cleanup into the behavior commit.
 
-Do **not** jump straight into production code. Start with an acceptance test, validate it with the user, then drive the inner red-green loop until that acceptance test passes (refactor pass is post-commit; use rules-of-refactoring).
+Do **not** jump straight into production code. Start with an acceptance test, validate it with the user, then drive the inner red-green loop until that acceptance test passes (refactor pass is post-commit; use `rules-of-refactoring`).
 
 ```mermaid
 flowchart LR
