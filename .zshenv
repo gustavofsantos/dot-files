@@ -18,6 +18,7 @@ export DENO_INSTALL="$HOME/.deno"
 # export AMP_TOOLBOX="$HOME/.bin"
 export HORSES_PATH="$HOME/Horses"
 export KNOWLEDGE_KB_PATH="$HORSES_PATH"
+export VALE_CONFIG_PATH="$HOME/.config/vale/.vale.ini"
 export PATH="$DENO_INSTALL/bin:$PATH"
 export PATH="$HOME/.poetry/bin:$PATH"
 
