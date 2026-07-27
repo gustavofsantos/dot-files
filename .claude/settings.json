@@ -107,15 +107,6 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|Write|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "claude-hook-change-point-gate"
-          }
-        ]
-      },
-      {
         "matcher": "Bash",
         "hooks": [
           {
