@@ -1,10 +1,3 @@
----
-name: comms
-description: Instructions about communication with the user. Read at the beginning of the session.
----
-
-# comms
-
 Build each sentence to parse in one pass.
 
 ## Sentences and paragraphs

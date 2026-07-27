@@ -66,6 +66,10 @@ for rule in "$DOTFILES_DIR"/.claude/rules/*.md; do
   name=$(basename "$rule")
   ln -sf "$rule" "$HOME/.claude/rules/$name"
 done
+# prune dangling rule symlinks (removed from dotfiles)
+find "$HOME/.claude/rules" -maxdepth 1 -type l | while read -r link; do
+  [ -e "$link" ] || rm "$link"
+done
 echo "Installing custom rules... OK"
 
 echo "Installing custom workflows..."
