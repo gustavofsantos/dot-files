@@ -1,0 +1,14 @@
+# STE GR-6 — do not use Latin abbreviations, they can confuse readers.
+extends: substitution
+message: "Use '%s' instead of the Latin abbreviation '%s' (STE GR-6)."
+level: warning
+ignorecase: true
+nonword: true
+swap:
+  e\.g\.: for example
+  i\.e\.: that is
+  etc\.: and so on
+  et al\.: and others
+  viz\.: namely
+  cf\.: compare with
+  N\.B\.: note

@@ -1,0 +1,48 @@
+# STE Rule 1.14 — American English spelling. Starter list; extend alongside
+# Vocab.yml when a machine-specific dictionary skill is built on top of this.
+extends: substitution
+message: "Use American spelling '%s' instead of '%s' (STE 1.14)."
+level: suggestion
+ignorecase: true
+swap:
+  colour: color
+  colours: colors
+  fibre: fiber
+  centre: center
+  centres: centers
+  organise: organize
+  organised: organized
+  organising: organizing
+  analyse: analyze
+  analysed: analyzed
+  analysing: analyzing
+  behaviour: behavior
+  behaviours: behaviors
+  catalogue: catalog
+  licence: license
+  labelled: labeled
+  labelling: labeling
+  travelled: traveled
+  travelling: traveling
+  cancelled: canceled
+  cancelling: canceling
+  modelled: modeled
+  modelling: modeling
+  optimise: optimize
+  optimised: optimized
+  optimising: optimizing
+  initialise: initialize
+  initialised: initialized
+  initialising: initializing
+  synchronise: synchronize
+  synchronised: synchronized
+  synchronising: synchronizing
+  serialise: serialize
+  serialised: serialized
+  serialising: serializing
+  normalise: normalize
+  normalised: normalized
+  normalising: normalizing
+  defence: defense
+  offence: offense
+  practise: practice

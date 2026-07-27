@@ -90,7 +90,9 @@
       "Bash(git push *)",
       "Bash(gh pr merge *)",
       "Bash(docker push *)",
-      "Bash(npm publish *)"
+      "Bash(npm publish *)",
+      "Bash(weep *)",
+      "Bash(aws *)"
     ],
     "defaultMode": "auto",
     "additionalDirectories": ["~/engineering"]

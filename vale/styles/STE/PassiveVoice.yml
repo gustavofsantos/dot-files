@@ -1,0 +1,8 @@
+# STE Rule 3.6 — use the active voice.
+extends: existence
+message: "Consider the active voice instead of '%s' (STE 3.6)."
+level: suggestion
+ignorecase: true
+tokens:
+  - '\b(?:can|could|may|might|must|shall|should|will|would)\s+be\s+\w{3,}ed\b'
+  - '\b(?:is|are|was|were|been|being)\s+\w{3,}ed\s+by\b'

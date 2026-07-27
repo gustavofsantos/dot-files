@@ -1,0 +1,25 @@
+# Starter word substitutions (STE rules 1.x / 9.2). This file is meant to be
+# extended or regenerated per machine by a future dictionary-building skill —
+# keep it as the one file that composes.
+extends: substitution
+message: "Prefer '%s' over '%s' — simpler, approved word (STE)."
+level: suggestion
+ignorecase: true
+swap:
+  acceptable: permitted
+  utilize: use
+  utilizes: uses
+  utilized: used
+  utilizing: using
+  approximately: about
+  sufficient: enough
+  numerous: many
+  purchase: buy
+  additional: more
+  prior to: before
+  subsequent to: after
+  in order to: to
+  due to the fact that: because
+  in the event that: if
+  a number of: some
+  the majority of: most

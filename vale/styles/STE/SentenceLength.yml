@@ -1,0 +1,7 @@
+# STE Rule 6.3 — descriptive sentences: max 25 words.
+extends: occurrence
+message: "Sentence has more than 25 words — split it (STE 6.3)."
+level: warning
+scope: sentence
+max: 25
+token: '\S+'

@@ -1,0 +1,8 @@
+# STE GR-1 — use the conjunction "that" after verbs like "make sure",
+# "recommend", "show" to mark where the subordinate clause starts.
+extends: existence
+message: "Consider adding 'that' after '%s' (STE GR-1)."
+level: suggestion
+ignorecase: true
+tokens:
+  - '\b(?:make sure|ensure|recommends?|recommended|shows?|showed|confirms?|verify|verifies)\s+(?:the|a|an|this|these|those|it|they)\b'
