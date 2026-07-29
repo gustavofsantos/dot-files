@@ -51,7 +51,11 @@ return {
       callback = function(ev)
         vim.keymap.set("n", "K", function() vim.lsp.buf.hover({ max_width = 60 }) end,
           { buffer = ev.buf, desc = "Hover" })
+        vim.keymap.set("n", "gra", vim.lsp.buf.code_action, { buffer = ev.buf, desc = "Code actions" })
         vim.keymap.set("n", "grd", vim.lsp.buf.definition, { buffer = ev.buf, desc = "Go to definition" })
+        vim.keymap.set("n", "grr", vim.lsp.buf.references, { buffer = ev.buf, desc = "Go to references" })
+        vim.keymap.set("n", "gri", vim.lsp.buf.implementation, { buffer = ev.buf, desc = "Go do implementation" })
+        vim.keymap.set("n", "grn", vim.lsp.buf.rename, { buffer = ev.buf, desc = "Rename symbol" })
       end,
     })
   end,
