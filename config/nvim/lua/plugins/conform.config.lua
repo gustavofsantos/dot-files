@@ -10,6 +10,7 @@ return {
         clojure = { "cljstyle" },
         sql = { "sqlfmt" },
         json = { "prettier" },
+        markdown = { "prettierd", "prettier" },
         javascript = { "deno_fmt", "prettierd", "prettier", "eslint_d", "eslint" },
         typescript = { "deno_fmt", "prettierd", "prettier", "eslint_d", "eslint" },
         javascriptreact = { "prettierd", "prettier", "eslint_d", "eslint" },
