@@ -33,9 +33,10 @@ vim.opt.backupskip = { "/tmp/*", "/private/tmp/*" }
 vim.opt.scrolloff = 3
 -- vim.opt.sidescrolloff = 5
 -- vim.opt.siso = 3
+vim.wo.foldmethod = 'indent';
 vim.opt.foldcolumn = "0"
 vim.opt.foldlevel = 999
-vim.opt.foldlevelstart = 99
+vim.opt.foldlevelstart = 5
 vim.opt.wildmenu = true
 -- vim.opt.wildmode = "longest,list"
 vim.opt.wildoptions:append { 'fuzzy' }
