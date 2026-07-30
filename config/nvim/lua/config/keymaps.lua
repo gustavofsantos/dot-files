@@ -14,7 +14,7 @@ vim.keymap.set("n", "<leader>W", "<cmd>wa!<cr>", { desc = "Save all" })
 vim.keymap.set("n", "gD", function()
   vim.diagnostic.setloclist()
   vim.cmd('lopen')
-end, { desc = 'Toggle diagnostics'})
+end, { desc = 'Toggle diagnostics' })
 vim.keymap.set('n', 'gK', function()
   local new_config = not vim.diagnostic.config().virtual_lines
   vim.diagnostic.config({ virtual_lines = new_config })
@@ -22,6 +22,9 @@ end, { desc = 'Toggle diagnostic virtual_lines' })
 
 vim.keymap.set("v", "<leader>b",
   ':<C-U>!git blame <C-R>=expand("%:p") <CR> | sed -n <C-R>=line("\'<") <CR>,<C-R>=line("\'>") <CR>p <CR>')
+
+vim.keymap.set({ "n", "v" }, "<leader>yp", ":YankPath<CR>", { desc = "Yank path", noremap = true, silent = true })
+
 vim.keymap.set("n", '[d', function() vim.diagnostic.jump { count = -1 } end, { desc = 'Previous diagnostic' })
 vim.keymap.set("n", ']d', function() vim.diagnostic.jump { count = 1 } end, { desc = 'Next diagnostic' })
 vim.keymap.set("n", '[e', function() vim.diagnostic.jump { count = -1, severity = vim.diagnostic.severity.ERROR } end,
@@ -33,16 +36,15 @@ vim.keymap.set("n", ']e', function() vim.diagnostic.jump { count = 1, severity =
 
 vim.keymap.set("n", "<leader>u", "<cmd>UndotreeToggle<cr>", { desc = "Toggle undo tree", noremap = true, silent = true })
 
-vim.keymap.set("n", "<leader>;a", "<cmd>BookmarkAdd<CR>",
-  { desc = "Bookmark current file", noremap = true, silent = true })
-vim.keymap.set("n", "<leader>;o", "<cmd>BookmarkSearch<CR>",
-  { desc = "Search project bookmarks", noremap = true, silent = true })
-vim.keymap.set("n", "<leader>;O", "<cmd>BookmarkSearchAll<CR>",
-  { desc = "Search bookmarks accross all projects", noremap = true, silent = true })
-
-vim.keymap.set("v", "<CR>", ":AgentCommentAdd<CR>", { desc = "Add agent comment for selection", noremap = true, silent = true })
-vim.keymap.set("n", "<leader>cf", "<cmd>AgentCommentsFlush<CR>", { desc = "Flush agent comments to prompt buffer", noremap = true, silent = true })
-vim.keymap.set("n", "<leader>cx", "<cmd>AgentCommentsClear<CR>", { desc = "Discard pending agent comments", noremap = true, silent = true })
-vim.keymap.set("n", "<leader>cd", "<cmd>AgentCommentDelete<CR>", { desc = "Delete agent comment near cursor", noremap = true, silent = true })
-vim.keymap.set("n", "<leader>ce", "<cmd>AgentCommentEdit<CR>", { desc = "Edit agent comment near cursor", noremap = true, silent = true })
-vim.keymap.set("n", "<leader>co", "<cmd>AgentCommentsList<CR>", { desc = "Open agent comments location list", noremap = true, silent = true })
+vim.keymap.set("v", "<CR>", ":AgentCommentAdd<CR>",
+  { desc = "Add agent comment for selection", noremap = true, silent = true })
+vim.keymap.set("n", "<leader>cf", "<cmd>AgentCommentsFlush<CR>",
+  { desc = "Flush agent comments to prompt buffer", noremap = true, silent = true })
+vim.keymap.set("n", "<leader>cx", "<cmd>AgentCommentsClear<CR>",
+  { desc = "Discard pending agent comments", noremap = true, silent = true })
+vim.keymap.set("n", "<leader>cd", "<cmd>AgentCommentDelete<CR>",
+  { desc = "Delete agent comment near cursor", noremap = true, silent = true })
+vim.keymap.set("n", "<leader>ce", "<cmd>AgentCommentEdit<CR>",
+  { desc = "Edit agent comment near cursor", noremap = true, silent = true })
+vim.keymap.set("n", "<leader>co", "<cmd>AgentCommentsList<CR>",
+  { desc = "Open agent comments location list", noremap = true, silent = true })
