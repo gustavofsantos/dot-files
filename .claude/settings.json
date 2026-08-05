@@ -104,28 +104,5 @@
   "theme": "custom:nord",
   "teammateMode": "tmux",
   "defaultMode": "auto",
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "tap-hook claude-hook-gitbutler-git"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "claude-hook-vale-lint"
-          }
-        ]
-      }
-    ]
-  }
+  "hooks": {}
 }
