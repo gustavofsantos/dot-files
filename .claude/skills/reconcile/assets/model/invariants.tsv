@@ -1,5 +1,1 @@
 id	claim	contexts	probe	watermark	last_run	status
-INV-002	every invoice points to a real contract	billing,cart	probes/INV-002.sql	2h	2026-08-04	green
-INV-014	every issued invoice has a fintech order	billing,fintech	probes/INV-014.sql	4h	2026-08-05	green
-INV-021	invoice amount equals sum of its order amounts	billing,fintech	probes/INV-021.sql	4h	2026-08-05	red
-INV-030	a payment order never predates its contract	cart,fintech	probes/INV-030.sql	4h	2026-08-05	green

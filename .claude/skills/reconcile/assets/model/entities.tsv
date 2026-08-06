@@ -1,5 +1,1 @@
 entity	context	grain	key	cardinality	p99_lag_min	record_owner
-invoice	billing	one billed document	invoice.id	1 per contract-month	95	billing
-contract	cart	one signed contract	contract.id	1	20	cart-system
-order	fintech-order	one payment order	order.id	N per contract	210	fintech-order
-posting	sap-gateway	one accounting line	doc_number+line	N per order	UNKNOWN	sap

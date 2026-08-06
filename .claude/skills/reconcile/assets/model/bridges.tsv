@@ -1,4 +1,1 @@
 left	right	join	coverage_pct	probe
-billing.invoice	cart.contract	invoice.contract_id = contract.id	100.00	INV-002
-billing.invoice	fintech.order	invoice.contract_id = order.contract_ref	100.00	INV-014
-fintech.order	sap.posting	UNKNOWN		UNKNOWN
