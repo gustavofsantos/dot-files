@@ -10,8 +10,10 @@ description: >
 # issue
 
 A tracked work item is a single markdown file. Everything it produces — notes,
-transcripts, spikes, data, diagrams — is a separate file in `~/engineering/artifacts/`,
-linked from the issue. Issues move between states; artifacts never move.
+transcripts, data, diagrams — is a separate file in `~/engineering/artifacts/`,
+linked from the issue. A spike is the exception: the `spike` skill writes it to
+`~/engineering/spikes/`, and the issue links it the same way. Issues move between
+states; artifacts and spikes never move.
 
 ```
 ~/engineering/
@@ -21,9 +23,11 @@ linked from the issue. Issues move between states; artifacts never move.
 │   │   └── 2026-07-22-characterize-fee-rounding.md  ← planned, not started
 │   └── done/
 │       └── 2026-06-30-retry-storm-in-settlement.md
-└── artifacts/
-    ├── 2026-08-04-ledger-retry-sequence.md
-    └── 2026-06-30-settlement-load-profile.csv
+├── artifacts/
+│   ├── 2026-08-04-ledger-retry-sequence.md
+│   └── 2026-06-30-settlement-load-profile.csv
+└── spikes/
+    └── 2026-08-04-does-the-projection-replay.md
 ```
 
 Three locations, three states. Moving the file is the only transition. There is no
@@ -63,8 +67,9 @@ Every issue has exactly these, in this order:
 
 ```markdown
 ---
-paths: []            # absolute paths to work in — repo roots, or project dirs
+paths: []            # absolute paths to work in — repo roots, or sub-directories
                      # inside a monorepo. List the primary one first.
+project:             # optional slug. The project brief this work belongs to.
 tags: []             # open vocabulary, for scanning
 created: YYYY-MM-DD
 ---
@@ -95,9 +100,14 @@ re-reading the whole file.
 Optional sections go between `Tasks` and `Artifacts`, except sections that record
 outcomes (`Findings`, `Decision`, `Resolution`), which go after `Artifacts`.
 
-`paths:` locates the work; it does not describe repository structure. A monorepo
-project is just a path. Anything needing a git root derives it —
+`paths:` locates the work. It does not describe repository structure. A monorepo
+sub-directory is just a path. Anything needing a git root derives it —
 `git rev-parse --show-toplevel` — rather than having it declared here.
+
+`project:` names the project brief in `~/engineering/projects/` that this work
+belongs to. Leave it out for work that stands alone. The link is authored here
+only: the brief keeps no list of its issues, and the `project` skill derives
+membership from this field.
 
 ## Artifacts
 
@@ -107,6 +117,11 @@ by the vault, so an artifact needs no knowledge of its issue.
 
 An artifact serving a second issue is simply linked twice — nothing moves, nothing
 is promoted.
+
+`artifacts/` holds raw material: what was observed. `spikes/` holds answers: what is
+now known, one falsifiable question per file. Both are linked from `## Artifacts`,
+and a `[[wikilink]]` resolves regardless of folder, so the split costs the reader
+nothing.
 
 ## Invariants
 
@@ -126,9 +141,9 @@ is promoted.
   wants to grow, the content belongs in an artifact behind an `## Artifacts` line,
   or it wanted to be a diagram. Length is not thoroughness.
 - **Issues hold deltas, not system state.** A diagram here describes the change or
-  the failing path, and is frozen at close. A diagram of how the system currently
-  works belongs in the topology map, not in an issue — it will be wrong within
-  weeks and will still look authoritative.
+  the failing path, and is frozen at close. A diagram of how the system works today
+  belongs in the `Topology` section of the project brief. Such a diagram goes stale
+  within weeks, and a stale diagram in a closed issue still looks authoritative.
 - **Sections are composed, not selected from a fixed set.** The list in
   `references/sections.md` is a vocabulary, not an enum. Add a new section when the
   work needs one; do not force work into an existing shape.

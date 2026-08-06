@@ -33,6 +33,7 @@ Re-running `setup.sh` is idempotent (`ln -sf`).
 ## Directory layout
 
 - `bin/` — personal scripts added to `$PATH` via `~/.bin/`
+- `test_bin/` — bats tests for `bin/` scripts, one `<script>.bats` per script
 - `config/` — XDG config dirs: `nvim/`, `ghostty/`, `bat/`, `lazygit/`, `zed/`, `wezterm/`, `tmux/`, `sheldon/`, `starship.toml`, `vale/`
 - `.claude/` — Claude Code config: `skills/`, `themes/`, `rules/`, `workflows/`, `settings.json`
 
@@ -55,6 +56,18 @@ Conventions the skills follow (keep them when editing):
   (e.g. `bruno` detects the collection format and loads one of two format files).
 - **No dead pointers.** A skill may only reference skills, scripts, and agents that
   exist in this repo.
+- **Skill scripts test in place.** A script under `.claude/skills/<name>/scripts/`
+  keeps its bats tests beside it as `<script>_test.bats` — the skill directory stays
+  self-contained, and the symlink into `~/.claude/skills/` carries the tests with it.
+  `test_bin/` is only for `bin/` scripts, whose tests cannot travel with them.
+
+Both test locations run under `bats` (`brew install bats-core`), and neither is
+discovered by `listchangedtests`, which matches only `py|js|ts|clj`:
+
+```bash
+bats test_bin/                                    # all bin/ script tests
+bats .claude/skills/spike/scripts/new_test.bats   # one skill script
+```
 
 ## Cross-harness skills
 
@@ -145,4 +158,6 @@ Plugin configs live in `config/nvim/lua/plugins/*.config.lua`. Leader is `<Space
 
 ## Engineering knowledge base
 
-`~/engineering/` is the local KB vault (markdown + `[[wikilinks]]`). The `eng-search` skill defines the retrieval protocol; `issue`, `spike`, and `tidy-kb` manage its contents.
+`~/engineering/` is the local KB vault (markdown + `[[wikilinks]]`). The `issue` skill tracks work items in `issues/` and their raw material in `artifacts/`. The `spike` skill records answered unknowns in `spikes/`.
+
+The `project` skill holds the durable context that no single issue owns: glossary, topology, data map, standing questions. One brief per project, at `~/engineering/projects/<slug>.md`, named by a bare slug because other files point at it as a key. An issue names its project in an optional `project:` frontmatter key, and `members.sh` derives the membership — the brief keeps no list, so nothing rots. An issue holds a delta; a brief holds system state. A campaign moves to `projects/done/` at the end; a domain the team owns never moves.

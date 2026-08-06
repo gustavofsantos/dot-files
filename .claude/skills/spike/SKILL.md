@@ -14,11 +14,15 @@ You are the investigator, not the scribe: run the experiment, then leave the rec
 ## Loop
 1. **Sharpen the unknown** — one question, phrased so it can be answered *wrong*. Fuzzy → sharpen before touching code.
 2. **Cheapest experiment** — read source, run a probe, write disposable code. Ignore quality, edges, error handling. This code does not survive.
-3. **Leave the receipt** — `scripts/new.sh "<slug>" [issue-id]` returns the path with stamped frontmatter. Fill Question / Answer / Evidence. Link the throwaway commit; don't paste it.
+3. **Leave the receipt** — `scripts/new.sh "<slug>"` returns the path with stamped frontmatter. Fill Question / Answer / Evidence. Link the throwaway commit; don't paste it. The issue links the spike, never the reverse.
 4. **Discard the scaffold** — the answer lives in the file; the experiment doesn't.
 
 ## Dedup
 `rg -il '<term>' ~/engineering/spikes/` first. Same unknown → update, don't fork.
+
+## Boundary
+`spikes/` holds the answer. Raw material that convinced you — query output, dumps,
+transcripts — belongs in `~/engineering/artifacts/`, linked from `## Evidence`.
 
 ## The artifact
 ```markdown
