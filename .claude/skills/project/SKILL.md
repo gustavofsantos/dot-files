@@ -87,4 +87,7 @@ key must stay stable when the title changes, so the name holds no date.
 ## Closing
 
 Move the file into `projects/done/`. Issues, artifacts and spikes stay where they
-are.
+are. `new.sh` makes `done/` up front, so the move cannot rename the brief.
+
+A domain has no end date. Leave its file in `projects/` for as long as the team
+owns the system.

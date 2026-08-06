@@ -158,4 +158,6 @@ Plugin configs live in `config/nvim/lua/plugins/*.config.lua`. Leader is `<Space
 
 ## Engineering knowledge base
 
-`~/engineering/` is the local KB vault (markdown + `[[wikilinks]]`). The `issue` skill tracks work items in `issues/` and their raw material in `artifacts/`; the `spike` skill records answered unknowns in `spikes/`.
+`~/engineering/` is the local KB vault (markdown + `[[wikilinks]]`). The `issue` skill tracks work items in `issues/` and their raw material in `artifacts/`. The `spike` skill records answered unknowns in `spikes/`.
+
+The `project` skill holds the durable context that no single issue owns: glossary, topology, data map, standing questions. One brief per project, at `~/engineering/projects/<slug>.md`, named by a bare slug because other files point at it as a key. An issue names its project in an optional `project:` frontmatter key, and `members.sh` derives the membership — the brief keeps no list, so nothing rots. An issue holds a delta; a brief holds system state. A campaign moves to `projects/done/` at the end; a domain the team owns never moves.

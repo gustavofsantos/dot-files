@@ -9,7 +9,9 @@ if [[ -z "$slug" ]]; then
 fi
 
 dir="$HOME/engineering/projects"
-mkdir -p "$dir"
+# done/ is made up front. Without it, `mv brief.md projects/done` renames the
+# brief to a file called "done" instead of failing.
+mkdir -p "$dir/done"
 
 f="$dir/${slug}.md"
 if [[ ! -f "$f" ]]; then

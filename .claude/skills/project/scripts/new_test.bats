@@ -41,6 +41,14 @@ teardown() {
   [ -d "$HOME/engineering/projects" ]
 }
 
+@test "closing a project cannot rename the brief to done" {
+  f=$("$SCRIPT" "$SLUG")
+  [ -d "$HOME/engineering/projects/done" ]
+
+  mv "$f" "$HOME/engineering/projects/done"
+  [ -f "$HOME/engineering/projects/done/${SLUG}.md" ]
+}
+
 # ── The brief ──────────────────────────────────────────────────────────────────
 
 @test "a new brief carries every section an agent reads cold" {
