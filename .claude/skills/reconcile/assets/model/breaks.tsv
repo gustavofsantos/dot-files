@@ -1,0 +1,4 @@
+date	invariant	class	count	note
+2026-08-05	INV-014	timing	35	cdc lag - folded into probe watermark, now 4h
+2026-08-05	INV-014	missing-in-target	2	contracts 88213, 88907 - order never created
+2026-08-05	INV-021	rounding	14	installment split, 0.01 residual on last line
