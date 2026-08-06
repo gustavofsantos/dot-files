@@ -1,12 +1,14 @@
 #!/usr/bin/env bats
 
-# Tests for .claude/skills/spike/scripts/new.sh
+# Tests for new.sh, alongside it.
+#
+# Run: bats .claude/skills/spike/scripts/new_test.bats
 #
 # Isolation strategy:
 #   HOME → fresh tmpdir, so ~/engineering is built per-test and never touched
 #          on the real machine.
 
-SCRIPT="$BATS_TEST_DIRNAME/../.claude/skills/spike/scripts/new.sh"
+SCRIPT="$BATS_TEST_DIRNAME/new.sh"
 
 setup() {
   TEST_HOME=$(mktemp -d)
