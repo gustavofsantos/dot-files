@@ -10,8 +10,10 @@ description: >
 # issue
 
 A tracked work item is a single markdown file. Everything it produces — notes,
-transcripts, spikes, data, diagrams — is a separate file in `~/engineering/artifacts/`,
-linked from the issue. Issues move between states; artifacts never move.
+transcripts, data, diagrams — is a separate file in `~/engineering/artifacts/`,
+linked from the issue. A spike is the exception: the `spike` skill writes it to
+`~/engineering/spikes/`, and the issue links it the same way. Issues move between
+states; artifacts and spikes never move.
 
 ```
 ~/engineering/
@@ -21,9 +23,11 @@ linked from the issue. Issues move between states; artifacts never move.
 │   │   └── 2026-07-22-characterize-fee-rounding.md  ← planned, not started
 │   └── done/
 │       └── 2026-06-30-retry-storm-in-settlement.md
-└── artifacts/
-    ├── 2026-08-04-ledger-retry-sequence.md
-    └── 2026-06-30-settlement-load-profile.csv
+├── artifacts/
+│   ├── 2026-08-04-ledger-retry-sequence.md
+│   └── 2026-06-30-settlement-load-profile.csv
+└── spikes/
+    └── 2026-08-04-does-the-projection-replay.md
 ```
 
 Three locations, three states. Moving the file is the only transition. There is no
@@ -107,6 +111,11 @@ by the vault, so an artifact needs no knowledge of its issue.
 
 An artifact serving a second issue is simply linked twice — nothing moves, nothing
 is promoted.
+
+`artifacts/` holds raw material: what was observed. `spikes/` holds answers: what is
+now known, one falsifiable question per file. Both are linked from `## Artifacts`,
+and a `[[wikilink]]` resolves regardless of folder, so the split costs the reader
+nothing.
 
 ## Invariants
 

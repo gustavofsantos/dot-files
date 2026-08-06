@@ -20,6 +20,10 @@ You are the investigator, not the scribe: run the experiment, then leave the rec
 ## Dedup
 `rg -il '<term>' ~/engineering/spikes/` first. Same unknown → update, don't fork.
 
+## Boundary
+`spikes/` holds the answer. Raw material that convinced you — query output, dumps,
+transcripts — belongs in `~/engineering/artifacts/`, linked from `## Evidence`.
+
 ## The artifact
 ```markdown
 ---

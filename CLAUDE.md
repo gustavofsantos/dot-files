@@ -145,4 +145,4 @@ Plugin configs live in `config/nvim/lua/plugins/*.config.lua`. Leader is `<Space
 
 ## Engineering knowledge base
 
-`~/engineering/` is the local KB vault (markdown + `[[wikilinks]]`). The `eng-search` skill defines the retrieval protocol; `issue`, `spike`, and `tidy-kb` manage its contents.
+`~/engineering/` is the local KB vault (markdown + `[[wikilinks]]`). The `issue` skill tracks work items in `issues/` and their raw material in `artifacts/`; the `spike` skill records answered unknowns in `spikes/`.
