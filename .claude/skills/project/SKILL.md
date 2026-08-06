@@ -21,7 +21,7 @@ carries no progress, no status, and no list of its issues.
 ```
 ~/engineering/
 ├── projects/
-│   ├── accounting-divergences.md      ← open
+│   ├── database-write-performance.md      ← open
 │   └── done/
 │       └── ledger-cutover-2025.md
 ├── issues/
