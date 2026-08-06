@@ -5,7 +5,7 @@ set -euo pipefail
 
 slug="${1:-}"
 if [[ -z "$slug" ]]; then
-  echo "usage: members.sh <slug>" >&2
+  echo "usage: $(basename "$0") <slug>" >&2
   exit 64
 fi
 
