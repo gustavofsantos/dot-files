@@ -12,11 +12,11 @@ command -v vale >/dev/null 2>&1 || exit 0
 
 input=$(cat)
 
-cwd=$(jq -r '.cwd // empty' <<<"$input")
+cwd=$(printf '%s' "$input" | jq -r '.cwd // empty')
 [ -n "$cwd" ] || exit 0
 cd "$cwd" 2>/dev/null || exit 0
 
-file=$(jq -r '.tool_input.file_path // empty' <<<"$input")
+file=$(printf '%s' "$input" | jq -r '.tool_input.file_path // empty')
 [ -n "$file" ] || exit 0
 
 case "$file" in
@@ -29,13 +29,13 @@ esac
 report=$(vale --output=JSON "$file" 2>/dev/null) || exit 0
 [ -n "$report" ] || exit 0
 
-alerts=$(jq -c '[.[][] | select(.Severity == "warning" or .Severity == "error")]' <<<"$report" 2>/dev/null) || exit 0
-count=$(jq 'length' <<<"$alerts")
+alerts=$(printf '%s' "$report" | jq -c '[.[][] | select(.Severity == "warning" or .Severity == "error")]' 2>/dev/null) || exit 0
+count=$(printf '%s' "$alerts" | jq 'length')
 [ "$count" -gt 0 ] || exit 0
 
 {
   echo "vale flagged $count issue(s) in $file:"
-  jq -r '.[] | "  \(.Line):\(.Span[0]) [\(.Severity)] \(.Check): \(.Message)"' <<<"$alerts"
+  printf '%s' "$alerts" | jq -r '.[] | "  \(.Line):\(.Span[0]) [\(.Severity)] \(.Check): \(.Message)"'
 } >&2
 
 exit 2
