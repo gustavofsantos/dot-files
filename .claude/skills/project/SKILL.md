@@ -51,6 +51,9 @@ key must stay stable when the title changes, so the name holds no date.
    sections.
 3. **Fill what you know** — leave a section empty rather than guessing. An empty
    Glossary is honest. A wrong Glossary costs every later session.
+4. **List the work** — `scripts/members.sh "<slug>"` prints the issues that name
+   this project, active first. Read it when you need the current state of the
+   work. Do not copy the output into the brief.
 
 ## Sections
 
@@ -68,8 +71,9 @@ key must stay stable when the title changes, so the name holds no date.
 - **The brief holds system state, not deltas.** An issue holds the change. The
   project holds how the system works today. This is the opposite rule to the issue
   skill, and it is deliberate.
-- **The brief holds no list of its issues.** An issue names its project. The vault
-  derives the reverse. A hand-written list rots within weeks.
+- **The brief holds no list of its issues.** An issue names its project in its
+  frontmatter, and `members.sh` derives the reverse. A hand-written list rots
+  within weeks.
 - **Key artifacts is curation, not an index.** List the files a new reader must
   read. Do not list every file the project produced.
 - **A standing question is falsifiable.** Phrase it so that a spike can answer it

@@ -67,8 +67,9 @@ Every issue has exactly these, in this order:
 
 ```markdown
 ---
-paths: []            # absolute paths to work in — repo roots, or project dirs
+paths: []            # absolute paths to work in — repo roots, or sub-directories
                      # inside a monorepo. List the primary one first.
+project:             # optional slug. The project brief this work belongs to.
 tags: []             # open vocabulary, for scanning
 created: YYYY-MM-DD
 ---
@@ -99,9 +100,14 @@ re-reading the whole file.
 Optional sections go between `Tasks` and `Artifacts`, except sections that record
 outcomes (`Findings`, `Decision`, `Resolution`), which go after `Artifacts`.
 
-`paths:` locates the work; it does not describe repository structure. A monorepo
-project is just a path. Anything needing a git root derives it —
+`paths:` locates the work. It does not describe repository structure. A monorepo
+sub-directory is just a path. Anything needing a git root derives it —
 `git rev-parse --show-toplevel` — rather than having it declared here.
+
+`project:` names the project brief in `~/engineering/projects/` that this work
+belongs to. Leave it out for work that stands alone. The link is authored here
+only: the brief keeps no list of its issues, and the `project` skill derives
+membership from this field.
 
 ## Artifacts
 
@@ -135,9 +141,9 @@ nothing.
   wants to grow, the content belongs in an artifact behind an `## Artifacts` line,
   or it wanted to be a diagram. Length is not thoroughness.
 - **Issues hold deltas, not system state.** A diagram here describes the change or
-  the failing path, and is frozen at close. A diagram of how the system currently
-  works belongs in the topology map, not in an issue — it will be wrong within
-  weeks and will still look authoritative.
+  the failing path, and is frozen at close. A diagram of how the system works today
+  belongs in the `Topology` section of the project brief. Such a diagram goes stale
+  within weeks, and a stale diagram in a closed issue still looks authoritative.
 - **Sections are composed, not selected from a fixed set.** The list in
   `references/sections.md` is a vocabulary, not an enum. Add a new section when the
   work needs one; do not force work into an existing shape.
