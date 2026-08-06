@@ -13,5 +13,13 @@ dir="$HOME/engineering/spikes"
 mkdir -p "$dir"
 
 f="$dir/${today}-${slug}.md"
-[[ -f "$f" ]] || printf -- '---\nstatus: resolved\ncreated: %s\n---\n' "$today" > "$f"
+if [[ ! -f "$f" ]]; then
+  cat > "$f" <<EOF
+---
+status: resolved
+created: $today
+---
+EOF
+fi
+
 echo "$f"
