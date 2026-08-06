@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
-# new.sh <slug> [issue-id] — prints spike path, seeds frontmatter
+# new.sh <slug> — prints the spike path, seeding frontmatter on first use.
 set -euo pipefail
-slug="$1"; issue="${2:-}"; dir=~/engineering/spikes; mkdir -p "$dir"
-if [[ -n "$issue" ]]; then prefix="$issue"; else
-  n=$(ls ~/engineering/issues/ ~/engineering/issues/archive/ "$dir" 2>/dev/null \
-    | grep -oE '^[0-9]+' | sort -n | tail -1)
-  prefix=$(printf '%03d' $(( ${n:-0} + 1 )))
+
+slug="${1:-}"
+if [[ -z "$slug" ]]; then
+  echo "usage: new.sh <slug>" >&2
+  exit 64
 fi
-f="$dir/${prefix}-${slug}.md"
-[[ -f "$f" ]] || printf -- '---\nstatus: resolved\ncreated: %s\n---\n' "$(date +%F)" > "$f"
+
+today=$(date +%F)
+dir="$HOME/engineering/spikes"
+mkdir -p "$dir"
+
+f="$dir/${today}-${slug}.md"
+[[ -f "$f" ]] || printf -- '---\nstatus: resolved\ncreated: %s\n---\n' "$today" > "$f"
 echo "$f"

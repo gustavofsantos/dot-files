@@ -69,6 +69,12 @@ teardown() {
   [ -d "$HOME/engineering/spikes" ]
 }
 
+@test "the script runs on its own, the way SKILL.md invokes it" {
+  run "$SCRIPT" "fee-rounding-drift"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$HOME/engineering/spikes/${TODAY}-fee-rounding-drift.md" ]
+}
+
 @test "a missing slug is refused rather than creating a nameless spike" {
   run bash "$SCRIPT"
   [ "$status" -ne 0 ]
