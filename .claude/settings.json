@@ -111,7 +111,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "tap-hook claude-hook-gitbutler-git"
+            "command": "tap-hook claude-hook-gitbutler-git",
+            "timeout": 5
           }
         ]
       }
@@ -122,7 +123,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "claude-hook-vale-lint"
+            "command": "claude-hook-vale-lint",
+            "timeout": 5
           }
         ]
       }
