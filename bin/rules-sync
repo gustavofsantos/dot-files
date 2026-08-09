@@ -89,16 +89,17 @@ def extract_block(frontmatter_text, harness):
     by its 2-space indent. Returns "" for an empty block (`harness: {}`, or a
     key with no children) and None when the harness key is absent entirely."""
     lines = frontmatter_text.splitlines(keepends=True)
+    key = None
     idx = None
     for i, line in enumerate(lines):
-        key = top_level_key(line)
-        if key and key[0] == harness:
-            idx = i
+        k = top_level_key(line)
+        if k and k[0] == harness:
+            key, idx = k, i
             break
     if idx is None:
         return None
 
-    inline = top_level_key(lines[idx])[1]
+    inline = key[1]
     children = []
     j = idx + 1
     while j < len(lines) and re.match(r"\A[ \t]", lines[j]):

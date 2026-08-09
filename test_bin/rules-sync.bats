@@ -24,7 +24,7 @@ teardown() {
   rm -rf "$SRC" "$DEST"
 }
 
-@test "a path-scoped rule's claude block is promoted to the generated file's own frontmatter" {
+write_sql_comments_source() {
   cat > "$SRC/sql-comments.md" <<'EOF'
 ---
 claude:
@@ -35,6 +35,10 @@ cursor:
 ---
 Always add COMMENT clauses to tables and columns.
 EOF
+}
+
+@test "a path-scoped rule's claude block is promoted to the generated file's own frontmatter" {
+  write_sql_comments_source
 
   cat > "$DEST/expected-sql-comments.md" <<'EOF'
 ---
@@ -76,16 +80,7 @@ EOF
 
 @test "a source file with no frontmatter block is skipped, and other files still sync" {
   printf 'No frontmatter here, just prose.\n' > "$SRC/no-frontmatter.md"
-  cat > "$SRC/sql-comments.md" <<'EOF'
----
-claude:
-  paths:
-    - "**/*.sql"
-cursor:
-  globs: "**/*.sql"
----
-Always add COMMENT clauses to tables and columns.
-EOF
+  write_sql_comments_source
 
   run "$SCRIPT" --source "$SRC" --claude-dest "$DEST"
   [ "$status" -eq 0 ]
