@@ -1,0 +1,167 @@
+#!/usr/bin/env python3
+"""
+rules-sync — derive .claude/rules and .cursor/rules from the generic agents/rules source.
+
+The source of truth is one Markdown file per rule under agents/rules/, whose
+frontmatter nests each harness's own config under a top-level key:
+
+  ---
+  claude:
+    paths:
+      - "**/*.sql"
+  cursor:
+    globs: "**/*.sql"
+  ---
+
+For each harness, rules-sync promotes that harness's block to the generated
+file's own top-level frontmatter (dedented, verbatim -- no YAML round-trip, so
+quoting and list formatting survive unchanged) and carries the body through
+untouched. An empty block (`claude: {}`) means "no scoping" and generates a
+file with no frontmatter at all -- this repo's convention for an always-apply
+rule.
+
+Usage:
+  rules-sync [--source DIR] [--claude-dest DIR] [--dry-run]
+
+Defaults (relative to the repo root):
+  --source       agents/rules
+  --claude-dest  .claude/rules
+
+Idempotent: re-running with unchanged sources reproduces the same output.
+"""
+
+import os
+import re
+import sys
+
+DOTFILES_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+FRONTMATTER_RE = re.compile(r"\A---[ \t]*\n(.*?\n)---[ \t]*\n?(.*)\Z", re.S)
+TOP_LEVEL_KEY_RE = re.compile(r"\A([A-Za-z0-9_-]+):(.*)")
+
+
+def parse_args(argv):
+    opts = {
+        "source": os.path.join(DOTFILES_DIR, "agents", "rules"),
+        "claude_dest": os.path.join(DOTFILES_DIR, ".claude", "rules"),
+        "dry_run": False,
+    }
+    args = list(argv)
+    while args:
+        arg = args.pop(0)
+        if arg == "--source":
+            opts["source"] = args.pop(0)
+        elif arg == "--claude-dest":
+            opts["claude_dest"] = args.pop(0)
+        elif arg == "--dry-run":
+            opts["dry_run"] = True
+        elif arg in ("-h", "--help"):
+            print(__doc__.strip())
+            sys.exit(0)
+        else:
+            print(f"rules-sync: unknown argument {arg!r}", file=sys.stderr)
+            sys.exit(2)
+    return opts
+
+
+def split_rule(text):
+    """Split "---\\n<frontmatter>\\n---\\n<body>" into (frontmatter_text, body),
+    where frontmatter_text keeps its trailing newline. Returns (None, text)
+    when the file has no leading frontmatter block."""
+    m = FRONTMATTER_RE.match(text)
+    if not m:
+        return None, text
+    return m.group(1), m.group(2)
+
+
+def top_level_key(line):
+    """(key, inline_remainder) for a top-level frontmatter line (zero indent),
+    or None for a continuation line: indented block content, list items,
+    blanks."""
+    m = TOP_LEVEL_KEY_RE.match(line)
+    if not m:
+        return None
+    return m.group(1), m.group(2).strip()
+
+
+def extract_block(frontmatter_text, harness):
+    """Extract one harness's block from a frontmatter block of text, dedented
+    by its 2-space indent. Returns "" for an empty block (`harness: {}`, or a
+    key with no children) and None when the harness key is absent entirely."""
+    lines = frontmatter_text.splitlines(keepends=True)
+    idx = None
+    for i, line in enumerate(lines):
+        key = top_level_key(line)
+        if key and key[0] == harness:
+            idx = i
+            break
+    if idx is None:
+        return None
+
+    inline = top_level_key(lines[idx])[1]
+    children = []
+    j = idx + 1
+    while j < len(lines) and re.match(r"\A[ \t]", lines[j]):
+        children.append(lines[j])
+        j += 1
+
+    if not children and inline in ("", "{}"):
+        return ""
+
+    return "".join(line[2:] if line.startswith("  ") else line for line in children)
+
+
+def render_rule(block, body):
+    if not block:
+        return body
+    return f"---\n{block}---\n{body}"
+
+
+def source_rule_files(source):
+    return sorted(
+        os.path.join(source, name)
+        for name in os.listdir(source)
+        if name.endswith(".md")
+    )
+
+
+def sync_claude(source, dest, dry_run):
+    print(f"claude -> {dest}")
+    if not dry_run:
+        os.makedirs(dest, exist_ok=True)
+
+    for path in source_rule_files(source):
+        name = os.path.basename(path)
+        with open(path, encoding="utf-8") as f:
+            raw = f.read()
+        frontmatter, body = split_rule(raw)
+        if frontmatter is None:
+            print(f"  skip  {name} (no frontmatter block)", file=sys.stderr)
+            continue
+
+        block = extract_block(frontmatter, "claude")
+        if block is None:
+            print(f"  skip  {name} (no claude: block)", file=sys.stderr)
+            continue
+
+        print(f"  gen   {name}")
+        if dry_run:
+            continue
+
+        with open(os.path.join(dest, name), "w", encoding="utf-8") as f:
+            f.write(render_rule(block, body))
+
+
+def main(argv):
+    opts = parse_args(argv)
+
+    if not os.path.isdir(opts["source"]):
+        print(f"rules-sync: source not found: {opts['source']}", file=sys.stderr)
+        return 1
+
+    sync_claude(opts["source"], opts["claude_dest"], opts["dry_run"])
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
