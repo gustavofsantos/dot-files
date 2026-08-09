@@ -1,12 +1,15 @@
 #!/usr/bin/env bats
 
+bats_require_minimum_version 1.5.0
+
 # Tests for bin/rules-sync
 #
 # Slice 1: generate .claude/rules/*.md from agents/rules/*.md — path-scoped and
-# always-apply cases. Cursor output lands in a later slice.
+# always-apply cases.
+# Slice 2: generate .cursor/rules/*.mdc alongside it.
 #
-# Isolation strategy: --source / --claude-dest point at tmpdirs, never the
-# repo's own agents/rules or .claude/rules.
+# Isolation strategy: --source / --claude-dest / --cursor-dest point at
+# tmpdirs, never the repo's own agents/rules, .claude/rules, .cursor/rules.
 #
 # Assertions use cmp against a byte-exact expected fixture rather than bats'
 # $output (which strips leading/trailing newlines) — byte fidelity of the
@@ -18,10 +21,11 @@ SCRIPT="$BATS_TEST_DIRNAME/../bin/rules-sync"
 setup() {
   SRC=$(mktemp -d)
   DEST=$(mktemp -d)
+  CURSOR_DEST=$(mktemp -d)
 }
 
 teardown() {
-  rm -rf "$SRC" "$DEST"
+  rm -rf "$SRC" "$DEST" "$CURSOR_DEST"
 }
 
 write_sql_comments_source() {
@@ -48,7 +52,7 @@ paths:
 Always add COMMENT clauses to tables and columns.
 EOF
 
-  run "$SCRIPT" --source "$SRC" --claude-dest "$DEST"
+  run "$SCRIPT" --source "$SRC" --claude-dest "$DEST" --cursor-dest "$CURSOR_DEST"
   [ "$status" -eq 0 ]
 
   [ -f "$DEST/sql-comments.md" ]
@@ -71,7 +75,7 @@ EOF
 Follow the acceptance loop.
 EOF
 
-  run "$SCRIPT" --source "$SRC" --claude-dest "$DEST"
+  run "$SCRIPT" --source "$SRC" --claude-dest "$DEST" --cursor-dest "$CURSOR_DEST"
   [ "$status" -eq 0 ]
 
   [ -f "$DEST/way-of-work.md" ]
@@ -82,9 +86,74 @@ EOF
   printf 'No frontmatter here, just prose.\n' > "$SRC/no-frontmatter.md"
   write_sql_comments_source
 
-  run "$SCRIPT" --source "$SRC" --claude-dest "$DEST"
+  run "$SCRIPT" --source "$SRC" --claude-dest "$DEST" --cursor-dest "$CURSOR_DEST"
   [ "$status" -eq 0 ]
 
   [ ! -f "$DEST/no-frontmatter.md" ]
   [ -f "$DEST/sql-comments.md" ]
+}
+
+@test "a path-scoped rule's cursor block is promoted to a .mdc file with a .mdc extension" {
+  write_sql_comments_source
+
+  cat > "$CURSOR_DEST/expected-sql-comments.mdc" <<'EOF'
+---
+globs: "**/*.sql"
+---
+Always add COMMENT clauses to tables and columns.
+EOF
+
+  run "$SCRIPT" --source "$SRC" --claude-dest "$DEST" --cursor-dest "$CURSOR_DEST"
+  [ "$status" -eq 0 ]
+
+  [ -f "$CURSOR_DEST/sql-comments.mdc" ]
+  cmp "$CURSOR_DEST/sql-comments.mdc" "$CURSOR_DEST/expected-sql-comments.mdc"
+}
+
+@test "an always-apply rule's cursor alwaysApply block is promoted to a .mdc file" {
+  cat > "$SRC/way-of-work.md" <<'EOF'
+---
+claude: {}
+cursor:
+  alwaysApply: true
+---
+
+Follow the acceptance loop.
+EOF
+
+  cat > "$CURSOR_DEST/expected-way-of-work.mdc" <<'EOF'
+---
+alwaysApply: true
+---
+
+Follow the acceptance loop.
+EOF
+
+  run "$SCRIPT" --source "$SRC" --claude-dest "$DEST" --cursor-dest "$CURSOR_DEST"
+  [ "$status" -eq 0 ]
+
+  [ -f "$CURSOR_DEST/way-of-work.mdc" ]
+  cmp "$CURSOR_DEST/way-of-work.mdc" "$CURSOR_DEST/expected-way-of-work.mdc"
+}
+
+@test "a rule with an empty cursor block generates a .mdc file with no frontmatter and warns it will not auto-attach" {
+  cat > "$SRC/orphan-cursor.md" <<'EOF'
+---
+claude:
+  paths:
+    - "**/*.sql"
+cursor: {}
+---
+Body text.
+EOF
+
+  run --separate-stderr "$SCRIPT" --source "$SRC" --claude-dest "$DEST" --cursor-dest "$CURSOR_DEST"
+  [ "$status" -eq 0 ]
+  sync_stderr="$stderr"
+
+  [ -f "$CURSOR_DEST/orphan-cursor.mdc" ]
+  run cat "$CURSOR_DEST/orphan-cursor.mdc"
+  [ "$output" = "Body text." ]
+  [[ "$sync_stderr" == *"orphan-cursor.md"* ]]
+  [[ "$sync_stderr" == *"will not auto-attach"* ]]
 }

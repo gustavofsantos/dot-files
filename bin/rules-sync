@@ -21,11 +21,12 @@ file with no frontmatter at all -- this repo's convention for an always-apply
 rule.
 
 Usage:
-  rules-sync [--source DIR] [--claude-dest DIR] [--dry-run]
+  rules-sync [--source DIR] [--claude-dest DIR] [--cursor-dest DIR] [--dry-run]
 
 Defaults (relative to the repo root):
   --source       agents/rules
   --claude-dest  .claude/rules
+  --cursor-dest  .cursor/rules
 
 Idempotent: re-running with unchanged sources reproduces the same output.
 """
@@ -44,6 +45,7 @@ def parse_args(argv):
     opts = {
         "source": os.path.join(DOTFILES_DIR, "agents", "rules"),
         "claude_dest": os.path.join(DOTFILES_DIR, ".claude", "rules"),
+        "cursor_dest": os.path.join(DOTFILES_DIR, ".cursor", "rules"),
         "dry_run": False,
     }
     args = list(argv)
@@ -53,6 +55,8 @@ def parse_args(argv):
             opts["source"] = args.pop(0)
         elif arg == "--claude-dest":
             opts["claude_dest"] = args.pop(0)
+        elif arg == "--cursor-dest":
+            opts["cursor_dest"] = args.pop(0)
         elif arg == "--dry-run":
             opts["dry_run"] = True
         elif arg in ("-h", "--help"):
@@ -153,6 +157,40 @@ def sync_claude(source, dest, dry_run):
             f.write(render_rule(block, body))
 
 
+def sync_cursor(source, dest, dry_run):
+    print(f"cursor -> {dest}")
+    if not dry_run:
+        os.makedirs(dest, exist_ok=True)
+
+    for path in source_rule_files(source):
+        name = os.path.basename(path)
+        stem = os.path.splitext(name)[0]
+        with open(path, encoding="utf-8") as f:
+            raw = f.read()
+        frontmatter, body = split_rule(raw)
+        if frontmatter is None:
+            print(f"  skip  {name} (no frontmatter block)", file=sys.stderr)
+            continue
+
+        block = extract_block(frontmatter, "cursor")
+        if block is None:
+            print(f"  skip  {name} (no cursor: block)", file=sys.stderr)
+            continue
+        if block == "":
+            print(
+                f"  warn  {name} has an empty cursor: block — will not auto-attach in Cursor",
+                file=sys.stderr,
+            )
+
+        dest_name = f"{stem}.mdc"
+        print(f"  gen   {dest_name}")
+        if dry_run:
+            continue
+
+        with open(os.path.join(dest, dest_name), "w", encoding="utf-8") as f:
+            f.write(render_rule(block, body))
+
+
 def main(argv):
     opts = parse_args(argv)
 
@@ -161,6 +199,7 @@ def main(argv):
         return 1
 
     sync_claude(opts["source"], opts["claude_dest"], opts["dry_run"])
+    sync_cursor(opts["source"], opts["cursor_dest"], opts["dry_run"])
     return 0
 
 
