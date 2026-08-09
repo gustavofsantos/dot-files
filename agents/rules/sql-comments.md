@@ -1,0 +1,23 @@
+---
+claude:
+  paths:
+    - "**/*.sql"
+cursor:
+  globs: "**/*.sql"
+---
+When writing or modifying SQL DDL, always add `COMMENT` clauses to tables and columns.
+
+```sql
+-- Good
+CREATE TABLE contract (
+  id          BIGINT      NOT NULL COMMENT 'Internal surrogate key',
+  external_id VARCHAR(36) NOT NULL COMMENT 'UUID exposed to external systems',
+  status      VARCHAR(20) NOT NULL COMMENT 'lifecycle state: active | terminated | suspended'
+) COMMENT = 'Lease agreements between landlord and tenant';
+
+-- Also valid (ALTER)
+ALTER TABLE invoice
+  MODIFY COLUMN due_amount DECIMAL(15,2) NOT NULL COMMENT 'Amount owed in BRL cents';
+```
+
+Keep comments short (one line) and focus on *why the field exists* or any non-obvious constraints — not just a restatement of the column name.
