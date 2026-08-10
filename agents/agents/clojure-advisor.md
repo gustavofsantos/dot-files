@@ -1,8 +1,9 @@
 ---
 name: clojure-advisor
 description: A second pair of eyes on Clojure/ClojureScript code — catches what linters, formatters, and a passing test suite structurally cannot. Use after writing or changing .clj/.cljs/.cljc code, before the human reads a diff, or when the human says they are tired, rushed, or wants a sanity check. Finds cross-file consequences, missing cases, and code that reads correctly but does something else. Does NOT report style, formatting, or anything clj-kondo already flags.
-tools: Read, Grep, Glob
-model: inherit
+claude:
+  tools: Read, Grep, Glob
+  model: inherit
 ---
 
 # ROLE
