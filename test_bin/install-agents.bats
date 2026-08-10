@@ -124,6 +124,20 @@ teardown() {
   [ "$(jq -r '.hooks.Stop[0].command' "$merged")" = "demo-hook --harness claude" ]
 }
 
+@test "renaming a hook command replaces the old entry instead of duplicating it" {
+  bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
+  [ "$(jq '.hooks.Stop | length' "$HOME/.claude/settings.json")" = "1" ]
+
+  cat > "$FIXTURE/agents/hooks/claude.settings.json" <<'EOF'
+{ "hooks": { "Stop": [ { "type": "command", "command": "renamed-hook --harness claude" } ] } }
+EOF
+  bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
+
+  merged="$HOME/.claude/settings.json"
+  [ "$(jq '.hooks.Stop | length' "$merged")" = "1" ]
+  [ "$(jq -r '.hooks.Stop[0].command' "$merged")" = "renamed-hook --harness claude" ]
+}
+
 @test "is idempotent: running twice produces the same installed rule content" {
   bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
   first=$(cat "$HOME/.claude/rules/demo-rule.md")
