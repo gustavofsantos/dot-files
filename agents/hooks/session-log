@@ -320,18 +320,25 @@ def handle_turn_end(harness: str, payload: dict) -> None:
         process_cursor_turn(log_path, session_id, cwd, ts)
 
 
-def handle_subagent_start(payload: dict) -> None:
+def resolve_subagent_log(payload: dict) -> tuple[str, Path] | None:
+    """(agent_id, log_path) for a subagent event, or None if session_id/agent_id
+    are missing. Creates the parent session directory as a side effect."""
     session_id = payload.get("session_id") or os.environ.get("CLAUDE_SESSION_ID", "")
-    if not session_id:
-        return
     agent_id = payload.get("agent_id", "")
-    agent_type = payload.get("agent_type", "")
-    if not agent_id:
-        return
+    if not session_id or not agent_id:
+        return None
 
     subdir = SESSIONS_DIR / session_id
     subdir.mkdir(parents=True, exist_ok=True)
-    log_path = subdir / f"{agent_id}.jsonl"
+    return agent_id, subdir / f"{agent_id}.jsonl"
+
+
+def handle_subagent_start(payload: dict) -> None:
+    resolved = resolve_subagent_log(payload)
+    if resolved is None:
+        return
+    agent_id, log_path = resolved
+    agent_type = payload.get("agent_type", "")
 
     if not log_path.exists():
         ts = int(time.time())
@@ -348,17 +355,13 @@ def handle_subagent_start(payload: dict) -> None:
 
 
 def handle_subagent_stop(payload: dict) -> None:
-    session_id = payload.get("session_id") or os.environ.get("CLAUDE_SESSION_ID", "")
-    if not session_id:
+    resolved = resolve_subagent_log(payload)
+    if resolved is None:
         return
-    agent_id = payload.get("agent_id", "")
+    agent_id, log_path = resolved
     agent_transcript_path = payload.get("agent_transcript_path", "")
-    if not agent_id or not agent_transcript_path:
+    if not agent_transcript_path:
         return
-
-    subdir = SESSIONS_DIR / session_id
-    subdir.mkdir(parents=True, exist_ok=True)
-    log_path = subdir / f"{agent_id}.jsonl"
 
     ts = int(time.time())
     process_transcript(log_path, agent_transcript_path, agent_id, ts, "claude")
