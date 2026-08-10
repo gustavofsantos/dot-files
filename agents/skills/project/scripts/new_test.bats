@@ -2,7 +2,7 @@
 
 # Tests for new.sh, alongside it.
 #
-# Run: bats .claude/skills/project/scripts/new_test.bats
+# Run: bats agents/skills/project/scripts/new_test.bats
 #
 # Isolation strategy:
 #   HOME → fresh tmpdir, so ~/engineering is built per-test and the real vault

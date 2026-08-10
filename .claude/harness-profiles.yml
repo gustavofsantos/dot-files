@@ -1,6 +1,6 @@
 # harness-profiles.yml — how skills-sync derives per-harness skill trees.
 #
-# Source of truth: .claude/skills/<name>/SKILL.md (Claude-native, maximal
+# Source of truth: agents/skills/<name>/SKILL.md (Claude-native, maximal
 # frontmatter). skills-sync generates one tree per harness below, rewriting only
 # the SKILL.md frontmatter; the body and references/ / scripts/ assets are shared
 # verbatim (symlinked back to the source). Generated skills carry a `.skills-sync`

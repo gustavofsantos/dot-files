@@ -5,7 +5,7 @@ DOTFILES_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "Installing skills..."
 mkdir -p "$HOME/.claude/skills"
-for skill in "$DOTFILES_DIR"/.claude/skills/*/; do
+for skill in "$DOTFILES_DIR"/agents/skills/*/; do
   [ -f "$skill/SKILL.md" ] || continue
   name=$(basename "$skill")
   ln -sfn "${skill%/}" "$HOME/.claude/skills/$name"
@@ -20,7 +20,7 @@ echo "Syncing skills to other harnesses..."
 ln -sf "$DOTFILES_DIR/.claude/harness-profiles.yml" "$HOME/.claude/harness-profiles.yml"
 if command -v ruby >/dev/null 2>&1; then
   ruby "$DOTFILES_DIR/bin/skills-sync" \
-    --source "$DOTFILES_DIR/.claude/skills" \
+    --source "$DOTFILES_DIR/agents/skills" \
     --profiles "$DOTFILES_DIR/.claude/harness-profiles.yml" >/dev/null \
     && echo "Syncing skills to other harnesses... OK" \
     || echo "Syncing skills to other harnesses... FAILED (non-fatal)"

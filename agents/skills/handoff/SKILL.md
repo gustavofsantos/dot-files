@@ -1,6 +1,7 @@
 ---
 name: handoff
 description: Write a path-free handoff prompt to a temp file that lets another agent investigate, discuss, or pick up a specific task in a fresh session.
+disable-model-invocation: true
 ---
 
 # Handoff

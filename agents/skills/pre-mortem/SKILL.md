@@ -1,6 +1,7 @@
 ---
 name: pre-mortem
 description: Before implementing a non-trivial solution — assume it already failed, enumerate and score failure modes, mitigate the top ones before writing code.
+disable-model-invocation: true
 ---
 
 # Pre-Mortem

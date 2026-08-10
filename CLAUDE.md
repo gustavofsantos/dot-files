@@ -40,7 +40,7 @@ Re-running `setup.sh` is idempotent (`ln -sf`).
 
 ## Skills
 
-Skills live under `.claude/skills/<name>/` — a `SKILL.md` plus optional `references/`
+Skills live under `agents/skills/<name>/` — a `SKILL.md` plus optional `references/`
 and `scripts/`. No plugins, no marketplace: `install-claude.sh` (run by `setup.sh`)
 symlinks each skill directory into `~/.claude/skills/`, so edits in the working tree
 take effect immediately (new/removed skills need a `./setup.sh` re-run to add/prune
@@ -57,7 +57,7 @@ Conventions the skills follow (keep them when editing):
   (e.g. `bruno` detects the collection format and loads one of two format files).
 - **No dead pointers.** A skill may only reference skills, scripts, and agents that
   exist in this repo.
-- **Skill scripts test in place.** A script under `.claude/skills/<name>/scripts/`
+- **Skill scripts test in place.** A script under `agents/skills/<name>/scripts/`
   keeps its bats tests beside it as `<script>_test.bats` — the skill directory stays
   self-contained, and the symlink into `~/.claude/skills/` carries the tests with it.
   `test_bin/` is only for `bin/` scripts, whose tests cannot travel with them.
@@ -67,12 +67,12 @@ discovered by `listchangedtests`, which matches only `py|js|ts|clj`:
 
 ```bash
 bats test_bin/                                    # all bin/ script tests
-bats .claude/skills/spike/scripts/new_test.bats   # one skill script
+bats agents/skills/spike/scripts/new_test.bats    # one skill script
 ```
 
 ## Cross-harness skills
 
-`.claude/skills/` is the Claude-native source of truth (maximal frontmatter). Other
+`agents/skills/` is the Claude-native source of truth (maximal frontmatter). Other
 harnesses can't consume it as-is: Cursor reads `.claude`-style skills but only acts on
 `name` + `description`, and Claude-only frontmatter (`disable-model-invocation`,
 `allowed-tools`, `context: fork`) leaks as misapplied config. `bin/skills-sync` derives a
@@ -94,7 +94,7 @@ harness picks the agent that fits) or a Claude-only tool.
 
 | Script | What it does |
 |--------|--------------|
-| `skills-sync` | Derive per-harness skill trees from `.claude/skills/` per `harness-profiles.yml`. Idempotent; `--source`, `--profiles`, `--harness NAME`, `--dry-run`. |
+| `skills-sync` | Derive per-harness skill trees from `agents/skills/` per `harness-profiles.yml`. Idempotent; `--source`, `--profiles`, `--harness NAME`, `--dry-run`. |
 
 Cursor reuses these same skills/agents by loading Claude's config directly (configured
 outside this repo). Hooks are *not* yet unified into the harness — that work is scoped

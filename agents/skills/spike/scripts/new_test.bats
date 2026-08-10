@@ -2,7 +2,7 @@
 
 # Tests for new.sh, alongside it.
 #
-# Run: bats .claude/skills/spike/scripts/new_test.bats
+# Run: bats agents/skills/spike/scripts/new_test.bats
 #
 # Isolation strategy:
 #   HOME → fresh tmpdir, so ~/engineering is built per-test and never touched
