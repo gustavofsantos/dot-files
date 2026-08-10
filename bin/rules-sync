@@ -130,35 +130,8 @@ def source_rule_files(source):
     )
 
 
-def sync_claude(source, dest, dry_run):
-    print(f"claude -> {dest}")
-    if not dry_run:
-        os.makedirs(dest, exist_ok=True)
-
-    for path in source_rule_files(source):
-        name = os.path.basename(path)
-        with open(path, encoding="utf-8") as f:
-            raw = f.read()
-        frontmatter, body = split_rule(raw)
-        if frontmatter is None:
-            print(f"  skip  {name} (no frontmatter block)", file=sys.stderr)
-            continue
-
-        block = extract_block(frontmatter, "claude")
-        if block is None:
-            print(f"  skip  {name} (no claude: block)", file=sys.stderr)
-            continue
-
-        print(f"  gen   {name}")
-        if dry_run:
-            continue
-
-        with open(os.path.join(dest, name), "w", encoding="utf-8") as f:
-            f.write(render_rule(block, body))
-
-
-def sync_cursor(source, dest, dry_run):
-    print(f"cursor -> {dest}")
+def sync_harness(source, dest, harness, ext, dry_run, warn_on_empty=False):
+    print(f"{harness} -> {dest}")
     if not dry_run:
         os.makedirs(dest, exist_ok=True)
 
@@ -172,17 +145,17 @@ def sync_cursor(source, dest, dry_run):
             print(f"  skip  {name} (no frontmatter block)", file=sys.stderr)
             continue
 
-        block = extract_block(frontmatter, "cursor")
+        block = extract_block(frontmatter, harness)
         if block is None:
-            print(f"  skip  {name} (no cursor: block)", file=sys.stderr)
+            print(f"  skip  {name} (no {harness}: block)", file=sys.stderr)
             continue
-        if block == "":
+        if block == "" and warn_on_empty:
             print(
-                f"  warn  {name} has an empty cursor: block — will not auto-attach in Cursor",
+                f"  warn  {name} has an empty {harness}: block — will not auto-attach in Cursor",
                 file=sys.stderr,
             )
 
-        dest_name = f"{stem}.mdc"
+        dest_name = f"{stem}.{ext}"
         print(f"  gen   {dest_name}")
         if dry_run:
             continue
@@ -198,8 +171,15 @@ def main(argv):
         print(f"rules-sync: source not found: {opts['source']}", file=sys.stderr)
         return 1
 
-    sync_claude(opts["source"], opts["claude_dest"], opts["dry_run"])
-    sync_cursor(opts["source"], opts["cursor_dest"], opts["dry_run"])
+    sync_harness(opts["source"], opts["claude_dest"], "claude", "md", opts["dry_run"])
+    sync_harness(
+        opts["source"],
+        opts["cursor_dest"],
+        "cursor",
+        "mdc",
+        opts["dry_run"],
+        warn_on_empty=True,
+    )
     return 0
 
 
