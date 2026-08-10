@@ -3,10 +3,10 @@
 # Tests for agents/hooks/vale-lint
 #
 # PostToolUse hook: after Edit/Write/MultiEdit on a *.md file, run vale and
-# feed warning+ severity issues back to Claude via stderr (exit 2).
+# feed warning+error severity issues back to Claude via stderr (exit 2).
 # Suggestion-level alerts (Vocab, PassiveVoice, ...) are dropped — see
-# config/vale/README.md's "Dogfood results" on why nothing in this style
-# set is at error level yet.
+# config/vale/README.md's "Dogfood results" for which STE checks are
+# error-level versus suggestion-level.
 #
 # Isolation: each test gets its own tmpdir with a copy of config/vale's
 # .vale.ini + styles, so the hook lints against the real STE style set
@@ -40,7 +40,7 @@ payload() {
   [ "$status" -ne 0 ]
 }
 
-@test "exits 2 and reports the check name for a warning-level violation" {
+@test "exits 2 and reports the check name for an error-level violation" {
   cat > "$TEST_DIR/bad.md" <<'EOF'
 # Test
 

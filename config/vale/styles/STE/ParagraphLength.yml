@@ -1,7 +1,7 @@
 # STE Rule 6.6 — no more than six sentences per paragraph.
 extends: occurrence
 message: "Paragraph has more than 6 sentences — split it (STE 6.6)."
-level: warning
+level: error
 scope: paragraph
 max: 6
 token: '[.!?]+(\s|$)'

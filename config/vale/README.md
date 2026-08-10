@@ -40,16 +40,16 @@ config/vale/            symlinked to ~/.config/vale
 
 | File | STE rule | Check type | Level |
 |---|---|---|---|
-| `Contractions.yml` | 4.2 | existence | warning |
-| `Semicolons.yml` | 8.1 | existence | warning |
-| `SentenceLength.yml` | 6.3 (25 words, descriptive) | occurrence | warning |
-| `ParagraphLength.yml` | 6.6 (max 6 sentences) | occurrence | warning |
-| `LatinAbbreviations.yml` | GR-6 | substitution | warning |
+| `Contractions.yml` | 4.2 | existence | error |
+| `Semicolons.yml` | 8.1 | existence | error |
+| `SentenceLength.yml` | 6.3 (25 words, descriptive) | occurrence | error |
+| `ParagraphLength.yml` | 6.6 (max 6 sentences) | occurrence | error |
+| `LatinAbbreviations.yml` | GR-6 | substitution | error |
 | `Vocab.yml` | 1.x / 9.2 word swaps | substitution | suggestion |
 | `AmericanSpelling.yml` | 1.14 | substitution | suggestion |
 | `MissingThat.yml` | GR-1 | existence (heuristic) | suggestion |
 | `PassiveVoice.yml` | 3.6 | existence (heuristic) | suggestion |
-| `Consistency.yml` | 1.11 / 9.4 (same term for the same item) | consistency | warning |
+| `Consistency.yml` | 1.11 / 9.4 (same term for the same item) | consistency | error |
 
 ## Deliberately left out
 
@@ -98,12 +98,14 @@ fire:
   used as an adjective ("must be fixed-width", permitted under STE 3.3) —
   that needs real parsing, not regex. Left as suggestion-level for that
   reason; don't promote it without a smarter check.
-- No level in this style set is currently `error` — nothing here blocks
-  Vale's own exit code by default. `Contractions.yml` was deliberately
-  brought down from `error` to `warning`: blocking an agent's whole turn
-  over "don't" vs. "do not" is disproportionate for a style rule, and the
-  future hook's blocking semantics aren't decided yet. Revisit deliberately
-  when that hook exists, not by leaving a level unexamined.
+- The six checks with an unambiguous, low-false-positive pattern
+  (`Contractions`, `Semicolons`, `SentenceLength`, `ParagraphLength`,
+  `LatinAbbreviations`, `Consistency`) run at `error`, now that the
+  `vale-lint` hook exists to enforce them: an agent writing markdown must
+  not violate these rules. The four heuristic checks (`Vocab`,
+  `AmericanSpelling`, `MissingThat`, `PassiveVoice`) stay at `suggestion` —
+  they have real false-positive rates (see `PassiveVoice` below) and
+  blocking on them would train everyone to ignore the linter instead.
 - `Consistency.yml`'s first draft included `repo: repository` and fired
   **8 times** on `CLAUDE.md` alone — pure register variation, not genuine
   reader confusion. Dropped that pair; the other seven (frontend/front end,

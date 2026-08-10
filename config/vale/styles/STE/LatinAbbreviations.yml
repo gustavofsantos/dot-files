@@ -1,7 +1,7 @@
 # STE GR-6 — do not use Latin abbreviations, they can confuse readers.
 extends: substitution
 message: "Use '%s' instead of the Latin abbreviation '%s' (STE GR-6)."
-level: warning
+level: error
 ignorecase: true
 nonword: true
 swap:

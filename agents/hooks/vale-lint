@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 # vale-lint — PostToolUse(Edit|Write|MultiEdit) hook: lint markdown files with
-# vale after every edit, feeding warning+ prose issues back to Claude via
-# stderr so it can fix them inline. Suggestion-level alerts (Vocab,
+# vale after every edit, feeding warning+error prose issues back to Claude
+# via stderr so it can fix them inline. Suggestion-level alerts (Vocab,
 # PassiveVoice, ...) are dropped — see config/vale/README.md's "Dogfood
-# results" on why nothing in this style set is at error level yet, so vale's
-# own exit code can't be trusted as the blocking signal.
+# results" for which STE checks are error-level (unambiguous rules) versus
+# suggestion-level (heuristics with real false-positive rates). warning+
+# still has to be checked explicitly rather than trusting vale's own exit
+# code: write-good and Readability keep warning-level checks (TooWordy,
+# FleschReadingEase, ...) that vale's exit code alone would miss, since it
+# only goes non-zero on error-level alerts.
 #
 # Usage: vale-lint --harness claude
 #
@@ -43,7 +47,12 @@ esac
 
 [ -f "$file" ] || exit 0
 
-report=$(vale --output=JSON "$file" 2>/dev/null) || exit 0
+# `|| true`, not `|| exit 0`: vale now exits non-zero whenever it finds an
+# error-level alert (the whole point of promoting STE checks to error), so
+# treating a non-zero exit as "vale failed to run" would swallow exactly the
+# alerts this hook exists to surface. An empty report is the real "vale
+# didn't run" signal.
+report=$(vale --output=JSON "$file" 2>/dev/null || true)
 [ -n "$report" ] || exit 0
 
 alerts=$(printf '%s' "$report" | jq -c '[.[][] | select(.Severity == "warning" or .Severity == "error")]' 2>/dev/null) || exit 0

@@ -11,7 +11,7 @@
 # variation rather than genuine reader confusion.
 extends: consistency
 message: "Inconsistent spelling: also saw '%s' elsewhere in this doc — pick one and use it everywhere (STE 1.11 / 9.4)."
-level: warning
+level: error
 ignorecase: true
 either:
   frontend: front end

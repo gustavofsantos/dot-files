@@ -1,7 +1,7 @@
 # STE Rule 4.2 — do not omit words or use contractions.
 extends: existence
 message: "Write '%s' in full — no contractions (STE 4.2)."
-level: warning
+level: error
 ignorecase: true
 tokens:
   - "can't"
