@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      { "command": "session-track --harness cursor" }
+    ],
+    "beforeSubmitPrompt": [
+      { "command": "session-track --harness cursor" }
+    ],
+    "stop": [
+      { "command": "session-log --harness cursor --event turn_end" },
+      { "command": "engineering-autocommit --harness cursor" },
+      { "command": "checks-snapshot --harness cursor" }
+    ]
+  }
+}
