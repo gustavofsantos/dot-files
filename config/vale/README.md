@@ -101,7 +101,7 @@ fire:
 - The six checks with an unambiguous, low-false-positive pattern
   (`Contractions`, `Semicolons`, `SentenceLength`, `ParagraphLength`,
   `LatinAbbreviations`, `Consistency`) run at `error`, now that the
-  `vale-lint` hook exists to enforce them: an agent writing markdown must
+  `hooks-vale-lint` hook exists to enforce them: an agent writing markdown must
   not violate these rules. The four heuristic checks (`Vocab`,
   `AmericanSpelling`, `MissingThat`, `PassiveVoice`) stay at `suggestion` —
   they have real false-positive rates (see `PassiveVoice` below) and

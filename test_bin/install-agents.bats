@@ -4,10 +4,10 @@
 #
 # Runs the real script against a from-scratch fixture repo (not the real
 # dotfiles checkout) so a test run never compiles into or symlinks from the
-# actual repo. rules-sync/agents-sync/hooks-sync each resolve their own
-# default paths from their own file location, so the fixture must mirror the
-# real directory shape (bin/, agents/*, .claude/) under one root, pointed at
-# via the DOTFILES_DIR env var the script now honors.
+# actual repo. rules-sync/agents-sync/hooks-sync are embedded in
+# install-agents.sh itself and default their paths from the DOTFILES_DIR env
+# var the script honors, so the fixture only needs to mirror agents/* and
+# .claude/ under one root, pointed at via DOTFILES_DIR.
 #
 # Isolation strategy:
 #   DOTFILES_DIR -> a constructed fixture repo (tmpdir)
@@ -22,10 +22,9 @@ setup() {
   export HOME="$FAKE_HOME"
   export DOTFILES_DIR="$FIXTURE"
 
-  mkdir -p "$FIXTURE/bin" "$FIXTURE/scripts"
-  cp "$REAL_REPO/bin/rules-sync" "$REAL_REPO/bin/agents-sync" "$REAL_REPO/bin/hooks-sync" "$FIXTURE/bin/"
+  mkdir -p "$FIXTURE/scripts"
   cp "$REAL_REPO/$SCRIPT_REL" "$FIXTURE/scripts/install-agents.sh"
-  chmod +x "$FIXTURE/bin/"* "$FIXTURE/scripts/"*
+  chmod +x "$FIXTURE/scripts/"*
 
   mkdir -p "$FIXTURE/agents/rules" "$FIXTURE/agents/agents" "$FIXTURE/agents/commands" \
     "$FIXTURE/agents/hooks" "$FIXTURE/agents/skills/demo-skill" \

@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# Tests for agents/hooks/session-track
+# Tests for bin/hooks-session-track
 #
 # Replaces claude-hook-session-track.bats + cursor-hook-session-track.bats.
 # Those two used CLAUDE_SESSIONS_DIR to isolate state, but the script (both
@@ -14,7 +14,7 @@
 #   AGENT_SESSIONS_DIR → explicit tmpdir subdirectory
 #   TMUX / TMUX_PANE   → unset unless under test
 
-SCRIPT="$BATS_TEST_DIRNAME/../agents/hooks/session-track"
+SCRIPT="$BATS_TEST_DIRNAME/../bin/hooks-session-track"
 
 setup() {
   TEST_HOME=$(mktemp -d)

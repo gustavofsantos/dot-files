@@ -110,23 +110,23 @@
     "SessionStart": [
       {
         "type": "command",
-        "command": "session-track --harness claude"
+        "command": "hooks-session-track --harness claude"
       }
     ],
     "UserPromptSubmit": [
       {
         "type": "command",
-        "command": "session-track --harness claude"
+        "command": "hooks-session-track --harness claude"
       }
     ],
     "Stop": [
       {
         "type": "command",
-        "command": "engineering-autocommit --harness claude"
+        "command": "hooks-engineering-autocommit --harness claude"
       },
       {
         "type": "command",
-        "command": "checks-snapshot --harness claude"
+        "command": "hooks-checks-snapshot --harness claude"
       }
     ],
     "PreToolUse": [
@@ -135,7 +135,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "change-point-gate --harness claude"
+            "command": "hooks-change-point-gate --harness claude"
           }
         ]
       }
@@ -146,7 +146,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "vale-lint --harness claude",
+            "command": "hooks-vale-lint --harness claude",
             "timeout": 5
           }
         ]

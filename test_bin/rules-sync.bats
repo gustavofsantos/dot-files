@@ -2,7 +2,7 @@
 
 bats_require_minimum_version 1.5.0
 
-# Tests for bin/rules-sync
+# Tests for `scripts/install-agents.sh rules-sync`
 #
 # Slice 1: generate .claude/rules/*.md from agents/rules/*.md — path-scoped and
 # always-apply cases.
@@ -16,7 +16,9 @@ bats_require_minimum_version 1.5.0
 # body, including its leading blank line or lack of one, is the property
 # under test.
 
-SCRIPT="$BATS_TEST_DIRNAME/../bin/rules-sync"
+INSTALL_SCRIPT="$BATS_TEST_DIRNAME/../scripts/install-agents.sh"
+rules-sync() { "$INSTALL_SCRIPT" rules-sync "$@"; }
+SCRIPT=rules-sync
 
 setup() {
   SRC=$(mktemp -d)

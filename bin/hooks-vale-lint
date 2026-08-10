@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# vale-lint — PostToolUse(Edit|Write|MultiEdit) hook: lint markdown files with
+# hooks-vale-lint — PostToolUse(Edit|Write|MultiEdit) hook: lint markdown files with
 # vale after every edit, feeding warning+error prose issues back to Claude
 # via stderr so it can fix them inline. Suggestion-level alerts (Vocab,
 # PassiveVoice, ...) are dropped — see config/vale/README.md's "Dogfood
@@ -10,7 +10,7 @@
 # FleschReadingEase, ...) that vale's exit code alone would miss, since it
 # only goes non-zero on error-level alerts.
 #
-# Usage: vale-lint --harness claude
+# Usage: hooks-vale-lint --harness claude
 #
 # No Cursor implementation today.
 set -euo pipefail
@@ -24,7 +24,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$HARNESS" != "claude" ]]; then
-  echo "vale-lint: --harness must be 'claude' (got '${HARNESS}')" >&2
+  echo "hooks-vale-lint: --harness must be 'claude' (got '${HARNESS}')" >&2
   exit 1
 fi
 

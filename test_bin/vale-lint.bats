@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# Tests for agents/hooks/vale-lint
+# Tests for bin/hooks-vale-lint
 #
 # PostToolUse hook: after Edit/Write/MultiEdit on a *.md file, run vale and
 # feed warning+error severity issues back to Claude via stderr (exit 2).
@@ -12,7 +12,7 @@
 # .vale.ini + styles, so the hook lints against the real STE style set
 # without depending on ~/.config/vale being symlinked on this machine.
 
-SCRIPT="$BATS_TEST_DIRNAME/../agents/hooks/vale-lint"
+SCRIPT="$BATS_TEST_DIRNAME/../bin/hooks-vale-lint"
 
 setup() {
   TEST_DIR=$(mktemp -d)

@@ -1,7 +1,5 @@
 ---
-claude: {}
-cursor:
-  alwaysApply: true
+alwaysApply: true
 ---
 
 Write in ASD-STE100 Simplified Technical English.

@@ -1,12 +1,12 @@
 #!/usr/bin/env bats
 
-# Tests for agents/hooks/gitbutler-git
+# Tests for bin/hooks-gitbutler-git
 #
 # PreToolUse(Bash) hook: denies raw git write commands in GitButler-managed
 # repos (a repo with .git/gitbutler/). Read-only git and non-GitButler repos
 # pass untouched.
 
-SCRIPT="$BATS_TEST_DIRNAME/../agents/hooks/gitbutler-git"
+SCRIPT="$BATS_TEST_DIRNAME/../bin/hooks-gitbutler-git"
 
 setup() {
   REPO=$(mktemp -d)

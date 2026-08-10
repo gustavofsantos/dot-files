@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# Tests for agents/hooks/checks-snapshot
+# Tests for bin/hooks-checks-snapshot
 #
 # checks-config / checks-hash / checks-runner are stubbed on PATH so these
 # tests exercise checks-snapshot's own logic (session/dir resolution per
@@ -12,7 +12,7 @@
 #   CHECKS_DIR → explicit tmpdir subdirectory
 #   STUB_BIN   → prepended to PATH, holds the fake checks-config/-hash/-runner
 
-SCRIPT="$BATS_TEST_DIRNAME/../agents/hooks/checks-snapshot"
+SCRIPT="$BATS_TEST_DIRNAME/../bin/hooks-checks-snapshot"
 
 setup() {
   TEST_HOME=$(mktemp -d)

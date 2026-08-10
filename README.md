@@ -36,8 +36,8 @@ in a harness-generic form. This is the source of truth; nothing under `.claude/`
 `./setup.sh` runs `scripts/install-agents.sh`, which:
 
 1. Compiles `agents/{rules,agents,commands,hooks}` into `.claude/` (and, where a
-   harness-specific block exists, `.cursor/`) via `rules-sync`, `agents-sync`,
-   `hooks-sync`.
+   harness-specific block exists, `.cursor/`) via its own embedded `rules-sync`,
+   `agents-sync`, `hooks-sync` subcommands.
 2. Symlinks skills, subagents, commands, themes, rules, and workflows into `~/.claude/`,
    and rules and hooks into `~/.cursor/`.
 3. Merges `.claude/settings.json` into `~/.claude/settings.json` (global wins on

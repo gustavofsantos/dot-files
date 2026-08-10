@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# Tests for bin/hooks-sync
+# Tests for `scripts/install-agents.sh hooks-sync`
 #
 # Merges agents/hooks/claude.settings.json's "hooks" key into the real,
 # hand-maintained .claude/settings.json (permissions/env untouched), and
@@ -10,7 +10,9 @@
 # --cursor-dest all point at tmpdirs/tmpfiles, never the repo's own
 # agents/hooks, .claude/settings.json, .cursor/hooks.json.
 
-SCRIPT="$BATS_TEST_DIRNAME/../bin/hooks-sync"
+INSTALL_SCRIPT="$BATS_TEST_DIRNAME/../scripts/install-agents.sh"
+hooks-sync() { "$INSTALL_SCRIPT" hooks-sync "$@"; }
+SCRIPT=hooks-sync
 
 setup() {
   WORK=$(mktemp -d)

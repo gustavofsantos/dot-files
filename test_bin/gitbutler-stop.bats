@@ -1,11 +1,11 @@
 #!/usr/bin/env bats
 
-# Tests for agents/hooks/gitbutler-stop
+# Tests for bin/hooks-gitbutler-stop
 #
 # Stop hook: blocks turn end with an uncommitted tree in GitButler-managed
 # repos (.git/gitbutler/ present), at most once per turn.
 
-SCRIPT="$BATS_TEST_DIRNAME/../agents/hooks/gitbutler-stop"
+SCRIPT="$BATS_TEST_DIRNAME/../bin/hooks-gitbutler-stop"
 
 setup() {
   REPO=$(mktemp -d)

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# change-point-gate — PreToolUse gate: no edit to an existing file until its
+# hooks-change-point-gate — PreToolUse gate: no edit to an existing file until its
 # behavior is pinned. Install anywhere on PATH. Location-independent: the repo is
 # resolved from the file under edit, never from $0 or $PWD.
 #
-#   hook mode   : change-point-gate --harness claude
+#   hook mode   : hooks-change-point-gate --harness claude
 #                 reads PreToolUse JSON on stdin, writes decision JSON on stdout
-#   check mode  : change-point-gate --check <path>   (human-readable, no caching,
+#   check mode  : hooks-change-point-gate --check <path>   (human-readable, no caching,
 #                 harness-independent — no stdin payload involved)
 #   debug       : GATE_DEBUG=1 traces every resolution step to stderr
 #
@@ -27,7 +27,7 @@ case "${1:-}" in
 esac
 
 if [ "$MODE" = hook ] && [ "$HARNESS" != claude ]; then
-  echo "change-point-gate: --harness must be 'claude' (got '${HARNESS}')" >&2
+  echo "hooks-change-point-gate: --harness must be 'claude' (got '${HARNESS}')" >&2
   exit 1
 fi
 
@@ -36,7 +36,7 @@ command -v jq  >/dev/null 2>&1 || allow "jq not on PATH"
 command -v git >/dev/null 2>&1 || allow "git not on PATH"
 
 if [ "$MODE" = check ]; then
-  [ -n "${TARGET:-}" ] || { echo "usage: change-point-gate --check <path>" >&2; exit 64; }
+  [ -n "${TARGET:-}" ] || { echo "usage: hooks-change-point-gate --check <path>" >&2; exit 64; }
   [ -e "$TARGET" ]     || { echo "no such file: $TARGET" >&2; exit 66; }
   FILE=$(cd "$(dirname "$TARGET")" && pwd)/$(basename "$TARGET")
   SESSION="check-$$"

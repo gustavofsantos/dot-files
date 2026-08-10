@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# gitbutler-stop — Stop hook: in GitButler-managed repos, don't let a turn end
+# hooks-gitbutler-stop — Stop hook: in GitButler-managed repos, don't let a turn end
 # with an uncommitted tree — gitbutler-provenance requires a why-focused
 # `but commit` at every turn boundary.
 #
@@ -7,7 +7,7 @@
 # agent that must ask the user something — e.g. which lane to commit to
 # when several are applied — gets through on the retry instead of looping.
 #
-# Usage: gitbutler-stop --harness claude
+# Usage: hooks-gitbutler-stop --harness claude
 #
 # No Cursor implementation today.
 set -euo pipefail
@@ -21,7 +21,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$HARNESS" != "claude" ]]; then
-  echo "gitbutler-stop: --harness must be 'claude' (got '${HARNESS}')" >&2
+  echo "hooks-gitbutler-stop: --harness must be 'claude' (got '${HARNESS}')" >&2
   exit 1
 fi
 

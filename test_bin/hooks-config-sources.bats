@@ -3,11 +3,12 @@
 # Tests for agents/hooks/claude.settings.json and agents/hooks/cursor.hooks.json
 #
 # Static validation: both are well-formed for their harness's shape, and every
-# hook command they wire references a script that actually exists in
-# agents/hooks/ — cheap insurance against a typo'd script name silently
-# breaking a hook.
+# hook command they wire references a script that actually exists in bin/
+# (hook scripts live there, prefixed hooks-*) — cheap insurance against a
+# typo'd script name silently breaking a hook.
 
 HOOKS_DIR="$BATS_TEST_DIRNAME/../agents/hooks"
+BIN_DIR="$BATS_TEST_DIRNAME/../bin"
 CLAUDE_CFG="$HOOKS_DIR/claude.settings.json"
 CURSOR_CFG="$HOOKS_DIR/cursor.hooks.json"
 
@@ -39,22 +40,22 @@ cursor_commands() {
   [ "$keys" = "hooks,version" ]
 }
 
-@test "every claude.settings.json command references a script in agents/hooks/" {
+@test "every claude.settings.json command references a script in bin/" {
   while IFS= read -r cmd; do
     script="${cmd%% *}"
     [ "$script" = "tap-hook" ] && script="${cmd#tap-hook }"
     script="${script%% *}"
-    [ -x "$HOOKS_DIR/$script" ] || {
+    [ -x "$BIN_DIR/$script" ] || {
       echo "missing or non-executable: $script (from command: $cmd)"
       return 1
     }
   done < <(claude_commands)
 }
 
-@test "every cursor.hooks.json command references a script in agents/hooks/" {
+@test "every cursor.hooks.json command references a script in bin/" {
   while IFS= read -r cmd; do
     script="${cmd%% *}"
-    [ -x "$HOOKS_DIR/$script" ] || {
+    [ -x "$BIN_DIR/$script" ] || {
       echo "missing or non-executable: $script (from command: $cmd)"
       return 1
     }

@@ -1,12 +1,12 @@
 #!/usr/bin/env bats
 
-# Tests for agents/hooks/engineering-autocommit
+# Tests for bin/hooks-engineering-autocommit
 #
 # Harness-agnostic in behavior (always commits the same fixed vault path);
 # --harness only changes which stdin field is read for the session id shown
 # in the (cosmetic) commit message body.
 
-SCRIPT="$BATS_TEST_DIRNAME/../agents/hooks/engineering-autocommit"
+SCRIPT="$BATS_TEST_DIRNAME/../bin/hooks-engineering-autocommit"
 
 setup() {
   ENG_DIR=$(mktemp -d)

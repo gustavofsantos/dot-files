@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# Tests for agents/hooks/session-log
+# Tests for bin/hooks-session-log
 #
 # Isolation strategy:
 #   HOME               -> fresh tmpdir
@@ -11,7 +11,7 @@
 # a real transcript file; Cursor's turn_end has no transcript and falls back
 # to `git diff` against the given workspace root.
 
-SCRIPT="$BATS_TEST_DIRNAME/../agents/hooks/session-log"
+SCRIPT="$BATS_TEST_DIRNAME/../bin/hooks-session-log"
 
 setup() {
   TEST_HOME=$(mktemp -d)

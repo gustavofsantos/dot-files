@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# gitbutler-git — PreToolUse(Bash) hook: in GitButler-managed repos, deny raw
+# hooks-gitbutler-git — PreToolUse(Bash) hook: in GitButler-managed repos, deny raw
 # git write commands — mutations must go through the `but` CLI so lane state
 # stays coherent (gitbutler-provenance). Read-only git (status, log, blame,
 # diff, show) passes untouched.
 #
-# Usage: gitbutler-git --harness claude
+# Usage: hooks-gitbutler-git --harness claude
 #
 # No Cursor implementation today.
 set -euo pipefail
@@ -18,7 +18,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$HARNESS" != "claude" ]]; then
-  echo "gitbutler-git: --harness must be 'claude' (got '${HARNESS}')" >&2
+  echo "hooks-gitbutler-git: --harness must be 'claude' (got '${HARNESS}')" >&2
   exit 1
 fi
 

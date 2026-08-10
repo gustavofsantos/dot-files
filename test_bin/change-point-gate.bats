@@ -1,12 +1,12 @@
 #!/usr/bin/env bats
 
-# Tests for agents/hooks/change-point-gate
+# Tests for bin/hooks-change-point-gate
 #
 # PreToolUse gate: blocks an edit to an existing, untested file until it's
 # characterized. --check mode is a manual debug CLI, harness-independent
 # (no stdin payload); hook mode now requires --harness claude explicitly.
 
-SCRIPT="$BATS_TEST_DIRNAME/../agents/hooks/change-point-gate"
+SCRIPT="$BATS_TEST_DIRNAME/../bin/hooks-change-point-gate"
 
 setup() {
   REPO=$(mktemp -d)

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# session-track — register/refresh an agent session and its pane.
+# hooks-session-track — register/refresh an agent session and its pane.
 #
-# Usage: session-track --harness claude|cursor
+# Usage: hooks-session-track --harness claude|cursor
 #
 # Wire for Claude (claude.settings.json), both events:
 #   SessionStart, UserPromptSubmit
@@ -31,7 +31,7 @@ done
 case "$HARNESS" in
   claude|cursor) ;;
   *)
-    echo "session-track: --harness must be 'claude' or 'cursor' (got '${HARNESS}')" >&2
+    echo "hooks-session-track: --harness must be 'claude' or 'cursor' (got '${HARNESS}')" >&2
     exit 1
     ;;
 esac

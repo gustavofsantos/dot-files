@@ -19,9 +19,9 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 | `link-home-files.sh` | Symlinks dotfiles (`.zshrc`, `.gitconfig`, etc.) into `$HOME` |
 | `create-local-files.sh` | Touches `~/.gitconfig.local` and `~/.zshlocal` if missing |
 | `init-engineering-repo.sh` | Idempotently `git init`s `~/engineering`, writes its `.gitignore`, seeds the first commit |
-| `link-bin-files.sh` | Symlinks every file in `bin/` and every executable in `agents/hooks/` into `~/.bin/` |
+| `link-bin-files.sh` | Symlinks every file in `bin/` into `~/.bin/` (hook scripts live there too, prefixed `hooks-*`) |
 | `link-xdg-config.sh` | Symlinks each subdir of `config/` into `~/.config/` |
-| `install-agents.sh` | Compiles `agents/{rules,agents,commands,hooks}` (`rules-sync`/`agents-sync`/`hooks-sync`), then symlinks skills/agents/commands/themes/rules/workflows into `~/.claude/` and rules/hooks into `~/.cursor/`; merges `.claude/settings.json` into `~/.claude/settings.json` |
+| `install-agents.sh` | Single source of truth for installing agent config: compiles `agents/{rules,agents,commands,hooks}` via its own embedded `rules-sync`/`agents-sync`/`hooks-sync` subcommands, then symlinks skills/agents/commands/themes/rules/workflows into `~/.claude/` and rules/hooks into `~/.cursor/`; merges `.claude/settings.json` into `~/.claude/settings.json` |
 | `set-caps-lock-ctrl.sh` | Sets the GNOME "Caps Lock as Ctrl" `xkb-options` key (`ctrl:nocaps`) via `gsettings`, no `gnome-tweaks` package needed. No-ops if `gsettings` is absent. |
 
 Re-running `setup.sh` is idempotent (`ln -sf`).
@@ -33,9 +33,9 @@ Re-running `setup.sh` is idempotent (`ln -sf`).
 
 ## Directory layout
 
-- `bin/` — personal scripts added to `$PATH` via `~/.bin/`
-- `agents/` — harness-generic agent config: `rules/`, `skills/`, `agents/`, `commands/`, `hooks/`. This is the source of truth; `.claude/` and `.cursor/` are compiled from it (see "Skills", "Cross-harness skills", "Hooks" below)
-- `test_bin/` — bats tests for `bin/` scripts and `agents/hooks/` scripts, one `<script>.bats` per script
+- `bin/` — personal scripts added to `$PATH` via `~/.bin/`, including hook scripts (`hooks-*`)
+- `agents/` — harness-generic agent config: `rules/`, `skills/`, `agents/`, `commands/`, `hooks/`. This is the source of truth; `.claude/` and `.cursor/` are compiled from it (see "Skills", "Cross-harness skills", "Hooks" below). `agents/hooks/` holds only the per-harness wiring config (`claude.settings.json`, `cursor.hooks.json`) — the hook scripts themselves live in `bin/`
+- `test_bin/` — bats tests for `bin/` scripts, one `<script>.bats` per script
 - `config/` — XDG config dirs: `nvim/`, `ghostty/`, `bat/`, `lazygit/`, `zed/`, `wezterm/`, `tmux/`, `sheldon/`, `starship.toml`, `vale/`
 - `.claude/` — compiled/hand-maintained Claude Code config: `themes/`, `rules/`, `agents/`, `commands/`, `workflows/`, `settings.json`, `harness-profiles.yml`
 
@@ -97,31 +97,33 @@ harness picks the agent that fits) or a Claude-only tool.
 |--------|--------------|
 | `skills-sync` | Derive per-harness skill trees from `agents/skills/` per `harness-profiles.yml`. Idempotent; `--source`, `--profiles`, `--harness NAME`, `--dry-run`. |
 
-Rules and hooks get the same treatment — `rules-sync` and `hooks-sync` generate
-`.cursor/rules/` and `.cursor/hooks.json` from `agents/rules/` and `agents/hooks/`, see
-"Hooks" below. Subagents and commands (`agents/agents/`, `agents/commands/`) are
-Claude-only today — `agents-sync` has no Cursor output for them yet, since Cursor has no
-subagent-tool equivalent and Cursor command support wasn't built out this round.
+Rules and hooks get the same treatment — `install-agents.sh rules-sync` and
+`install-agents.sh hooks-sync` generate `.cursor/rules/` and `.cursor/hooks.json` from
+`agents/rules/` and `agents/hooks/`, see "Hooks" below. Subagents and commands
+(`agents/agents/`, `agents/commands/`) are Claude-only today — `install-agents.sh
+agents-sync` has no Cursor output for them yet, since Cursor has no subagent-tool
+equivalent and Cursor command support wasn't built out this round.
 
 ## Hooks
 
-Hook scripts live under `agents/hooks/`, one script per hook (no `claude-hook-`/
-`cursor-hook-` prefix — the harness is an argument, not part of the identity). Every hook
-accepts `--harness claude|cursor`, which selects how it reads stdin and, where
-applicable, what shape it writes to stdout — Claude and Cursor have different native
-hook payloads and response contracts, and a hook parses its harness's own shape
-directly, with no shared envelope or translation layer in between. A hook with no
-Cursor implementation yet rejects `--harness cursor` with a clear stderr message rather
-than silently no-op'ing. `agents/hooks/session-log` additionally takes `--event <name>`,
-since neither harness's payload self-identifies its event the same way across event
-types (Claude's Stop/SubagentStart/SubagentStop vs. Cursor's stop).
+Hook scripts live under `bin/`, prefixed `hooks-*` (e.g. `hooks-vale-lint`) — the prefix
+is what marks a script as hook-wired rather than a general personal command; the harness
+is still passed as an argument, not baked into the name. Every hook accepts `--harness
+claude|cursor`, which selects how it reads stdin and, where applicable, what shape it
+writes to stdout — Claude and Cursor have different native hook payloads and response
+contracts, and a hook parses its harness's own shape directly, with no shared envelope or
+translation layer in between. A hook with no Cursor implementation yet rejects `--harness
+cursor` with a clear stderr message rather than silently no-op'ing. `bin/hooks-session-log`
+additionally takes `--event <name>`, since a harness's payload doesn't self-identify its
+event the same way.
 
 Two harness-native config sources wire each hook to its event(s):
 `agents/hooks/claude.settings.json` (just the `hooks` key, Claude's own shape) and
 `agents/hooks/cursor.hooks.json` (the full native Cursor shape — `{version, hooks}`,
-its own dedicated file, nothing else lives there). `hooks-sync` compiles them: it merges
-`claude.settings.json`'s `hooks` key into the real `.claude/settings.json` (leaving
-`permissions`/`env` untouched, since those stay hand-maintained) and generates
+its own dedicated file, nothing else lives there); `agents/hooks/` holds only these two
+wiring files now, not the scripts themselves. `install-agents.sh hooks-sync` compiles
+them: it merges `claude.settings.json`'s `hooks` key into the real `.claude/settings.json`
+(leaving `permissions`/`env` untouched, since those stay hand-maintained) and generates
 `.cursor/hooks.json` wholesale from `cursor.hooks.json`.
 
 That compiled `.claude/settings.json` then merges into the global `~/.claude/settings.json`
@@ -129,41 +131,50 @@ on install (`install-agents.sh`): global settings win on scalar/object conflicts
 `permissions.allow/deny/ask` and `hooks` arrays are unioned. `.cursor/hooks.json` and
 `.cursor/rules/` install as plain symlinks — Cursor reads them directly, no merge step.
 
-| Script | What it does |
-|--------|--------------|
-| `hooks-sync` | Compile `agents/hooks/{claude.settings.json,cursor.hooks.json}` into `.claude/settings.json`'s `hooks` key and `.cursor/hooks.json`. Idempotent; `--dry-run`. |
+`install-agents.sh` is the single source of truth for installing agent config: `rules-sync`,
+`agents-sync`, and `hooks-sync` are subcommands it embeds directly (`install-agents.sh
+rules-sync|agents-sync|hooks-sync [flags]`), not separate `bin/` scripts, so there is one
+script to read to understand the whole compile-and-install pipeline. See the table under
+"Setup" above for what the default (no-subcommand) invocation does end to end.
 
-`link-bin-files.sh` (part of `setup.sh`) symlinks every executable in `agents/hooks/`
-into `~/.bin/` alongside `bin/`, so a hook is reachable by bare name from generated
+`link-bin-files.sh` (part of `setup.sh`) symlinks every file in `bin/` into `~/.bin/`,
+including the `hooks-*` scripts, so a hook is reachable by bare name from generated
 config. `tap-hook <hook> [args...]` still works as a debug-logging wrapper around any
 hook command — it names its log file from the first argument (the hook), not the last,
 so it composes with the `--harness`/`--event` flags that now follow the hook name.
 
-Some hooks were already cross-harness before this convention existed (`session-track`,
-`session-log`, `engineering-autocommit`, `checks-snapshot`) and port real `--harness
-cursor` support forward. One real limitation surfaced along the way, not introduced by
-it: Cursor's native `stop` payload (`{status, loop_count}`) carries no session or cwd
-correlation, unlike Claude's Stop payload — so Cursor's turn-end logging
-(`session-log`) and check snapshotting (`checks-snapshot`) are best-effort there and
-commonly no-op, same as before.
+Some hooks were already cross-harness before this convention existed (`hooks-session-track`,
+`hooks-session-log`, `hooks-engineering-autocommit`, `hooks-checks-snapshot`) and port real
+`--harness cursor` support forward. One real limitation surfaced along the way, not
+introduced by it: Cursor's native `stop` payload (`{status, loop_count}`) carries no session
+or cwd correlation, unlike Claude's Stop payload — so Cursor's turn-end logging
+(`hooks-session-log`) and check snapshotting (`hooks-checks-snapshot`) are best-effort there
+and commonly no-op, same as before.
+
+`hooks-notify`, `hooks-gitbutler-stop`, `hooks-gitbutler-git`, and `hooks-session-log`'s
+Claude wiring (`Stop`/`SubagentStart`/`SubagentStop`) were removed from
+`claude.settings.json`; the scripts still exist under `bin/` but nothing currently invokes
+them for Claude. `hooks-session-log` now only fires from Cursor's `stop` hook (`--event
+turn_end`), so per-turn telemetry in `~/.agent-sessions/<id>.jsonl` covers Cursor sessions
+only.
 
 ## Agent checks
 
-A single global registry, `~/.checks.yml`, enrolls the repositories that run checks after each agent turn and defines them — each check a `name` + a `command`, modeled on the hooks shape. Repos are matched by `path` (main working tree), so every worktree is covered; unregistered repos are skipped. After every agent turn (Claude or Cursor) `checks-snapshot` fires, which (for enrolled repos) hashes the changed tracked files (`checks-hash`), versions them under `~/.checks/<session>/<hash>/`, and spawns `checks-runner` detached to run the checks and write `results.json`. The agent reads them via `checks-status`; enrollment is manual — add a `path` + `checks` entry to `~/.checks.yml` by hand (see the commented example `create-local-files.sh` seeds in a fresh one). `~/.checks.local.yml` (same shape) overlays a repo's checks by name for machine-specific checks.
+A single global registry, `~/.checks.yml`, enrolls the repositories that run checks after each agent turn and defines them — each check a `name` + a `command`, modeled on the hooks shape. Repos are matched by `path` (main working tree), so every worktree is covered; unregistered repos are skipped. After every agent turn (Claude or Cursor) `hooks-checks-snapshot` fires, which (for enrolled repos) hashes the changed tracked files (`checks-hash`), versions them under `~/.checks/<session>/<hash>/`, and spawns `checks-runner` detached to run the checks and write `results.json`. The agent reads them via `checks-status`; enrollment is manual — add a `path` + `checks` entry to `~/.checks.yml` by hand (see the commented example `create-local-files.sh` seeds in a fresh one). `~/.checks.local.yml` (same shape) overlays a repo's checks by name for machine-specific checks.
 
 | Script | What it does |
 |--------|--------------|
 | `checks-hash` | Stable content hash of tracked working-dir changes vs `HEAD` |
 | `checks-config` | Resolve a repo's checks from `~/.checks.yml` (handles worktrees); `--registered` for an enrolment check |
-| `checks-snapshot` | Turn-end hook (Claude and Cursor): version changes for enrolled repos, fire the runner (no-op if unchanged) |
+| `hooks-checks-snapshot` | Turn-end hook (Claude and Cursor): version changes for enrolled repos, fire the runner (no-op if unchanged) |
 | `checks-runner` | Run a snapshot's checks; `--watch` for daemon mode |
 | `checks-status` | Show the latest result for a session/repo (`--json`, `--oneline`) |
 
-Session navigation is independent of checks and of hooks, and spans both Claude Code and Cursor Agent. `claude-sessions` (`bind a` in tmux) discovers live agent sessions by **scanning tmux pane processes** — it walks each pane's process subtree looking for an agent CLI (`claude`, `cursor-agent`, aider, codex, …; the matched set is the `AGENTS` list at the top of the script) and lists every match in one fzf picker (a `cc`/`cu` tag distinguishes them). There is no state file and no hook to keep in sync: a session exists exactly while its process is alive, so the list can never go stale and needs no configuration — a bare `claude` or `cursor-agent` in any pane just shows up. Enter jumps straight to that pane (switch session → select window → select pane); the preview (`claude-session-preview`) is a live `tmux capture-pane` of the agent plus its location and cwd. A pane whose window name carries the `⊡` waiting prefix (set by the `notify` hook) is shown as `waiting` and sorted first — best-effort only, not a dependency. Because discovery is process-based there is no `SessionEnd` hook; the `session-track` hook that remains exists only to keep that `⊡` marker fresh for the `claude-run` flow and to record `track_name` for checks correlation. Per-turn telemetry still lands in `~/.agent-sessions/<id>.jsonl` via `session-log`, but the navigator no longer reads it.
+Session navigation is independent of checks and of hooks, and spans both Claude Code and Cursor Agent. `claude-sessions` (`bind a` in tmux) discovers live agent sessions by **scanning tmux pane processes** — it walks each pane's process subtree looking for an agent CLI (`claude`, `cursor-agent`, aider, codex, …; the matched set is the `AGENTS` list at the top of the script) and lists every match in one fzf picker (a `cc`/`cu` tag distinguishes them). There is no state file and no hook to keep in sync: a session exists exactly while its process is alive, so the list can never go stale and needs no configuration — a bare `claude` or `cursor-agent` in any pane just shows up. Enter jumps straight to that pane (switch session → select window → select pane); the preview (`claude-session-preview`) is a live `tmux capture-pane` of the agent plus its location and cwd. `claude-sessions` still knows how to sort a pane first when its window name carries the `⊡` waiting prefix, but nothing sets that prefix today — the `hooks-notify` hook that used to set it on `Stop`/`Notification` was removed from `claude.settings.json` (see "Hooks" above), so every session currently shows as `active`. The `hooks-session-track` hook that remains exists to record `track_name` for checks correlation and to restore a bare window name for the `claude-run` flow.
 
 ## GitButler provenance hooks
 
-Two hooks in `agents/hooks/`, wired via `claude.settings.json` like every other Claude hook (see "Hooks" above), enforce the `gitbutler-provenance` skill in repos with a `.git/gitbutler/` dir — and no-op instantly everywhere else. `gitbutler-stop` (`Stop`) blocks a turn from ending while the tree is dirty, at most once per turn (`stop_hook_active`), so a lane question can still reach the user. `gitbutler-git` (`PreToolUse` on Bash) denies raw git write commands (`commit`, `add`, `push`, `checkout`, `rebase`, …) — mutations must go through the `but` CLI; read-only git passes. Both are Claude-only today.
+`bin/hooks-gitbutler-stop` and `bin/hooks-gitbutler-git` enforce GitButler-provenance-style commits in repos with a `.git/gitbutler/` dir: `hooks-gitbutler-stop` (`Stop`) blocks a turn from ending while the tree is dirty; `hooks-gitbutler-git` (`PreToolUse` on Bash) denies raw git write commands, requiring the `but` CLI for mutations. Neither is currently wired in `claude.settings.json` — both were removed from the `Stop`/`PreToolUse` hooks (see "Hooks" above) and are dormant scripts today.
 
 ## AI session token stats
 
@@ -180,7 +191,7 @@ Re-run `ai-stats-import` to refresh (live sessions whose transcript is still gro
 
 ## Engineering vault auto-commit
 
-`~/engineering` is a git repo whose changes are committed automatically after every agent turn — the commit never depends on the agent remembering to do it. `engineering-autocommit` is a `Stop`/`stop` hook, wired for both Claude and Cursor via `agents/hooks/claude.settings.json` and `agents/hooks/cursor.hooks.json`. It targets the **fixed** vault path (not the session cwd, since the vault is an additional working dir editable from any session): if the tree is dirty it `git add -A` + commits with a `vault: auto-commit N file(s) — <stamp>` message tagged with the harness and session id; if clean it no-ops fast. Concurrent turn-end hooks across sessions are serialised by an atomic `mkdir` lock under `.git/` (stale locks >60s reclaimed); a contender just bails, since the holder's commit or the next turn covers its changes.
+`~/engineering` is a git repo whose changes are committed automatically after every agent turn — the commit never depends on the agent remembering to do it. `hooks-engineering-autocommit` is a `Stop`/`stop` hook, wired for both Claude and Cursor via `agents/hooks/claude.settings.json` and `agents/hooks/cursor.hooks.json`. It targets the **fixed** vault path (not the session cwd, since the vault is an additional working dir editable from any session): if the tree is dirty it `git add -A` + commits with a `vault: auto-commit N file(s) — <stamp>` message tagged with the harness and session id; if clean it no-ops fast. Concurrent turn-end hooks across sessions are serialised by an atomic `mkdir` lock under `.git/` (stale locks >60s reclaimed); a contender just bails, since the holder's commit or the next turn covers its changes.
 
 `init-engineering-repo.sh` (part of `setup.sh`) idempotently creates the repo, writes `.gitignore` (`.trash/`, Obsidian `workspace*.json`/`cache`, `.DS_Store`), and seeds the first commit. Commits stay local — nothing is pushed. There is no single per-machine override switch anymore (that was `~/.agent-hooks.local.yml`, retired with `hooks-runner`); pausing this on one machine means overriding the hook at the harness's own local-settings layer.
 

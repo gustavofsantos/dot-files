@@ -1,38 +1,20 @@
 {
   "hooks": {
     "SessionStart": [
-      { "type": "command", "command": "session-track --harness claude" }
+      { "type": "command", "command": "hooks-session-track --harness claude" }
     ],
     "UserPromptSubmit": [
-      { "type": "command", "command": "session-track --harness claude" }
+      { "type": "command", "command": "hooks-session-track --harness claude" }
     ],
     "Stop": [
-      { "type": "command", "command": "notify --harness claude" },
-      { "type": "command", "command": "gitbutler-stop --harness claude" },
-      { "type": "command", "command": "engineering-autocommit --harness claude" },
-      { "type": "command", "command": "checks-snapshot --harness claude" },
-      { "type": "command", "command": "session-log --harness claude --event turn_end" }
-    ],
-    "Notification": [
-      { "type": "command", "command": "notify --harness claude" }
-    ],
-    "SubagentStart": [
-      { "type": "command", "command": "session-log --harness claude --event subagent_start" }
-    ],
-    "SubagentStop": [
-      { "type": "command", "command": "session-log --harness claude --event subagent_stop" }
+      { "type": "command", "command": "hooks-engineering-autocommit --harness claude" },
+      { "type": "command", "command": "hooks-checks-snapshot --harness claude" }
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash",
-        "hooks": [
-          { "type": "command", "command": "tap-hook gitbutler-git --harness claude", "timeout": 5 }
-        ]
-      },
-      {
         "matcher": "Edit|Write|MultiEdit",
         "hooks": [
-          { "type": "command", "command": "change-point-gate --harness claude" }
+          { "type": "command", "command": "hooks-change-point-gate --harness claude" }
         ]
       }
     ],
@@ -40,7 +22,7 @@
       {
         "matcher": "Edit|Write|MultiEdit",
         "hooks": [
-          { "type": "command", "command": "vale-lint --harness claude", "timeout": 5 }
+          { "type": "command", "command": "hooks-vale-lint --harness claude", "timeout": 5 }
         ]
       }
     ]

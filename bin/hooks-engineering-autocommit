@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# engineering-autocommit — turn_end hook: auto-commit the ~/engineering vault.
+# hooks-engineering-autocommit — turn_end hook: auto-commit the ~/engineering vault.
 #
-# Usage: engineering-autocommit --harness claude|cursor
+# Usage: hooks-engineering-autocommit --harness claude|cursor
 #
 # Wire for Claude (claude.settings.json), event: Stop
 # Wire for Cursor (cursor.hooks.json), event: stop
@@ -32,7 +32,7 @@ done
 case "$HARNESS" in
   claude|cursor) ;;
   *)
-    echo "engineering-autocommit: --harness must be 'claude' or 'cursor' (got '${HARNESS}')" >&2
+    echo "hooks-engineering-autocommit: --harness must be 'claude' or 'cursor' (got '${HARNESS}')" >&2
     exit 1
     ;;
 esac

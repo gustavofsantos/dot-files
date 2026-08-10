@@ -1,8 +1,3 @@
----
-claude: {}
-cursor:
-  alwaysApply: true
----
 
 Write in ASD-STE100 Simplified Technical English.
 

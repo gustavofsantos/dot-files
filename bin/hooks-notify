@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# notify — Stop + Notification hook: update session state and notify
+# hooks-notify — Stop + Notification hook: update session state and notify
 #
-# Usage: notify --harness claude
+# Usage: hooks-notify --harness claude
 #
 # Wire for Claude (claude.settings.json):
-#   "Stop":         [{"type":"command","command":"notify --harness claude"}]
-#   "Notification": [{"type":"command","command":"notify --harness claude"}]
+#   "Stop":         [{"type":"command","command":"hooks-notify --harness claude"}]
+#   "Notification": [{"type":"command","command":"hooks-notify --harness claude"}]
 #
 # Claude Code injects $CLAUDE_SESSION_ID into the hook environment.
 # claude-run exports: $CLAUDE_TRACK_NAME, $CLAUDE_TRACK_TASK, $CLAUDE_TRACK_DIR.
@@ -25,7 +25,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$HARNESS" != "claude" ]]; then
-  echo "notify: --harness must be 'claude' (got '${HARNESS}')" >&2
+  echo "hooks-notify: --harness must be 'claude' (got '${HARNESS}')" >&2
   exit 1
 fi
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# Tests for bin/agents-sync
+# Tests for `scripts/install-agents.sh agents-sync`
 #
 # Slice 1: generate .claude/agents/*.md from agents/agents/*.md — merging each
 # source file's shared top-level frontmatter keys with its claude: overlay.
@@ -17,7 +17,9 @@
 # merged frontmatter (shared keys, then the claude: block's own keys) is the
 # property under test.
 
-SCRIPT="$BATS_TEST_DIRNAME/../bin/agents-sync"
+INSTALL_SCRIPT="$BATS_TEST_DIRNAME/../scripts/install-agents.sh"
+agents-sync() { "$INSTALL_SCRIPT" agents-sync "$@"; }
+SCRIPT=agents-sync
 
 setup() {
   SRC=$(mktemp -d)

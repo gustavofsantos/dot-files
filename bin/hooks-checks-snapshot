@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# checks-snapshot — Stop-hook entry: version the agent's changes, fire the runner.
+# hooks-checks-snapshot — Stop-hook entry: version the agent's changes, fire the runner.
 #
-# Usage: checks-snapshot --harness claude|cursor
+# Usage: hooks-checks-snapshot --harness claude|cursor
 #
 # Wire for Claude (claude.settings.json), event: Stop
 # Wire for Cursor (cursor.hooks.json), event: stop
@@ -33,7 +33,7 @@ done
 case "$HARNESS" in
   claude|cursor) ;;
   *)
-    echo "checks-snapshot: --harness must be 'claude' or 'cursor' (got '${HARNESS}')" >&2
+    echo "hooks-checks-snapshot: --harness must be 'claude' or 'cursor' (got '${HARNESS}')" >&2
     exit 1
     ;;
 esac

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Idempotently initialise ~/engineering as a git repo so the vault can be
-# auto-committed at every agent turn end (see bin/engineering-autocommit).
+# auto-committed at every agent turn end (see bin/hooks-engineering-autocommit).
 set -euo pipefail
 
 ENG_DIR="${ENGINEERING_HOME:-$HOME/engineering}"

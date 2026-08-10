@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# Tests for agents/hooks/notify
+# Tests for bin/hooks-notify
 #
 # Replaces claude-hook-notify.bats, fixing a pre-existing bug: the old test
 # isolated state via CLAUDE_SESSIONS_DIR, but the script reads
@@ -14,7 +14,7 @@
 #   TMUX / TMUX_PANE   → unset so tmux rename-window is never attempted on
 #                        the real tmux session
 
-SCRIPT="$BATS_TEST_DIRNAME/../agents/hooks/notify"
+SCRIPT="$BATS_TEST_DIRNAME/../bin/hooks-notify"
 
 setup() {
   TEST_HOME=$(mktemp -d)
