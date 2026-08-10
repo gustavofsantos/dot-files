@@ -24,6 +24,16 @@ teardown() {
   rm -rf "$SRC" "$DEST"
 }
 
+write_plain_agent_source() {
+  cat > "$SRC/plain-agent.md" <<'EOF'
+---
+name: plain-agent
+description: No harness overlay needed.
+---
+Body text.
+EOF
+}
+
 @test "a subagent's shared keys and claude block are merged into the generated file's own frontmatter, in order" {
   cat > "$SRC/clojure-advisor.md" <<'EOF'
 ---
@@ -60,13 +70,7 @@ EOF
 }
 
 @test "a source file with no claude block is generated with just the shared keys" {
-  cat > "$SRC/plain-agent.md" <<'EOF'
----
-name: plain-agent
-description: No harness overlay needed.
----
-Body text.
-EOF
+  write_plain_agent_source
 
   cat > "$DEST/expected-plain-agent.md" <<'EOF'
 ---
@@ -85,13 +89,7 @@ EOF
 
 @test "a source file with no frontmatter block is skipped, and other files still sync" {
   printf 'No frontmatter here.\n' > "$SRC/no-frontmatter.md"
-  cat > "$SRC/plain-agent.md" <<'EOF'
----
-name: plain-agent
-description: No harness overlay needed.
----
-Body text.
-EOF
+  write_plain_agent_source
 
   run "$SCRIPT" --agents-source "$SRC" --agents-dest "$DEST"
   [ "$status" -eq 0 ]
