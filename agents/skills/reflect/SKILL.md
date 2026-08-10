@@ -1,6 +1,6 @@
 ---
 name: reflect
-description: Analyzes thread history for agent mistakes (failed commands, schema misunderstandings, user confusion) and updates project CLAUDE.local.md to prevent future failures.
+description: Analyzes thread history for agent mistakes (failed commands, schema misunderstandings, user confusion) and updates project to prevent future failures.
 ---
 
 # Reflect
@@ -26,17 +26,16 @@ Review the current thread to identify agent failures and update project document
    - What the correct approach was
    - A concise rule or hint that would prevent it
 
-3. **Update CLAUDE.local.md** - Add learnings to the project's Claude file:
+3. **Update** - Add learnings to the project's agent rules:
    - Create the file if it doesn't exist
-   - Add a `## Learnings` or `## Gotchas` section if not present
-   - Write concise, actionable guidance (not verbose explanations)
+   - Write concise, actionable guidance (not verbose explanations - use ASD-STE100 Simplified Technical English)
    - Avoid duplicating information already in the file
 
 ## Output Format
 
 After updating, summarize:
 - Number of issues found
-- What was added to CLAUDE.local.md
+- What was added
 - Any issues that couldn't be captured as guidance
 
 ## Guidelines
