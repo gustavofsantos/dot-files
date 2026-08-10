@@ -20,6 +20,12 @@ untouched. An empty block (`claude: {}`) means "no scoping" and generates a
 file with no frontmatter at all -- this repo's convention for an always-apply
 rule.
 
+Each destination directory keeps a `.rules-sync-manifest` listing the
+basenames a prior run generated there. When a source rule disappears, the
+next run deletes only the destination files it previously generated for that
+rule -- a file in the destination that was never in the manifest (hand-made,
+or from another tool) is left untouched.
+
 Usage:
   rules-sync [--source DIR] [--claude-dest DIR] [--cursor-dest DIR] [--dry-run]
 
@@ -36,6 +42,7 @@ import re
 import sys
 
 DOTFILES_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MANIFEST_NAME = ".rules-sync-manifest"
 
 FRONTMATTER_RE = re.compile(r"\A---[ \t]*\n(.*?\n)---[ \t]*\n?(.*)\Z", re.S)
 TOP_LEVEL_KEY_RE = re.compile(r"\A([A-Za-z0-9_-]+):(.*)")
@@ -130,10 +137,37 @@ def source_rule_files(source):
     )
 
 
+def read_manifest(dest):
+    path = os.path.join(dest, MANIFEST_NAME)
+    try:
+        with open(path, encoding="utf-8") as f:
+            return {line.strip() for line in f if line.strip()}
+    except FileNotFoundError:
+        return set()
+
+
+def write_manifest(dest, names):
+    with open(os.path.join(dest, MANIFEST_NAME), "w", encoding="utf-8") as f:
+        f.writelines(f"{name}\n" for name in sorted(names))
+
+
+def prune_stale(dest, previous_names, live_names, dry_run):
+    for name in sorted(previous_names - live_names):
+        path = os.path.join(dest, name)
+        if not os.path.isfile(path):
+            continue
+        print(f"  prune {name}")
+        if not dry_run:
+            os.remove(path)
+
+
 def sync_harness(source, dest, harness, ext, dry_run, warn_on_empty=False):
     print(f"{harness} -> {dest}")
     if not dry_run:
         os.makedirs(dest, exist_ok=True)
+
+    previous_names = read_manifest(dest)
+    live_names = set()
 
     for path in source_rule_files(source):
         name = os.path.basename(path)
@@ -156,12 +190,17 @@ def sync_harness(source, dest, harness, ext, dry_run, warn_on_empty=False):
             )
 
         dest_name = f"{stem}.{ext}"
+        live_names.add(dest_name)
         print(f"  gen   {dest_name}")
         if dry_run:
             continue
 
         with open(os.path.join(dest, dest_name), "w", encoding="utf-8") as f:
             f.write(render_rule(block, body))
+
+    prune_stale(dest, previous_names, live_names, dry_run)
+    if not dry_run:
+        write_manifest(dest, live_names)
 
 
 def main(argv):
