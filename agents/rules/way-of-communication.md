@@ -14,7 +14,7 @@ second language must never read a sentence twice.
 ## Two paths, one standard
 
 Vale checks markdown files. The `STE` style in `config/vale/styles/STE/` runs
-from the `claude-hook-vale-lint` hook after each edit. It reports what a regular
+from the `vale-lint` hook after each edit. It reports what a regular
 expression can find.
 
 This rule covers what Vale cannot reach. Vale never sees a chat reply. Vale also

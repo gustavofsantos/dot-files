@@ -111,7 +111,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "tap-hook claude-hook-gitbutler-git",
+            "command": "tap-hook gitbutler-git --harness claude",
             "timeout": 5
           }
         ]
@@ -123,7 +123,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "claude-hook-vale-lint",
+            "command": "vale-lint --harness claude",
             "timeout": 5
           }
         ]

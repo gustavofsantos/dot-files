@@ -52,7 +52,7 @@ test, one you can see is not. Drive the hook directly and assert the decisions.
 ```bash
 for f in <COVERED_FILE> <UNCOVERED_FILE>; do
   printf '{"session_id":"probe","tool_input":{"file_path":"%s"}}' "$PWD/$f" \
-    | claude-hook-change-point-gate | jq -r '.hookSpecificOutput.permissionDecision // "allow(silent)"'
+    | change-point-gate --harness claude | jq -r '.hookSpecificOutput.permissionDecision // "allow(silent)"'
 done
 ```
 

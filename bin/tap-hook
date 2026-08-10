@@ -6,7 +6,7 @@ input="$(cat)"
 sid="$(printf '%s' "$input"  | jq -r '.session_id // "no-session"' 2>/dev/null)"
 cwd="$(printf '%s' "$input"  | jq -r '.cwd // .workspace_roots[0] // empty' 2>/dev/null)"
 repo="$(basename "$(git -C "${cwd:-$PWD}" rev-parse --show-toplevel 2>/dev/null || echo unknown)")"
-hook="$(basename "${!#}")"          # last arg = the actual script, not python3
+hook="$(basename "$1")"             # first arg = the real hook, per the usage line above
 
 LOG="$HOME/.agents/hook-taps/$repo/$sid/$hook.log"
 mkdir -p "$(dirname "$LOG")"
