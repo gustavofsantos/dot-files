@@ -1,7 +1,7 @@
 # Section vocabulary
 
-Optional sections. Compose what the work needs; ignore the rest. This is a
-vocabulary, not a closed set — add a section that isn't here when the work calls
+Optional sections. Compose what the work needs. Ignore the rest. This is a
+vocabulary, not a closed set — add a section that is not here when the work calls
 for it.
 
 Typical compositions, for orientation only:
@@ -19,7 +19,7 @@ Typical compositions, for orientation only:
 # Diagram vocabulary
 
 Mermaid, always. One diagram answers one question — split rather than merging into
-a single large picture. Label edges; an unlabelled arrow is prose avoidance.
+a single large picture. Label edges. An unlabelled arrow is prose avoidance.
 
 | Content | Diagram |
 |---|---|
@@ -40,7 +40,7 @@ content is a judgment rather than a structure.
 
 ## Scope
 Use when the work has a tempting edge — something nearby that could be changed but
-shouldn't be.
+should not be.
 
 ```markdown
 ## Scope
@@ -65,7 +65,7 @@ The `## Model` diagram for a defect is the failing path as a `sequenceDiagram`,
 with the point of divergence marked.
 
 ## Root Cause
-Use alongside Reproduction. Starts as a hypothesis; rewritten once confirmed.
+Use alongside Reproduction. Starts as a hypothesis. Rewritten once confirmed.
 Mark which it currently is. Name the node or edge in the `## Model` diagram where
 it lives rather than re-describing the path in prose.
 
@@ -103,7 +103,7 @@ Filled during execution — do not pre-populate. What the tests now pin down,
 including behavior that looks like a bug but is being preserved.
 
 ## Findings
-Filled during execution — do not pre-populate. Append as they arrive; do not
+Filled during execution — do not pre-populate. Append as they arrive. Do not
 rewrite earlier findings, supersede them.
 
 ## Decision

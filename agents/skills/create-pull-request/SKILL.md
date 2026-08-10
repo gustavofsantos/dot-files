@@ -38,7 +38,7 @@ branch's commits and local knowledge base context.
    - What problem or need existed before this change?
    - Why is this the right approach?
    - What is the outcome for users or the system?
-   Fill remaining sections (test plan, checklist, etc.) from the diff and commits. Do not
+   Fill remaining sections (test plan, checklist, and so on.) from the diff and commits. Do not
    describe implementation details that are already visible in the diff.
 
 6. **Scrub the title and body.** Before creating the PR, re-read the assembled text and fix

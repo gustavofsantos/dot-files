@@ -1,12 +1,12 @@
 ---
 name: datomic-console
-description: Use this skill when the user wants to explore, query, or inspect data in a Datomic database via the Datomic Console — the web UI shipped with Datomic On-Prem. Covers starting the console and guiding the user through its tabs, queries, and time-travel features. Not for Datomic Cloud or for writing application code (that's clojure-datomic).
+description: Use this skill when the user wants to explore, query, or inspect data in a Datomic database via the Datomic Console — the web UI shipped with Datomic On-Prem. Covers starting the console and guiding the user through its tabs, queries, and time-travel features. Not for Datomic Cloud or for writing application code (that is clojure-datomic).
 ---
 
 # Datomic Console
 
 Web-based, **read-only** graphical UI shipped with Datomic On-Prem (`bin/console`).
-Requires a running **Transactor**; connects via named *storage aliases*. Supports
+Requires a running **Transactor**. Connects via named *storage aliases*. Supports
 time-travel (`as-of`, `since`, `history`).
 
 ## Starting the Console

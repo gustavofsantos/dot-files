@@ -1,6 +1,6 @@
 # Test Smells and Rewrites
 
-Detect, then rewrite in place. Pseudocode is language-agnostic — translate to the target stack's idiom. These are the cases where the *documenting* instinct diverges from ordinary test hygiene; the fix is always to surface the business promise.
+Detect, then rewrite in place. Pseudocode is language-agnostic — translate to the target stack's idiom. These are the cases where the *documenting* instinct diverges from ordinary test hygiene. The fix is always to surface the business promise.
 
 ## 1. Method-mirror name
 Name repeats the implementation, so failure teaches nothing about the domain.
@@ -32,7 +32,7 @@ GOOD:  "tax is charged at destination state rate"
 Keep whole-object equality only for atomic value objects where the shape *is* the one rule.
 
 ## 4. Hidden deciding value
-The fact that makes the scenario meaningful is buried in a default, so the reader can't see why this case exercises this rule. Name the condition too.
+The fact that makes the scenario meaningful is buried in a default, so the reader cannot see why this case exercises this rule. Name the condition too.
 ```
 BAD:   "refund is rejected"  with  standardAccount()
 GOOD:  "refund is rejected after return window closes"
@@ -47,7 +47,7 @@ GOOD:  assertThat(order).isConfirmed()
        assertThat(customer.availableCredit).isEqualTo(0)   // credit consumed
        // name: "order is confirmed and customer credit is consumed"
 ```
-Mock only true boundaries (external services, clock, randomness); assert on observable domain state.
+Mock only true boundaries (external services, clock, randomness). Assert on observable domain state.
 
 ## 6. The undocumented invariant (a gap, not a smell)
-A rule is enforced in the code but named in no test — so it's unenforced by the suite; delete the guard and everything stays green. Read the logic, list its rules, check each against the test names, add the missing one. This is where the skill earns its keep: the code says *what happens*, only the test says *this is a promise we intend to keep*.
+A rule is enforced in the code but named in no test — so it is unenforced by the suite. Delete the guard and everything stays green. Read the logic, list its rules, check each against the test names, add the missing one. This is where the skill earns its keep: the code says *what happens*, only the test says *this is a promise we intend to keep*.

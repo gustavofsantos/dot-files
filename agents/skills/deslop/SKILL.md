@@ -19,13 +19,13 @@ Remove AI-generated cruft from the branch diff, touching **only changed lines**,
 
 - **Comments** that narrate the code, restate syntax, or reference tickets. Keep comments that carry domain *why*.
 - **Docstrings** that merely restate the function name. Keep ones explaining complex returns or business logic.
-- **Defensive code** (try/catch, nil checks, impossible-state guards) that doesn't mirror an existing pattern on the same path. Keep checks required for external inputs, DB results, API responses.
+- **Defensive code** (try/catch, nil checks, impossible-state guards) that does not mirror an existing pattern on the same path. Keep checks required for external inputs, DB results, API responses.
 - **Nesting** that fights the file's style — flatten toward the surrounding file's idioms.
 - **Naming** that breaks local conventions — drop or rename to match what the file/namespace already uses.
-- **Tests** — drop narrating comments and unused stubs/mocks; keep the scenario descriptions that explain intent.
+- **Tests** — drop narrating comments and unused stubs/mocks. Keep the scenario descriptions that explain intent.
 
 ## Guardrails
 
-- Match the surrounding file rather than imposing a global style; consistency over verbosity.
+- Match the surrounding file rather than imposing a global style. Consistency over verbosity.
 - No behavior changes except an obvious bug fix (wrong condition, off-by-one).
 - When many instances exist, fix the clearest and stop — no whole-function rewrites.

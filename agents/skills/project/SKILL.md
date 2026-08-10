@@ -12,8 +12,8 @@ description: >
 # project
 
 A project is one markdown file. It holds the durable context that no single issue
-owns: the vocabulary, the map of the system, the shape of the data, and the open
-unknowns.
+owns. That context is the vocabulary, the map of the system, the shape of the data,
+and the open unknowns.
 
 Write the brief for an agent that reads it cold. The brief is not a tracker. It
 carries no progress, no status, and no list of its issues.
@@ -31,7 +31,7 @@ $ENGINEERING_HOME/
 └── spikes/
 ```
 
-Two locations, two states. Moving the file is the only transition. There is no
+Two locations, two states. Moving the file is the only transition. A brief carries no
 status field.
 
 A campaign ends, so its file moves to `done/`. A domain that the team owns has no

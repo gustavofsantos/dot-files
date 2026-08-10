@@ -45,11 +45,11 @@ Review the current thread to identify agent failures and update project document
 After updating, summarize:
 - Number of issues found
 - What was added
-- Any issues that couldn't be captured as guidance
+- Any issues that could not be captured as guidance
 
 ## Guidelines
 
 - Be selective: only add learnings that will genuinely help future sessions
 - Keep entries concise: one line per learning when possible
 - Use specific examples: "Use `bundle exec rspec` not `rspec`" beats "run tests correctly"
-- Don't add obvious things the agent should already know
+- Do not add obvious things the agent should already know

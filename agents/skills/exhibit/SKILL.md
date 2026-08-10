@@ -20,7 +20,7 @@ is numbered to a probe.
 
 **Only probed data gets an exhibit.** Input is the output of a `model/probes/*.sql` or a
 `model/traces/*.sql`, piped through the adapter. Never write ad-hoc SQL for the sake of a
-picture — a chart is the most persuasive artifact in the repo, and an unverified one is a lie
+picture. A chart is the most persuasive artifact in the repo. An unverified one is a lie
 with a legend.
 
 If the user asks for a chart of something no probe covers: write the probe first (`reconcile`),
@@ -28,7 +28,7 @@ then render it.
 
 ## Closed set
 
-Five verbs. Do not invent a sixth; if none fits, the question is not yet framed.
+Five verbs. Do not invent a sixth. If none fits, the question is not yet framed.
 
 | Verb | Question | Mermaid |
 |---|---|---|
@@ -54,27 +54,27 @@ Reads CSV on stdin by default, so it composes directly with the adapter:
   | scripts/exhibit.py breaks --probe INV-014 --grain "one issued invoice" --watermark 4h
 ```
 
-Column names are overridable (`--count-col`, `--class-col`, `--lag-col`, `--time-col`, …); the
+Column names are overridable (`--count-col`, `--class-col`, `--lag-col`, `--time-col`, …). The
 defaults match the shapes `reconcile` already emits.
 
 ## Provenance
 
 The script stamps every exhibit with probe id, grain, population, watermark, row count, and
 as-of. Never write that footer by hand and never strip it — exhibits get pasted into issues and
-outlive their context by months. Pass `--probe`, `--grain`, `--watermark` on every call; a `-`
+outlive their context by months. Pass `--probe`, `--grain`, `--watermark` on every call. A `-`
 in the footer is a defect, not a default.
 
 ## Rules that survive being ignored by the model
 
 - **Counts and money together** in `funnel`, via `--amount-col`. A fan-out inflates counts while
-  the control total stays flat; one number alone hides it.
+  the control total stays flat. One number alone hides it.
 - **Never smooth.** The spike is the finding.
-- **Never a pie chart of break classes.** Rank order is the information; angle is not.
+- **Never a pie chart of break classes.** Rank order is the information. Angle is not.
 - **Zero baseline always.** `xychart-beta` starts at 0 here by construction — keep it.
 - **One exhibit, one claim.** No dual axes, no two questions on one canvas.
 
 ## Escape hatch
 
 Mermaid has no stacked bars, so class × time in a single view is the one shape it cannot do.
-When that view is genuinely needed, and only then, fall back to matplotlib and emit a PNG —
-noting in the caption that it is an off-Mermaid exhibit. Everything else stays dependency-free.
+When that view is genuinely needed, and only then, fall back to matplotlib and emit a PNG.
+Note in the caption that it is an off-Mermaid exhibit. Everything else stays dependency-free.

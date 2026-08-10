@@ -12,7 +12,7 @@ description: >
 A tracked work item is a single markdown file. Everything it produces — notes,
 transcripts, data, diagrams — is a separate file in `artifacts/`, linked from the
 issue. A spike is the exception: the `spike` skill writes it to `spikes/`, and the
-issue links it the same way. Issues move between states; artifacts and spikes never
+issue links it the same way. Issues move between states. Artifacts and spikes never
 move.
 
 The vault is `$ENGINEERING_HOME`, which defaults to `~/engineering`. Every path below is relative to it.
@@ -32,7 +32,7 @@ $ENGINEERING_HOME/
     └── 2026-08-04-does-the-projection-replay.md
 ```
 
-Three locations, three states. Moving the file is the only transition. There is no
+Three locations, three states. Moving the file is the only transition. An issue carries no
 status field.
 
 `backlog/` → `issues/` → `done/`
@@ -53,7 +53,7 @@ title is later revised.
 
 1. **Search first** — `rg -il 'term' "${ENGINEERING_HOME:-$HOME/engineering}/issues/" 2>/dev/null` — searches
    active, backlog and done. If a similar item exists, update it instead of creating
-   a duplicate. This is the only guard against near-duplicate names; do not skip it.
+   a duplicate. This is the only guard against near-duplicate names. Do not skip it.
 2. **Create the file** — in `issues/` if starting now, in `issues/backlog/` if
    filing for later.
 3. **Decide what kind of work this is** — bug, investigation, prototype,
@@ -114,7 +114,7 @@ membership from this field.
 ## Artifacts
 
 Written to `artifacts/`, date-prefixed, linked from the issue that
-produced them. The link is authored in one direction only; the reverse is derived
+produced them. The link is authored in one direction only. The reverse is derived
 by the vault, so an artifact needs no knowledge of its issue.
 
 An artifact serving a second issue is simply linked twice — nothing moves, nothing
@@ -128,8 +128,8 @@ nothing.
 ## Invariants
 
 - **`Done when` must be checkable.** "Investigate the retry path" is not a
-  condition; "the retry path's failure modes are written up in an artifact" is.
-  A vague `Done when` is design feedback — the work isn't understood yet. Say so
+  condition. "the retry path's failure modes are written up in an artifact" is.
+  A vague `Done when` is design feedback — the work is not understood yet. Say so
   rather than writing a placeholder.
 - **No unlinked artifacts.** Every file written to `artifacts/` is linked from at
   least one issue, with a line saying what it is. An unlinked artifact is invisible
@@ -148,7 +148,7 @@ nothing.
   within weeks, and a stale diagram in a closed issue still looks authoritative.
 - **Sections are composed, not selected from a fixed set.** The list in
   `references/sections.md` is a vocabulary, not an enum. Add a new section when the
-  work needs one; do not force work into an existing shape.
+  work needs one. Do not force work into an existing shape.
 
 ## Closing
 

@@ -8,11 +8,11 @@ disable-model-invocation: true
 
 # Outcome Builder
 
-Shapes ideas into **Outcome-Driven Stories** anchored on a strict logical assertion (the **Outcome Anchor**) — keeping a pairing LLM aligned on the *value/outcome* instead of fixating on a pre-decided *mechanism*.
+Shapes ideas into **Outcome-Driven Stories**. Each story is anchored on a strict logical assertion, the **Outcome Anchor**. The anchor keeps a pairing LLM aligned on the *value/outcome*, instead of a pre-decided *mechanism*.
 
 ## Phase 1 — Uncover the Outcome
 
-Don't draft yet. Ask up to 3 questions to decouple the **outcome** from the **mechanism**, identifying:
+Do not draft yet. Ask up to 3 questions to decouple the **outcome** from the **mechanism**, identifying:
 
 1. **Outcome** — what capability or state transition is achieved (the *value*)
 2. **Verification** — the concrete, testable signal that proves success (the *proof*)
@@ -64,4 +64,4 @@ Decompose into atomic tasks (max 7). Each must focus on the assertion, leaving r
 
 ## Phase 4 — Store as issue
 
-Read [references/issue-template.md](references/issue-template.md), fill it (`{title}` slugified; `{id}`/`{today}` resolved by the skill; outcome anchor, narrative, criteria, confirmed tasks), then invoke the `issue` skill to allocate an ID and write the file.
+Read [references/issue-template.md](references/issue-template.md) and fill it. The skill slugifies `{title}` and resolves `{id}` and `{today}`. Add the outcome anchor, the narrative, the criteria, and the confirmed tasks. Then invoke the `issue` skill to allocate an ID and write the file.

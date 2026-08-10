@@ -16,7 +16,7 @@ description: >-
 
 # Reconcile
 
-Don't trust, verify. A belief about the business is worth nothing until it is a zero-row
+Do not trust, verify. A belief about the business is worth nothing until it is a zero-row
 assertion.
 
 ## Where the work lives
@@ -82,7 +82,7 @@ Classify every returned row first:
     timing | in-transit | rounding | duplicate | missing-in-target | missing-in-source | misclassified
 
 **An explainable class is a predicate, not a note.** Tighten the probe until only irreducible
-breaks survive, then log those to `breaks.tsv`. Prose decays silently; predicates cannot.
+breaks survive, then log those to `breaks.tsv`. Prose decays silently. Predicates cannot.
 
 ## Promotion
 
@@ -94,7 +94,7 @@ On green only:
     irreducible breaks  -> breaks.tsv
 
 The tables go to the vault. The SQL goes to the repository. An unprobed row in entities.tsv or
-bridges.tsv is hearsay; `scripts/no-unproven-claims.sh` fails closed on it.
+bridges.tsv is hearsay. `scripts/no-unproven-claims.sh` fails closed on it.
 
 Red is equally mandatory: a failing probe is a falsified belief or a changed rule. Mark it red
 the moment it fails. Never delete a probe to green the suite.

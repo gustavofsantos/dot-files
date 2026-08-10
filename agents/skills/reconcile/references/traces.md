@@ -61,9 +61,13 @@ FROM <orders> o JOIN <contracts> c ON c.<key> = o.<key>
 WHERE o.created_at < c.created_at
 ```
 
-Look for, while reading a trace: effect before cause; terminal state followed by a
-non-terminal one; mutually exclusive states overlapping; a gap exceeding any plausible
-business duration; a downstream event with no upstream origin.
+Look for these, while reading a trace:
+
+- effect before cause
+- a terminal state followed by a non-terminal one
+- mutually exclusive states overlapping
+- a gap exceeding any plausible business duration
+- a downstream event with no upstream origin
 
 Each is one query, zero rows when healthy, and catches bugs no aggregate check will surface.
 

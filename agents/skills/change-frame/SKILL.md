@@ -1,41 +1,41 @@
 ---
 name: change-frame
-description: Align the causal model of a change between the user and the agent BEFORE writing any code. Use when the user arrives with a change request and wants shared understanding of the system — before/after — instead of jumping to implementation. Trigger on "I want to change", "I need the system to", "let's align before I code", "understand what I want", or when the user describes a goal without having decided the implementation. Do NOT use for execution, writing tests, or generating code — the output is a minimal model frame, not an implementation artifact. Use even if the user doesn't explicitly ask for "alignment" when the request is a behavior change whose model isn't yet clear.
+description: Align the causal model of a change between the user and the agent BEFORE writing any code. Use when the user arrives with a change request and wants shared understanding of the system — before/after — instead of jumping to implementation. Trigger on "I want to change", "I need the system to", "let's align before I code", "understand what I want", or when the user describes a goal without having decided the implementation. Do NOT use for execution, writing tests, or generating code — the output is a minimal model frame, not an implementation artifact. Use even if the user does not explicitly ask for "alignment" when the request is a behavior change whose model is not yet clear.
 ---
  
 # Change Frame
  
-Close the gap between two models of the system — the user's (tacit, in their head)
-and yours (inferred from source right now) — before writing code. The output is NOT
-a spec. It's the whiteboard sketch: the minimum that captures the change in *shape*
+Close the gap between two models of the system before writing code. The user holds
+one model, tacit, in their head. You infer the other from source right now. The output is NOT
+a spec. It is the whiteboard sketch: the minimum that captures the change in *shape*
 of the system, short-lived, handed off to execution.
  
-Prose contracts drift from code and overload the reader. The real gap isn't missing
-text — it's a divergent causal model. Close the model, don't write the spec.
+Prose contracts drift from code and overload the reader. The real gap is not missing
+text — it is a divergent causal model. Close the model, do not write the spec.
  
 ## Golden rule
  
-Align on the MODEL, never on the text. The user corrects *your* understanding; you
+Align on the MODEL, never on the text. The user corrects *your* understanding. You
 never ask them to correct *your* text. If the conversation turned into paragraph
 review, you picked the wrong artifact — go back to the model diff.
  
 ## Flow
  
 1. **Read the territory before asking.** Never ask from an imagined model. Read the
-   source of the relevant regions first — that's the only way to align on the real
+   source of the relevant regions first — that is the only way to align on the real
    system, not the assumed one. Cite evidence (file, function) and mark it
-   `verified`. Anything you couldn't confirm in source is `inferred` — say so.
-   If you don't know which regions are relevant, that's the first question.
+   `verified`. Anything you could not confirm in source is `inferred` — say so.
+   If you do not know which regions are relevant, that is the first question.
 2. **Reflect back the model you inferred.** "Today `X` does `Y` (`foo.clj:42`). You
-   want it to do `Z`. Right?" This surfaces divergence early. It's pairing, not
+   want it to do `Z`. Right?" This surfaces divergence early. It is pairing, not
    documentation — sketch just enough to agree on direction.
 3. **Iterate on the model diff until it converges.** Adjust the model, not the text.
    Stop when the user confirms the `BEFORE → AFTER` of the regions that change shape.
-   Don't expand scope — only regions that change enter the diff; the rest is noise.
+   Do not expand scope — only regions that change enter the diff. The rest is noise.
 4. **Emit the frame and stop.** Only emit when every `GOAL` is testable and every
-   `INVARIANT` is expressable as an assertion. Anything unverifiable doesn't enter
-   the frame — it becomes a `DRAGON`. What can't be checked isn't an agreement, it's
-   a hope. After emitting, STOP. Don't write tests, don't generate code.
+   `INVARIANT` is expressable as an assertion. Anything unverifiable does not enter
+   the frame — it becomes a `DRAGON`. What cannot be checked is not an agreement, it is
+   a hope. After emitting, STOP. Do not write tests, do not generate code.
 ## Frame format
  
 ALWAYS use this exact template. Deliberately prose-poor.
@@ -59,7 +59,7 @@ DRAGONS (unknowns — become spikes, not decisions):
 ```
  
 Size limits, seriously:
-- `GOAL`: one sentence. If it needs two, it's two frames.
+- `GOAL`: one sentence. If it needs two, it is two frames.
 - `MODEL`: only lines that change. Zero context lines that stay the same.
 - If the frame exceeds ~15 lines, the scope is too big — split it.
 ## Example
@@ -96,7 +96,7 @@ DRAGONS:
 ## When the model diverges DURING execution
  
 The frame freezes an understanding that implementation can invalidate — you discover,
-while coding, that the model was wrong. When that happens, don't edit the frame like
+while coding, that the model was wrong. When that happens, do not edit the frame like
 a doc. Invalidate and re-emit: `frame v1 assumed X; spike Y refuted it; frame v2`.
 The resolved divergence is the record that matters — the delta between consecutive
 frames, not the frames themselves. The frame is ephemeral by design.

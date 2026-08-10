@@ -27,7 +27,7 @@ layout — never from remembered conventions for the stack. Anchor with `(^|/)` 
 directory segments and `$` for suffixes.
 
 `runTests` is a command prefix a human appends a target to. It is advisory text the gate
-shows the agent; the gate never executes it.
+shows the agent. The gate never executes it.
 
 # Acceptance
 
@@ -45,7 +45,7 @@ The third command is the important one: any file it prints is a test your patter
 missed. Fix the pattern. Never widen it to a bare substring — verify why it escaped.
 
 **2. runTests actually runs.** Execute it once against a single real test target. If it
-errors, the prefix is wrong; find the correct single-target invocation and re-run.
+errors, the prefix is wrong. Find the correct single-target invocation and re-run.
 
 **3. The gate answers correctly.** Pick two files by hand: one you can see is pinned by a
 test, one you can see is not. Drive the hook directly and assert the decisions.
@@ -58,7 +58,7 @@ done
 ```
 
 Expect `allow` then `deny`. Any other pair means the config is wrong, not the gate —
-`allow allow` usually means the uncovered file's stem collides with an unrelated test;
+`allow allow` usually means the uncovered file's stem collides with an unrelated test.
 `deny deny` usually means `testPathPattern` failed to see the covering test at all.
 Diagnose before adjusting. Use `session_id` values other than `probe` when re-running,
 since the gate caches its verdict per session.
@@ -66,6 +66,6 @@ since the gate caches its verdict per session.
 # Report
 
 State the pattern, the two probe files, the three check outputs, and any file whose
-classification you were unsure about. If a repo has no tests at all, say so and write
-`"gate": "off"` with a one-line reason — a gate that cannot observe anything is worse
+classification you were unsure about. If a repo has no tests at all, say so. Write
+`"gate": "off"` with a one-line reason. A gate that cannot observe anything is worse
 than no gate.

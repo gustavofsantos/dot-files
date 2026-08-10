@@ -5,7 +5,7 @@ description: Steer test-writing toward tests that document and enforce business 
 
 # Smelly Test
 
-You already know how to write tests. This skill only redirects the *target*: make each test document and enforce a **business promise**, so the suite reads as a spec and goes red when a promise breaks — not as a mirror of the code that passes while documenting nothing.
+You already know how to write tests. This skill only redirects the *target*. Make each test document and enforce a **business promise**. The suite then reads as a spec and goes red when a promise breaks. It does not mirror the code, passing while it documents nothing.
 
 Apply one filter to every test: **does this protect a promise the business is making?** If yes, make it read like one.
 
@@ -17,7 +17,7 @@ Prefer a **natural-language string** that reads like a spec sentence — lowerca
 
 `"interest accrues daily on outstanding principal"`
 
-Use **camelCase as an identifier** only when the framework or convention requires it (e.g. JUnit method names) or when a string name is not available. Even then, the identifier should still read as a domain sentence, not a method mirror:
+Use **camelCase as an identifier** only in two cases. The first is when the framework or convention requires it, as with JUnit method names. The second is when no string name is available. Even then, the identifier should still read as a domain sentence, not a method mirror:
 
 `testCalculateInterest` → `"interest accrues daily on outstanding principal"` (preferred) or `interestAccruesDailyOnOutstandingPrincipal` (fallback)
 

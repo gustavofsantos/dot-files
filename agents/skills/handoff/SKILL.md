@@ -10,10 +10,10 @@ Write a standalone prompt for a fresh agent to investigate, discuss, or work a t
 
 ## Workflow
 
-1. Identify the task; if given only a label, infer from repo, recent discussion, branch, linked issue/PR, nearby context.
-2. Gather enough to orient the receiver — repo/product identity, issue/PR/branch names, likely modules, constraints, symptoms. Don't do their review or decide their technical direction.
+1. Identify the task. If given only a label, infer from repo, recent discussion, branch, linked issue/PR, nearby context.
+2. Gather enough to orient the receiver — repo/product identity, issue/PR/branch names, likely modules, constraints, symptoms. Do not do their review or decide their technical direction.
 3. Write the prompt (template below) to `/tmp/handoff-<short-slug>.txt`.
-4. Reply with the task title and the temp file path. Don't paste the full prompt unless asked.
+4. Reply with the task title and the temp file path. Do not paste the full prompt unless asked.
 
 ## Template
 
@@ -50,7 +50,7 @@ Output:
 
 ## Output file
 
-Write to `/tmp/handoff-<short-slug>.txt` by writing the file directly (not shell heredocs — inline quoting breaks on backticks/`$`/quotes). No clipboard interaction; the user copies it manually. Report the path.
+Write to `/tmp/handoff-<short-slug>.txt` by writing the file directly (not shell heredocs — inline quoting breaks on backticks/`$`/quotes). No clipboard interaction. The user copies it manually. Report the path.
 
 ## Quality bar
 

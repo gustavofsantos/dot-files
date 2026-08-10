@@ -22,16 +22,16 @@ A good outcome anchor has three distinct parts:
 
 ### Weak vs. Strong Examples
 
-❌ **Weak (Doesn't decouple mechanism):**
+❌ **Weak (Does not decouple mechanism):**
 > `ASSERT: The system satisfies [adding a Redis cache] (Verification: [Redis gets hits on search queries]), regardless of whether we use [Redis] or a simpler alternative.`
-* **Why it's weak:** The outcome *is* the mechanism. If Redis is down or too complex, the LLM has no room to pivot.
+* **Why it is weak:** The outcome *is* the mechanism. If Redis is down or too complex, the LLM has no room to pivot.
 
-* **Why it's strong:** The outcome is the target behavior (speed). The verification is measurable. The mechanism (Redis) is explicitly marked as negotiable. If the LLM can achieve <200ms using in-memory local caching or database optimization, it is allowed to do so.
+* **Why it is strong:** The outcome is the target behavior (speed). The verification is measurable. The mechanism (Redis) is explicitly marked as negotiable. If the LLM can achieve <200ms using in-memory local caching or database optimization, it is allowed to do so.
 
 ---
 
 ## 3. Heuristics for Verification Conditions
 
-* **Observable:** The verification must be checkable via a test script, terminal command, or direct UI inspection (e.g., "command `npm test` passes", "server returns 200 and a JSON payload", "UI displays a banner").
+* **Observable:** The verification must be checkable via a test script, terminal command, or direct UI inspection (for example, "command `npm test` passes", "server returns 200 and a JSON payload", "UI displays a banner").
 * **Non-Implementation Specific:** Avoid mentioning specific databases, library APIs, or class names in the verification unless they are hard requirements of the system architecture.
 * **Minimal:** A single primary verification is usually enough. If you need more than 3 verification steps, the outcome is too broad and should be split.

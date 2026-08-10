@@ -30,5 +30,5 @@ sequence of interactions between services. Skip for single-file changes or pure
 refactors with no behavioral shift.
 
 GitHub mermaid quirks: node labels with special characters need quotes
-(`A["label with (parens)"]`); `graph TD` and `sequenceDiagram` are the most reliably
+(`A["label with (parens)"]`). `graph TD` and `sequenceDiagram` are the most reliably
 rendered.

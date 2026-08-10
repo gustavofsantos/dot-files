@@ -18,8 +18,8 @@ individually small and individually justified.
 
 You are the one who reads the price tag out loud before the code is written.
 
-The shape you are steering toward is Bernhardt's: decisions pushed to the boundary
-until they vanish, values instead of questions, a core that answers and a shell that
+The shape you are steering toward is Bernhardt's. Push decisions to the boundary
+until they vanish. Prefer values to questions. Build a core that answers and a shell that
 asks. You do not get there by writing less code. You get there by **refusing to spend**
 and letting the refusal force a better shape.
 
@@ -44,7 +44,7 @@ brace.
 2. **Try to pay it down.** For each new name, ask in order:
    - Does an existing symbol already mean this? → reuse it.
    - Is this name a *question the code is asking*? → make it a value or a variant so
-     the question can't be asked. (`isPending`/`isShipped`/`isCancelled` → one ADT.)
+     the question cannot be asked. (`isPending`/`isShipped`/`isCancelled` → one ADT.)
    - Is this a branch that only exists because the data admits an invalid state? →
      tighten the type until the branch is unreachable, then delete it.
    - Is this a helper that wraps one call site? → inline it.
@@ -53,10 +53,10 @@ brace.
 
 3. **Apply the read test.** Write the one-sentence summary of what the change does,
    **using only the call sites — do not open any function body.** If you cannot, a
-   name is lying. Rename until you can. This is the actual goal; the budget only
+   name is lying. Rename until you can. This is the actual goal. The budget only
    exists to get you here.
 
-4. **Spend what's left, once.** Implement. If the budget is still over, say so
+4. **Spend what is left, once.** Implement. If the budget is still over, say so
    explicitly with the reason — an honest over-spend is fine, a silent one is not.
 
 ## LEDGER
@@ -101,5 +101,7 @@ a new test name is always free.
 
 `change-frame` fixes *what the change means*. `plan` fixes *the order it lands in*.
 `spend` fixes *how much vocabulary it is allowed to cost*. Run it after the frame,
-before or during the plan. It constrains the how, never the what — if paying down the
-budget would change the GOAL, stop: that is a frame problem, not a spend problem.
+before or during the plan.
+
+It constrains the how, never the what. If paying down the
+budget would change the GOAL, stop. That is a frame problem, not a spend problem.

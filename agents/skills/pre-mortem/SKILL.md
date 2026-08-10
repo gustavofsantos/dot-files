@@ -10,10 +10,10 @@ Before implementing a non-trivial solution, project into a future where it has *
 
 ## Procedure
 
-1. **Goal** — state it in one sentence; name what success looks like and how you'd measure it.
-2. **Assume failure** — "It's 4 weeks out. This failed." Don't ask *if* it might; assume it did.
+1. **Goal** — state it in one sentence. Name what success looks like and how you'd measure it.
+2. **Assume failure** — "It is 4 weeks out. This failed." Do not ask *if* it might. Assume it did.
 3. **Enumerate ≥5 specific failure modes** across: technical (races, edge cases, perf cliffs, wrong abstractions), behavioral (misread requirements/assumptions), operational (deploy, observability, rollback), integration (broken upstream/downstream contracts), time (scope creep, underestimation, missing deps).
-4. **Score** each by likelihood × impact; focus on high/high.
+4. **Score** each by likelihood × impact. Focus on high/high.
 5. **Mitigate** each top item with one concrete action — a design change, an upfront test, a guard/constraint, or a question to answer first.
 6. **Pre-flight** — top 2–3 modes have a mitigation, blocking unknowns are assigned, a rollback/recovery path exists.
 
@@ -31,4 +31,4 @@ Before implementing a non-trivial solution, project into a future where it has *
 
 ## Feeding back
 
-If tracked as an issue (`issue` skill): unresolved blockers → `## Open questions`; approach-constraining mitigations → `## Context`; must-not-break modes → `## Off-limits`.
+If tracked as an issue (`issue` skill): unresolved blockers → `## Open questions`, approach-constraining mitigations → `## Context`, must-not-break modes → `## Off-limits`.

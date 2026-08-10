@@ -30,8 +30,8 @@ Structures and names should **emerge** from removing differences — do not desi
 
 - Prefer alike things **inside the files / paths touched by the just-committed change** (and their direct callers/callees if needed to complete one flocking step).
 - Do not open a repo-wide cleanup, rename campaign, or unrelated module rewrite.
-- Do not change behavior, public contracts, or tests' asserted outcomes — only shape. If a test must change, you left the refactor lane; stop and treat it as a new behavior turn.
-- Keep tests green after every flocking step; if red, revert the step and pick a smaller difference.
+- Do not change behavior, public contracts, or tests' asserted outcomes — only shape. If a test must change, you left the refactor lane. Stop and treat it as a new behavior turn.
+- Keep tests green after every flocking step. If red, revert the step and pick a smaller difference.
 
 ## Commit
 

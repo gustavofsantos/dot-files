@@ -16,13 +16,13 @@ Build and execute Datalog interactively. Two synced modes:
 - **Form mode**: separate `:find`, `:with`, `:where`, `:in` fields — no aggregates or rules here
 - **Text mode**: raw query text — valid Datomic Datalog, copy/paste to/from application code
 
-Key interactions: add/remove `:where` clauses with `+`/`-`; map `:in` bindings to data sources (`$` = current DB); results land in the sortable **Data Set** table; clicking an entity id jumps to the Entities tab; the combobox above the query text saves queries for the session only.
+Key interactions: add or remove `:where` clauses with `+`/`-`. Map `:in` bindings to data sources (`$` = current DB). Results land in the sortable **Data Set** table. Clicking an entity id jumps to the Entities tab. The combobox above the query text saves queries for the session only.
 
 ### Entities tab
-Inspect one entity by entity id or `:db/ident`. All attributes shown as an expandable tree; reference attributes traverse forward, and **reverse references** (who points here) are expandable too — no reverse-lookup query needed.
+Inspect one entity by entity id or `:db/ident`. All attributes shown as an expandable tree. Reference attributes traverse forward, and **reverse references** (who points here) are expandable too — no reverse-lookup query needed.
 
 ### Transactions tab
-Transaction history as a bar chart. Day/Hour/Minute scale → bars are transaction counts; Second scale → bars are datom counts, and clicking a bar shows the raw datoms. Click a bar to zoom in, up arrow to zoom out. Use for "was there unusual write activity that night?"
+Transaction history as a bar chart. Day/Hour/Minute scale → bars are transaction counts. Second scale → bars are datom counts, and clicking a bar shows the raw datoms. Click a bar to zoom in, up arrow to zoom out. Use for "was there unusual write activity that night?"
 
 ### Indexes tab
 Scan the four indexes directly for ranges of data:
@@ -46,10 +46,10 @@ Named databases or data sets injected as query inputs via `:in` (`$`, `$1`, `$2`
 Query for the id, then click it in the Data Set table → opens in Entities tab.
 
 ### Time-travel debugging
-Set `as-of` to the tx id or timestamp of interest, run the query; compare with current state in a second browser tab with a different `as-of`.
+Set `as-of` to the tx id or timestamp of interest, run the query. Compare with current state in a second browser tab with a different `as-of`.
 
 ### Cross-database join
-1. Create two data sources (e.g. `db-v1`, `db-v2`)
+1. Create two data sources (for example `db-v1`, `db-v2`)
 2. Query tab → `:in` table → bind `$1` → `db-v1`, `$2` → `db-v2`
 3. Prefix `:where` clauses explicitly:
 ```clojure

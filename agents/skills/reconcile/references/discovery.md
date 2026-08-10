@@ -1,4 +1,4 @@
-# Discovery — relationships you don't know yet
+# Discovery — relationships you do not know yet
 
 Read when `bridges.tsv` says UNKNOWN, a new system enters scope, or the question has no claim
 behind it. This is schema-agnostic data profiling: three measurements, in order.
