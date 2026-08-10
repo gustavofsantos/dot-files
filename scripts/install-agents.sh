@@ -3,6 +3,21 @@ set -euo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
 
+# Symlink every file matching $1 into dir $2, then remove any symlink in $2
+# whose source no longer exists (a file removed from the dotfiles repo).
+install_and_prune_symlinks() {
+  local glob="$1" dest="$2" file name
+  mkdir -p "$dest"
+  for file in $glob; do
+    [ -f "$file" ] || continue
+    name=$(basename "$file")
+    ln -sf "$file" "$dest/$name"
+  done
+  find "$dest" -maxdepth 1 -type l | while read -r link; do
+    [ -e "$link" ] || rm "$link"
+  done
+}
+
 echo "Compiling rules..."
 "$DOTFILES_DIR/bin/rules-sync" >/dev/null \
   && echo "Compiling rules... OK" \
@@ -44,16 +59,7 @@ else
 fi
 
 echo "Installing custom subagents..."
-mkdir -p "$HOME/.claude/agents"
-for agent in "$DOTFILES_DIR"/.claude/agents/*; do
-  [ -f "$agent" ] || continue
-  name=$(basename "$agent")
-  ln -sf "$agent" "$HOME/.claude/agents/$name"
-done
-# prune dangling agent symlinks (removed from dotfiles)
-find "$HOME/.claude/agents" -maxdepth 1 -type l | while read -r link; do
-  [ -e "$link" ] || rm "$link"
-done
+install_and_prune_symlinks "$DOTFILES_DIR/.claude/agents/*" "$HOME/.claude/agents"
 echo "Installing custom subagents... OK"
 
 echo "Installing custom commands..."
@@ -75,16 +81,7 @@ done
 echo "Installing custom themes... OK"
 
 echo "Installing custom rules..."
-mkdir -p "$HOME/.claude/rules"
-for rule in "$DOTFILES_DIR"/.claude/rules/*.md; do
-  [ -f "$rule" ] || continue
-  name=$(basename "$rule")
-  ln -sf "$rule" "$HOME/.claude/rules/$name"
-done
-# prune dangling rule symlinks (removed from dotfiles)
-find "$HOME/.claude/rules" -maxdepth 1 -type l | while read -r link; do
-  [ -e "$link" ] || rm "$link"
-done
+install_and_prune_symlinks "$DOTFILES_DIR/.claude/rules/*.md" "$HOME/.claude/rules"
 echo "Installing custom rules... OK"
 
 echo "Installing custom workflows..."
@@ -97,16 +94,7 @@ done
 echo "Installing custom workflows... OK"
 
 echo "Installing Cursor rules..."
-mkdir -p "$HOME/.cursor/rules"
-for rule in "$DOTFILES_DIR"/.cursor/rules/*.mdc; do
-  [ -f "$rule" ] || continue
-  name=$(basename "$rule")
-  ln -sf "$rule" "$HOME/.cursor/rules/$name"
-done
-# prune dangling rule symlinks (removed from dotfiles)
-find "$HOME/.cursor/rules" -maxdepth 1 -type l | while read -r link; do
-  [ -e "$link" ] || rm "$link"
-done
+install_and_prune_symlinks "$DOTFILES_DIR/.cursor/rules/*.mdc" "$HOME/.cursor/rules"
 echo "Installing Cursor rules... OK"
 
 echo "Installing Cursor hooks..."
