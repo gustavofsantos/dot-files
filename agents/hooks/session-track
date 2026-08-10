@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# session-track — register/refresh an agent session and its pane.
+#
+# Usage: session-track --harness claude|cursor
+#
+# Wire for Claude (claude.settings.json), both events:
+#   SessionStart, UserPromptSubmit
+# Wire for Cursor (cursor.hooks.json), both events:
+#   sessionStart, beforeSubmitPrompt
+#
+# Every agent session — however it was launched (claude-run, a bare `claude`
+# or `cursor-agent` in any tmux pane, a resumed session) — gets a state file
+# the moment it starts and on every prompt, recording the exact tmux pane it
+# runs in. That makes it visible and jump-to-able in `claude-sessions`
+# regardless of harness, repo, or checks.
+#
+# State: ~/.agent-sessions/<session_id>.json
+#   { session_id, [agent,] track_name, task, dir, pane, status, started_at,
+#     last_activity, notifications }
+
+set -euo pipefail
+
+HARNESS=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --harness) HARNESS="$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+
+case "$HARNESS" in
+  claude|cursor) ;;
+  *)
+    echo "session-track: --harness must be 'claude' or 'cursor' (got '${HARNESS}')" >&2
+    exit 1
+    ;;
+esac
+
+INPUT=$(cat 2>/dev/null || true)
+SESSIONS_DIR="${AGENT_SESSIONS_DIR:-${HOME}/.agent-sessions}"
+command -v jq &>/dev/null || exit 0
+
+jget() { printf '%s' "$INPUT" | jq -r "$1 // empty" 2>/dev/null; }
+
+# Args: session_id dir pane track_name task agent_field (agent_field empty = omit)
+write_state() {
+  local session_id="$1" dir="$2" pane="$3" track_name="$4" task="$5" agent_field="$6"
+  local now state tmp
+  now=$(date +%s)
+  mkdir -p "$SESSIONS_DIR"
+  state="${SESSIONS_DIR}/${session_id}.json"
+
+  if [[ -f "$state" ]]; then
+    tmp=$(mktemp)
+    jq --argjson ts "$now" --arg pane "$pane" --arg dir "$dir" \
+      '.status = "running"
+       | .last_activity = $ts
+       | (if $pane != "" then .pane = $pane else . end)
+       | (if ((.dir // "") == "") and $dir != "" then .dir = $dir else . end)' \
+      "$state" > "$tmp" && mv "$tmp" "$state"
+  else
+    jq -n \
+      --arg sid "$session_id" --arg name "$track_name" --arg task "$task" \
+      --arg dir "$dir" --arg pane "$pane" --arg agent "$agent_field" --argjson ts "$now" \
+      '{session_id:$sid, track_name:$name, task:$task, dir:$dir, pane:$pane,
+        status:"running", started_at:$ts, last_activity:$ts, notifications:0}
+       + (if $agent != "" then {agent:$agent} else {} end)' \
+      > "$state"
+  fi
+}
+
+PANE="${TMUX_PANE:-}"
+
+if [[ "$HARNESS" == "claude" ]]; then
+  SESSION_ID="${CLAUDE_SESSION_ID:-$(jget '.session_id')}"
+  [[ -z "$SESSION_ID" ]] && exit 0
+
+  DIR="$(jget '.cwd')"
+  DIR="${DIR:-${CLAUDE_PROJECT_DIR:-${CLAUDE_TRACK_DIR:-$PWD}}}"
+  TRACK_NAME="${CLAUDE_TRACK_NAME:-$(basename "$DIR")}"
+  TASK="${CLAUDE_TRACK_TASK:-}"
+
+  write_state "$SESSION_ID" "$DIR" "$PANE" "$TRACK_NAME" "$TASK" ""
+
+  # Restore window name to bare track name (drop the ⊡ waiting prefix), for
+  # the claude-run flow where the window is named after the session.
+  if [[ -n "$PANE" && -n "${CLAUDE_TRACK_NAME:-}" ]]; then
+    tmux rename-window -t "$PANE" "$CLAUDE_TRACK_NAME" 2>/dev/null || true
+  fi
+else
+  SESSION_ID="$(jget '.conversation_id')"
+  [[ -z "$SESSION_ID" ]] && exit 0
+
+  DIR="$(jget '.workspace_roots[0]')"
+  DIR="${DIR:-${CURSOR_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}}"
+  TRACK_NAME="$(basename "$DIR")"
+
+  write_state "$SESSION_ID" "$DIR" "$PANE" "$TRACK_NAME" "" "cursor"
+fi
+
+exit 0
