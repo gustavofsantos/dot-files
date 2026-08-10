@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # engineering-autocommit — turn_end hook: auto-commit the ~/engineering vault.
 #
-# Wired in ~/.agent-hooks.yml:
-#   - name: engineering-autocommit
-#     on: [turn_end]
-#     command: engineering-autocommit
+# Usage: engineering-autocommit --harness claude|cursor
+#
+# Wire for Claude (claude.settings.json), event: Stop
+# Wire for Cursor (cursor.hooks.json), event: stop
 #
 # After every agent turn (Claude or Cursor) this commits any pending changes in
 # the engineering knowledge vault, so the user never has to remember — and the
@@ -12,11 +12,30 @@
 # session cwd, because the vault is an additional working dir editable from any
 # session.  No-ops (fast) when the tree is clean, so idle turns cost nothing.
 #
+# --harness only affects which field is read for the (cosmetic) session id in
+# the commit message -- the commit itself never depends on session or cwd.
+#
 # Concurrency: many sessions can end a turn at once.  An atomic mkdir lock under
 # .git/ serialises commits; a contending hook simply bails (the holder's commit,
 # or the next turn, covers its changes).  Stale locks (>60s) are reclaimed.
 
 set -uo pipefail
+
+HARNESS=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --harness) HARNESS="$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+
+case "$HARNESS" in
+  claude|cursor) ;;
+  *)
+    echo "engineering-autocommit: --harness must be 'claude' or 'cursor' (got '${HARNESS}')" >&2
+    exit 1
+    ;;
+esac
 
 ENG_DIR="${ENGINEERING_HOME:-$HOME/engineering}"
 
@@ -46,11 +65,13 @@ trap 'rmdir "$LOCK" 2>/dev/null || true' EXIT
 # Another hook may have committed our changes while we waited for the lock.
 [[ -z "$(git -C "$ENG_DIR" status --porcelain 2>/dev/null)" ]] && exit 0
 
-# ── Build the commit message from the canonical event envelope (stdin) ─────────
+# ── Build the commit message from the harness-native payload (stdin) ───────────
 HOOK_JSON=$(cat 2>/dev/null || true)
-SID=$(printf '%s' "$HOOK_JSON" | jq -r '.session_id // empty' 2>/dev/null || true)
-HARNESS=$(printf '%s' "$HOOK_JSON" | jq -r '.harness // "agent"' 2>/dev/null || true)
-[[ -z "$HARNESS" || "$HARNESS" == "null" ]] && HARNESS="agent"
+if [[ "$HARNESS" == claude ]]; then
+  SID=$(printf '%s' "$HOOK_JSON" | jq -r '.session_id // empty' 2>/dev/null || true)
+else
+  SID=$(printf '%s' "$HOOK_JSON" | jq -r '.conversation_id // empty' 2>/dev/null || true)
+fi
 
 COUNT=$(git -C "$ENG_DIR" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
 STAMP=$(date '+%Y-%m-%d %H:%M:%S')

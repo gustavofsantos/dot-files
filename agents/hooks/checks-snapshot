@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # checks-snapshot — Stop-hook entry: version the agent's changes, fire the runner.
 #
-# Wire in .claude/settings.json:
-#   "Stop": [{"type":"command","command":"checks-snapshot"}]
+# Usage: checks-snapshot --harness claude|cursor
+#
+# Wire for Claude (claude.settings.json), event: Stop
+# Wire for Cursor (cursor.hooks.json), event: stop
 #
 # On every agent turn end this:
 #   1. hashes the tracked working-dir changes (checks-hash)
@@ -12,13 +14,42 @@
 #
 # No-ops (fast) when the hash is unchanged since the last turn, so idle
 # "stop" events never re-run the checks.
+#
+# Cursor's native "stop" payload ({status, loop_count}) carries no session or
+# cwd correlation (unlike Claude's Stop payload), so this is best-effort for
+# Cursor and commonly a no-op there today -- the same pre-existing
+# limitation documented in session-log, not something this port introduces.
 
 set -euo pipefail
 
-# Hook JSON arrives on stdin; extract session_id, fall back to env var.
+HARNESS=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --harness) HARNESS="$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+
+case "$HARNESS" in
+  claude|cursor) ;;
+  *)
+    echo "checks-snapshot: --harness must be 'claude' or 'cursor' (got '${HARNESS}')" >&2
+    exit 1
+    ;;
+esac
+
+# Hook JSON arrives on stdin; extract session_id/dir per harness, falling
+# back to env vars.
 HOOK_JSON=$(cat 2>/dev/null || true)
-SESSION_ID="${CLAUDE_SESSION_ID:-$(printf '%s' "$HOOK_JSON" | jq -r '.session_id // empty' 2>/dev/null)}"
-DIR="${CLAUDE_TRACK_DIR:-$PWD}"
+if [[ "$HARNESS" == claude ]]; then
+  SESSION_ID="${CLAUDE_SESSION_ID:-$(printf '%s' "$HOOK_JSON" | jq -r '.session_id // empty' 2>/dev/null)}"
+  DIR="${CLAUDE_TRACK_DIR:-$PWD}"
+else
+  SESSION_ID="${CURSOR_SESSION_ID:-$(printf '%s' "$HOOK_JSON" | jq -r '.conversation_id // empty' 2>/dev/null)}"
+  DIR="${CURSOR_PROJECT_DIR:-$(printf '%s' "$HOOK_JSON" | jq -r '.workspace_roots[0] // empty' 2>/dev/null)}"
+  DIR="${DIR:-$PWD}"
+fi
+
 CHECKS_DIR="${CHECKS_DIR:-${HOME}/.checks}"
 SESSIONS_DIR="${AGENT_SESSIONS_DIR:-${HOME}/.agent-sessions}"
 
