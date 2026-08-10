@@ -1,20 +1,26 @@
 #!/usr/bin/env python3
 """
-claude-hook-session-log — append structured events to ~/.agent-sessions/<id>.jsonl
+session-log — append structured events to ~/.agent-sessions/<id>.jsonl
 
-Handles three events dispatched by hooks-runner:
-  turn_end      (Claude Stop or Cursor stop) → parse transcript → append events
-  SubagentStart (fires in parent)            → create subagent dir + session_start
-  SubagentStop  (fires in parent)            → parse agent_transcript_path → append
+Usage: session-log --harness claude|cursor --event <name>
 
-Event log: ~/.agent-sessions/<session_id>.jsonl — append-only, one JSON per line.
-A special {"type":"_cursor","uuid":"..."} line is appended after each turn to
-enable idempotent incremental parsing on subsequent calls.
+--harness selects how the stdin payload is read (each harness's own native
+hook shape). --event selects which of the three behaviors runs:
+  turn_end       (Claude Stop / Cursor stop)                 -> parse transcript, append events
+  subagent_start (Claude SubagentStart; no Cursor equivalent) -> create subagent dir + session_start
+  subagent_stop  (Claude SubagentStop; no Cursor equivalent)  -> parse agent_transcript_path, append
 
-Cursor fallback (transcript_path is null): emits file_change events from
-`git diff HEAD --name-only` and a turn_end with no tokens or model.
+Event log: ~/.agent-sessions/<session_id>.jsonl -- append-only, one JSON per
+line. A special {"type":"_cursor","uuid":"..."} line is appended after each
+turn to enable idempotent incremental parsing on subsequent calls.
+
+Cursor's native "stop" payload ({status, loop_count}) carries no session or
+cwd correlation, unlike Claude's Stop payload -- so turn_end logging for
+Cursor is best-effort and commonly a no-op today. That is a pre-existing
+limitation, not something this port introduces or fixes.
 """
 
+import argparse
 import json
 import os
 import subprocess
@@ -25,8 +31,6 @@ from pathlib import Path
 SESSIONS_DIR = Path(os.environ.get("AGENT_SESSIONS_DIR") or "").expanduser() \
     if os.environ.get("AGENT_SESSIONS_DIR") \
     else Path.home() / ".agent-sessions"
-HOOK_EVENT = os.environ.get("HOOK_EVENT", "")
-HOOK_HARNESS = os.environ.get("HOOK_HARNESS", "")
 
 
 # ── helpers ────────────────────────────────────────────────────────────────────
@@ -140,7 +144,7 @@ def process_transcript(
     transcript_path: str,
     session_id: str,
     ts: int,
-    harness: str = "claude",
+    harness: str,
 ) -> None:
     entries = parse_transcript(transcript_path)
     if not entries:
@@ -246,7 +250,7 @@ def process_cursor_turn(
     cwd: str,
     ts: int,
 ) -> None:
-    """Cursor fallback: no transcript — derive file changes from git diff."""
+    """Cursor fallback: no transcript -- derive file changes from git diff."""
     is_new = not log_path.exists()
     events: list[dict] = []
 
@@ -290,31 +294,38 @@ def _append(log_path: Path, events: list[dict]) -> None:
 
 
 # ── event handlers ─────────────────────────────────────────────────────────────
+# Each harness's payload is read directly, in its own native shape -- no
+# envelope, no translation layer.
 
-def handle_turn_end(envelope: dict) -> None:
-    session_id = envelope.get("session_id") or os.environ.get("CLAUDE_SESSION_ID", "")
-    if not session_id:
-        return
+def handle_turn_end(harness: str, payload: dict) -> None:
     ts = int(time.time())
-    log_path = SESSIONS_DIR / f"{session_id}.jsonl"
-    transcript_path = envelope.get("transcript_path") or jget(envelope, "raw", "transcript_path")
-    harness = envelope.get("harness") or HOOK_HARNESS or "claude"
 
-    if transcript_path:
-        process_transcript(log_path, transcript_path, session_id, ts, harness)
-    elif harness == "cursor":
-        cwd = envelope.get("cwd") or jget(envelope, "raw", "workspace_roots", 0) or ""
-        if cwd:
-            process_cursor_turn(log_path, session_id, cwd, ts)
+    if harness == "claude":
+        session_id = payload.get("session_id") or os.environ.get("CLAUDE_SESSION_ID", "")
+        if not session_id:
+            return
+        transcript_path = payload.get("transcript_path")
+        if not transcript_path:
+            return
+        log_path = SESSIONS_DIR / f"{session_id}.jsonl"
+        process_transcript(log_path, transcript_path, session_id, ts, "claude")
+    else:
+        session_id = payload.get("conversation_id", "")
+        if not session_id:
+            return
+        cwd = jget(payload, "workspace_roots", 0) or ""
+        if not cwd:
+            return
+        log_path = SESSIONS_DIR / f"{session_id}.jsonl"
+        process_cursor_turn(log_path, session_id, cwd, ts)
 
 
-def handle_subagent_start(envelope: dict) -> None:
-    session_id = envelope.get("session_id") or os.environ.get("CLAUDE_SESSION_ID", "")
+def handle_subagent_start(payload: dict) -> None:
+    session_id = payload.get("session_id") or os.environ.get("CLAUDE_SESSION_ID", "")
     if not session_id:
         return
-    raw = envelope.get("raw", {})
-    agent_id = raw.get("agent_id", "")
-    agent_type = raw.get("agent_type", "")
+    agent_id = payload.get("agent_id", "")
+    agent_type = payload.get("agent_type", "")
     if not agent_id:
         return
 
@@ -336,13 +347,12 @@ def handle_subagent_start(envelope: dict) -> None:
             f.write(json.dumps(ev, separators=(",", ":")) + "\n")
 
 
-def handle_subagent_stop(envelope: dict) -> None:
-    session_id = envelope.get("session_id") or os.environ.get("CLAUDE_SESSION_ID", "")
+def handle_subagent_stop(payload: dict) -> None:
+    session_id = payload.get("session_id") or os.environ.get("CLAUDE_SESSION_ID", "")
     if not session_id:
         return
-    raw = envelope.get("raw", {})
-    agent_id = raw.get("agent_id", "")
-    agent_transcript_path = raw.get("agent_transcript_path", "")
+    agent_id = payload.get("agent_id", "")
+    agent_transcript_path = payload.get("agent_transcript_path", "")
     if not agent_id or not agent_transcript_path:
         return
 
@@ -351,26 +361,45 @@ def handle_subagent_stop(envelope: dict) -> None:
     log_path = subdir / f"{agent_id}.jsonl"
 
     ts = int(time.time())
-    process_transcript(log_path, agent_transcript_path, agent_id, ts, harness="claude")
+    process_transcript(log_path, agent_transcript_path, agent_id, ts, "claude")
 
 
 # ── main ───────────────────────────────────────────────────────────────────────
 
-def main() -> None:
+def main() -> int:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--harness", choices=["claude", "cursor"], required=True)
+    parser.add_argument("--event", required=True)
     try:
-        envelope = json.loads(sys.stdin.read())
+        args = parser.parse_args()
+    except SystemExit:
+        print("session-log: usage: session-log --harness claude|cursor --event <name>", file=sys.stderr)
+        return 1
+
+    if args.event == "subagent_start" and args.harness != "claude":
+        print(f"session-log: --event subagent_start has no {args.harness} implementation", file=sys.stderr)
+        return 1
+    if args.event == "subagent_stop" and args.harness != "claude":
+        print(f"session-log: --event subagent_stop has no {args.harness} implementation", file=sys.stderr)
+        return 1
+
+    try:
+        payload = json.loads(sys.stdin.read())
     except json.JSONDecodeError:
-        envelope = {}
+        payload = {}
 
-    event = HOOK_EVENT or envelope.get("event") or envelope.get("raw_event", "")
+    if args.event == "turn_end":
+        handle_turn_end(args.harness, payload)
+    elif args.event == "subagent_start":
+        handle_subagent_start(payload)
+    elif args.event == "subagent_stop":
+        handle_subagent_stop(payload)
+    else:
+        print(f"session-log: unknown --event {args.event!r}", file=sys.stderr)
+        return 1
 
-    if event == "turn_end":
-        handle_turn_end(envelope)
-    elif event == "SubagentStart":
-        handle_subagent_start(envelope)
-    elif event == "SubagentStop":
-        handle_subagent_stop(envelope)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
