@@ -170,6 +170,10 @@ def prune_stale(dest, previous_names, live_names, dry_run):
 
 
 def sync_kind(source, dest, kind, dry_run):
+    if not os.path.isdir(source):
+        print(f"agents-sync: source not found: {source}", file=sys.stderr)
+        return False
+
     print(f"{kind} -> {dest}")
     if not dry_run:
         os.makedirs(dest, exist_ok=True)
@@ -198,21 +202,18 @@ def sync_kind(source, dest, kind, dry_run):
     prune_stale(dest, previous_names, live_names, dry_run)
     if not dry_run:
         write_manifest(dest, live_names)
+    return True
 
 
 def main(argv):
     opts = parse_args(argv)
 
-    if not os.path.isdir(opts["agents_source"]):
-        print(f"agents-sync: source not found: {opts['agents_source']}", file=sys.stderr)
+    if not sync_kind(opts["agents_source"], opts["agents_dest"], "agents", opts["dry_run"]):
         return 1
-
-    sync_kind(opts["agents_source"], opts["agents_dest"], "agents", opts["dry_run"])
-
-    if not os.path.isdir(opts["commands_source"]):
-        print(f"agents-sync: source not found: {opts['commands_source']}", file=sys.stderr)
+    if not sync_kind(
+        opts["commands_source"], opts["commands_dest"], "commands", opts["dry_run"]
+    ):
         return 1
-    sync_kind(opts["commands_source"], opts["commands_dest"], "commands", opts["dry_run"])
     return 0
 
 
