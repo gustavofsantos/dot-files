@@ -1,11 +1,28 @@
 #!/usr/bin/env bash
-# PostToolUse(Edit|Write|MultiEdit) hook: lint markdown files with vale after
-# every edit, feeding warning+ prose issues back to Claude via stderr so it
-# can fix them inline. Suggestion-level alerts (Vocab, PassiveVoice, ...) are
-# dropped — see config/vale/README.md's "Dogfood results" on why nothing in
-# this style set is at error level yet, so vale's own exit code can't be
-# trusted as the blocking signal.
+# vale-lint — PostToolUse(Edit|Write|MultiEdit) hook: lint markdown files with
+# vale after every edit, feeding warning+ prose issues back to Claude via
+# stderr so it can fix them inline. Suggestion-level alerts (Vocab,
+# PassiveVoice, ...) are dropped — see config/vale/README.md's "Dogfood
+# results" on why nothing in this style set is at error level yet, so vale's
+# own exit code can't be trusted as the blocking signal.
+#
+# Usage: vale-lint --harness claude
+#
+# No Cursor implementation today.
 set -euo pipefail
+
+HARNESS=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --harness) HARNESS="$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+
+if [[ "$HARNESS" != "claude" ]]; then
+  echo "vale-lint: --harness must be 'claude' (got '${HARNESS}')" >&2
+  exit 1
+fi
 
 command -v jq >/dev/null 2>&1 || exit 0
 command -v vale >/dev/null 2>&1 || exit 0

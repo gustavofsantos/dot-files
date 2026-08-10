@@ -1,12 +1,29 @@
 #!/usr/bin/env bash
-# Stop hook: in GitButler-managed repos, don't let a turn end with an
-# uncommitted tree — gitbutler-provenance requires a why-focused
+# gitbutler-stop — Stop hook: in GitButler-managed repos, don't let a turn end
+# with an uncommitted tree — gitbutler-provenance requires a why-focused
 # `but commit` at every turn boundary.
 #
 # Blocks at most once per turn (stop_hook_active short-circuits), so an
 # agent that must ask the user something — e.g. which lane to commit to
 # when several are applied — gets through on the retry instead of looping.
+#
+# Usage: gitbutler-stop --harness claude
+#
+# No Cursor implementation today.
 set -euo pipefail
+
+HARNESS=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --harness) HARNESS="$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+
+if [[ "$HARNESS" != "claude" ]]; then
+  echo "gitbutler-stop: --harness must be 'claude' (got '${HARNESS}')" >&2
+  exit 1
+fi
 
 command -v jq >/dev/null 2>&1 || exit 0
 input=$(cat)

@@ -1,16 +1,33 @@
 #!/usr/bin/env bash
-# claude-hook-notify — Stop + Notification hook: update session state and notify
+# notify — Stop + Notification hook: update session state and notify
 #
-# Wire in .claude/settings.json:
-#   "Stop":         [{"type":"command","command":"claude-hook-notify"}]
-#   "Notification": [{"type":"command","command":"claude-hook-notify"}]
+# Usage: notify --harness claude
+#
+# Wire for Claude (claude.settings.json):
+#   "Stop":         [{"type":"command","command":"notify --harness claude"}]
+#   "Notification": [{"type":"command","command":"notify --harness claude"}]
 #
 # Claude Code injects $CLAUDE_SESSION_ID into the hook environment.
 # claude-run exports: $CLAUDE_TRACK_NAME, $CLAUDE_TRACK_TASK, $CLAUDE_TRACK_DIR.
 # Sessions started without claude-run still get a state file written here,
 # using the current tmux window name as the track name.
+#
+# No Cursor implementation today.
 
 set -euo pipefail
+
+HARNESS=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --harness) HARNESS="$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+
+if [[ "$HARNESS" != "claude" ]]; then
+  echo "notify: --harness must be 'claude' (got '${HARNESS}')" >&2
+  exit 1
+fi
 
 INPUT=$(cat)
 SESSION_ID="${CLAUDE_SESSION_ID:-}"
@@ -22,20 +39,11 @@ SESSIONS_DIR="${AGENT_SESSIONS_DIR:-${HOME}/.agent-sessions}"
 # Need jq — bail silently if missing
 command -v jq &>/dev/null || exit 0
 
-# Determine hook type.  When invoked via hooks-runner the canonical event is
-# exported as HOOK_EVENT ("turn_end" or "notification"); fall back to payload
-# shape detection for direct invocations.
-if [[ "${HOOK_EVENT:-}" == "turn_end" ]]; then
-  HOOK_TYPE="stop"
-elif [[ "${HOOK_EVENT:-}" == "notification" ]]; then
-  HOOK_TYPE="notification"
-elif printf '%s' "$INPUT" | jq -e 'has("stop_hook_active")' &>/dev/null; then
-  HOOK_TYPE="stop"
-elif printf '%s' "$INPUT" | jq -e '.event == "turn_end"' &>/dev/null; then
+# Determine hook type from the payload shape (Claude's own hook payloads
+# don't share one common "type" field across Stop vs Notification).
+if printf '%s' "$INPUT" | jq -e 'has("stop_hook_active")' &>/dev/null; then
   HOOK_TYPE="stop"
 elif printf '%s' "$INPUT" | jq -e 'has("message")' &>/dev/null; then
-  HOOK_TYPE="notification"
-elif printf '%s' "$INPUT" | jq -e '.event == "notification"' &>/dev/null; then
   HOOK_TYPE="notification"
 else
   exit 0
