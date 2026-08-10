@@ -202,6 +202,21 @@ Plugin configs live in `config/nvim/lua/plugins/*.config.lua`. Leader is `<Space
 
 ## Engineering knowledge base
 
-`~/engineering/` is the local KB vault (markdown + `[[wikilinks]]`). The `issue` skill tracks work items in `issues/` and their raw material in `artifacts/`. The `spike` skill records answered unknowns in `spikes/`.
+The vault is `$ENGINEERING_HOME` (`.zshenv`, default `~/engineering`) — the local KB vault (markdown + `[[wikilinks]]`). Every script and skill that touches it resolves `${ENGINEERING_HOME:-$HOME/engineering}`. Nothing hardcodes the path. `bin/facts-churn` reads the same variable (it used to read a second name, `ENGINEERING_DIR`).
 
-The `project` skill holds the durable context that no single issue owns: glossary, topology, data map, standing questions. One brief per project, at `~/engineering/projects/<slug>.md`, named by a bare slug because other files point at it as a key. An issue names its project in an optional `project:` frontmatter key, and `members.sh` derives the membership — the brief keeps no list, so nothing rots. An issue holds a delta; a brief holds system state. A campaign moves to `projects/done/` at the end; a domain the team owns never moves.
+| Section | Owner | Holds |
+|---|---|---|
+| `issues/` | `issue` skill | Tracked work items, one delta each |
+| `artifacts/` | `issue` skill | Raw material: notes, transcripts, data, diagrams, DDD surveys, hypothesis verdicts |
+| `spikes/` | `spike` skill | Answered unknowns |
+| `projects/` | `project` skill | One brief per project: glossary, topology, data map, standing questions |
+| `reconcile/<repo>/` | `reconcile` skill | entities/bridges/invariants/breaks tables |
+| `facts/`, `.metadata/` | `facts-churn` | The facts base and its provenance mapping |
+
+A brief lives at `projects/<slug>.md`, named by a bare slug because other files point at it as a key. An issue names its project in an optional `project:` frontmatter key, and `members.sh` derives the membership — the brief keeps no list, so nothing rots. An issue holds a delta; a brief holds system state. A campaign moves to `projects/done/` at the end; a domain the team owns never moves.
+
+### A skill is code, never a store
+
+A skill directory holds `SKILL.md`, `references/`, `scripts/`, and `assets/`. Nothing else. Whatever a skill learns goes to the vault. A skill that needs durable storage delegates to the skill that owns that section, rather than inventing a path. `outcome-builder` invokes `issue`. `ddd-survey` and `reflect` offer their findings to `project`. `test_bin/skills-storage.bats` fails if a skill stores its own output.
+
+Two kinds of output stay out of the vault on purpose. Ephemeral output goes to `/tmp` (`handoff`). Executable assertions stay beside the code they assert against: `reconcile` keeps `model/probes/*.sql` and `model/traces/*.sql` in the repository, while its knowledge tables move to the vault.

@@ -1,6 +1,6 @@
 ---
 name: reflect
-description: Analyzes thread history for agent mistakes (failed commands, schema misunderstandings, user confusion) and updates project to prevent future failures.
+description: Analyzes thread history for agent mistakes (failed commands, schema misunderstandings, user confusion) and records each learning where it belongs — a mechanical one in the repository CLAUDE.md, a contextual one in the knowledge vault through the project skill — to prevent future failures.
 ---
 
 # Reflect
@@ -26,8 +26,17 @@ Review the current thread to identify agent failures and update project document
    - What the correct approach was
    - A concise rule or hint that would prevent it
 
-3. **Update** - Add learnings to the project's agent rules:
-   - Create the file if it doesn't exist
+3. **Sort each learning by kind** - A learning is mechanical or contextual. The kind names
+   the destination. Never keep a learning in this skill directory.
+
+   | Kind | Example | Destination |
+   |---|---|---|
+   | Mechanical - how to drive this repository | "Use `bundle exec rspec`, not `rspec`" | The repository `CLAUDE.md` |
+   | Contextual - how the system or the domain works | "A settlement row is one payout, not one order" | The vault, through the `project` skill |
+
+4. **Write it** - Add each mechanical learning to `CLAUDE.md`, creating the file if it does
+   not exist. For each contextual learning, invoke the `project` skill, which owns the brief
+   in `${ENGINEERING_HOME:-$HOME/engineering}/projects/`. Do not write the brief yourself.
    - Write concise, actionable guidance (not verbose explanations - use ASD-STE100 Simplified Technical English)
    - Avoid duplicating information already in the file
 

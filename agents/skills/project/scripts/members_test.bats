@@ -13,6 +13,7 @@ SCRIPT="$BATS_TEST_DIRNAME/members.sh"
 setup() {
   TEST_HOME=$(mktemp -d)
   export HOME="$TEST_HOME"
+  unset ENGINEERING_HOME
   SLUG="accounting-divergences"
   ISSUES="$HOME/engineering/issues"
   mkdir -p "$ISSUES/backlog" "$ISSUES/done"
@@ -129,4 +130,17 @@ seed_issue() {
   run "$SCRIPT" "$SLUG"
   [ "$status" -eq 0 ]
   [ "$output" = "$ISSUES/2026-08-04-correct-the-ledger.md" ]
+}
+
+# ── The vault location is configuration, not a constant ────────────────────────
+
+@test "membership is read from the vault the machine declares, not a hardcoded home" {
+  export ENGINEERING_HOME="$TEST_HOME/notes"
+  mkdir -p "$TEST_HOME/notes/issues"
+  ISSUES="$TEST_HOME/notes/issues"
+  seed_issue "2026-08-04-correct-the-ledger.md" "$SLUG"
+
+  run bash "$SCRIPT" "$SLUG"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$TEST_HOME/notes/issues/2026-08-04-correct-the-ledger.md" ]
 }

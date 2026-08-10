@@ -10,13 +10,15 @@ description: >
 # issue
 
 A tracked work item is a single markdown file. Everything it produces — notes,
-transcripts, data, diagrams — is a separate file in `~/engineering/artifacts/`,
-linked from the issue. A spike is the exception: the `spike` skill writes it to
-`~/engineering/spikes/`, and the issue links it the same way. Issues move between
-states; artifacts and spikes never move.
+transcripts, data, diagrams — is a separate file in `artifacts/`, linked from the
+issue. A spike is the exception: the `spike` skill writes it to `spikes/`, and the
+issue links it the same way. Issues move between states; artifacts and spikes never
+move.
+
+The vault is `$ENGINEERING_HOME`, which defaults to `~/engineering`. Every path below is relative to it.
 
 ```
-~/engineering/
+$ENGINEERING_HOME/
 ├── issues/
 │   ├── 2026-08-04-extract-ledger-projection.md      ← active
 │   ├── backlog/
@@ -49,7 +51,7 @@ title is later revised.
 
 ## Operating loop
 
-1. **Search first** — `rg -il 'term' ~/engineering/issues/ 2>/dev/null` — searches
+1. **Search first** — `rg -il 'term' "${ENGINEERING_HOME:-$HOME/engineering}/issues/" 2>/dev/null` — searches
    active, backlog and done. If a similar item exists, update it instead of creating
    a duplicate. This is the only guard against near-duplicate names; do not skip it.
 2. **Create the file** — in `issues/` if starting now, in `issues/backlog/` if
@@ -104,14 +106,14 @@ outcomes (`Findings`, `Decision`, `Resolution`), which go after `Artifacts`.
 sub-directory is just a path. Anything needing a git root derives it —
 `git rev-parse --show-toplevel` — rather than having it declared here.
 
-`project:` names the project brief in `~/engineering/projects/` that this work
+`project:` names the project brief in `projects/` that this work
 belongs to. Leave it out for work that stands alone. The link is authored here
 only: the brief keeps no list of its issues, and the `project` skill derives
 membership from this field.
 
 ## Artifacts
 
-Written to `~/engineering/artifacts/`, date-prefixed, linked from the issue that
+Written to `artifacts/`, date-prefixed, linked from the issue that
 produced them. The link is authored in one direction only; the reverse is derived
 by the vault, so an artifact needs no knowledge of its issue.
 

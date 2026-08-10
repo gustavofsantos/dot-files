@@ -18,8 +18,10 @@ unknowns.
 Write the brief for an agent that reads it cold. The brief is not a tracker. It
 carries no progress, no status, and no list of its issues.
 
+The vault is `$ENGINEERING_HOME`, which defaults to `~/engineering`. Every path below is relative to it.
+
 ```
-~/engineering/
+$ENGINEERING_HOME/
 ├── projects/
 │   ├── database-write-performance.md      ← open
 │   └── done/
@@ -45,7 +47,7 @@ key must stay stable when the title changes, so the name holds no date.
 
 ## Operating loop
 
-1. **Search first** — `rg -il 'term' ~/engineering/projects/`. If a brief already
+1. **Search first** — `rg -il 'term' "${ENGINEERING_HOME:-$HOME/engineering}/projects/"`. If a brief already
    covers this topic, update it. Do not open a second brief for the same topic.
 2. **Create the file** — `scripts/new.sh "<slug>"` prints the path and seeds the
    sections.

@@ -18,11 +18,11 @@ You are the investigator, not the scribe: run the experiment, then leave the rec
 4. **Discard the scaffold** — the answer lives in the file; the experiment doesn't.
 
 ## Dedup
-`rg -il '<term>' ~/engineering/spikes/` first. Same unknown → update, don't fork.
+`rg -il '<term>' "${ENGINEERING_HOME:-$HOME/engineering}/spikes/"` first. Same unknown → update, don't fork.
 
 ## Boundary
 `spikes/` holds the answer. Raw material that convinced you — query output, dumps,
-transcripts — belongs in `~/engineering/artifacts/`, linked from `## Evidence`.
+transcripts — belongs in the vault's `artifacts/`, linked from `## Evidence`.
 
 ## The artifact
 ```markdown

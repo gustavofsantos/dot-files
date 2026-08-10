@@ -27,9 +27,9 @@ it happen — write the probe and run it.
    observable outcome: *"Given <input/state>, when <action>, then <measurable result>."*
    If it can't be phrased this way, say so and stop — it isn't empirically testable.
 
-2. **Check memory.** `rg -i 'keyword' ~/engineering/hypotheses.md 2>/dev/null`. If this
-   hypothesis was already settled and nothing about the code or data has changed, reuse
-   that verdict — cite the recorded date and result, skip to step 5.
+2. **Check memory.** `rg -il 'keyword' "${ENGINEERING_HOME:-$HOME/engineering}/artifacts/"
+   2>/dev/null`. If this hypothesis was already settled and nothing about the code or data
+   has changed, reuse that verdict — cite the recorded date and result, skip to step 5.
 
 3. **Run the existing test.** A quick `rg` for one that already exercises this path (the
    behavior, the endpoint, the entity); prefer the outermost end-to-end test. Run the
@@ -50,22 +50,30 @@ it happen — write the probe and run it.
    - **Undetermined** — the observation was inconclusive or unreproducible; say exactly
      what blocked it. Never upgrade this to a verdict by reasoning.
 
-6. **Record it.** Append one row to `~/engineering/hypotheses.md`, creating the file from
-   this skeleton if missing:
+6. **Record it in the vault.** One verdict is one artifact. Write it to
+   `${ENGINEERING_HOME:-$HOME/engineering}/artifacts/<YYYY-MM-DD>-<slug>.md`. Never keep
+   the verdict in this skill directory, and never keep it in the repository under test.
 
    ```markdown
-   # Hypotheses tested
+   ---
+   kind: hypothesis
+   verdict: Confirmed
+   created: 2026-07-03
+   ---
 
-   Empirical verdicts from the `hypothesize` skill — Claude's caching memory.
+   # <the falsifiable hypothesis>
 
-   | Date | Hypothesis | Verdict | Evidence |
-   |------|------------|---------|----------|
-   | 2026-07-03 | <the falsifiable hypothesis> | Confirmed | <test path + observed result> |
+   **Verdict** — Confirmed. <one sentence.>
+
+   **Evidence** — <test path + the observed result that decided it.>
    ```
+
+   Link the artifact from the issue that prompted the hypothesis, if one exists.
 
 ## Constraints
 
 - One hypothesis, one narrow observation. Don't build a suite or refactor test infra.
 - Reading is for finding where to drive, not reconstructing behavior. A run beats a read.
 - Don't fix the system here. A falsified hypothesis is a finding — report it and stop.
-- The memory file is a flat append log: one row per verdict, never reorganized.
+- One verdict is one artifact. Do not edit an old artifact. If the verdict changes, write
+  a new artifact and link the old one.

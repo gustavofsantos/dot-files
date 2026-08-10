@@ -13,6 +13,7 @@ SCRIPT="$BATS_TEST_DIRNAME/new.sh"
 setup() {
   TEST_HOME=$(mktemp -d)
   export HOME="$TEST_HOME"
+  unset ENGINEERING_HOME
   SLUG="accounting-divergences"
 }
 
@@ -90,6 +91,23 @@ teardown() {
 
 @test "the script runs on its own, the way SKILL.md invokes it" {
   run "$SCRIPT" "$SLUG"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$HOME/engineering/projects/${SLUG}.md" ]
+}
+
+# ── The vault location is configuration, not a constant ────────────────────────
+
+@test "a brief lands in the vault the machine declares, not a hardcoded home" {
+  export ENGINEERING_HOME="$TEST_HOME/notes"
+
+  run bash "$SCRIPT" "$SLUG"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$TEST_HOME/notes/projects/${SLUG}.md" ]
+  [ -f "$output" ]
+}
+
+@test "a machine that declares no vault still gets the default one" {
+  run bash "$SCRIPT" "$SLUG"
   [ "$status" -eq 0 ]
   [ "$output" = "$HOME/engineering/projects/${SLUG}.md" ]
 }

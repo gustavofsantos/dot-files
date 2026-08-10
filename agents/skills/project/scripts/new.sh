@@ -8,7 +8,7 @@ if [[ -z "$slug" ]]; then
   exit 64
 fi
 
-dir="$HOME/engineering/projects"
+dir="${ENGINEERING_HOME:-$HOME/engineering}/projects"
 # done/ is made up front. Without it, `mv brief.md projects/done` renames the
 # brief to a file called "done" instead of failing.
 mkdir -p "$dir/done"

@@ -3,8 +3,9 @@
 facts-churn — Staleness checker for the engineering facts base. NO MODEL. NO DEPS.
 
 How it works:
-Every fact in ~/engineering/facts/ can record in its YAML frontmatter a `provenance`
-block. This script loads the repo mapping from ~/engineering/.metadata/sources.local.json,
+Every fact in $ENGINEERING_HOME/facts/ (default ~/engineering) can record in its YAML
+frontmatter a `provenance` block. This script loads the repo mapping from
+$ENGINEERING_HOME/.metadata/sources.local.json,
 checks if the source files of the pinned facts have changed since their pinned revisions,
 and outputs a report.
 
@@ -23,7 +24,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ENGINEERING_DIR = Path(os.environ.get("ENGINEERING_DIR", "~/engineering")).expanduser()
+ENGINEERING_DIR = Path(os.environ.get("ENGINEERING_HOME", "~/engineering")).expanduser()
 SOURCES_FILE = ENGINEERING_DIR / ".metadata" / "sources.local.json"
 FACTS_DIR = ENGINEERING_DIR / "facts"
 

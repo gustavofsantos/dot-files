@@ -25,8 +25,12 @@ Show the measurement and the `modules` list sorted by size as candidate scopes. 
 
 ## 4. Dispatch
 
-Spawn a subagent in a read-only research/exploration role, briefed with `references/survey-procedure.md` verbatim plus: target paths, ignore paths, repo name, the measurement JSON, output file path (default `<repo-root>/ddd-survey.md`; ask if writing inside the repo is unwanted), and any prior context map to extend. Use whichever subagent fits the context for read-only exploration — the procedure is self-contained, so no specific named agent is required.
+Spawn a subagent in a read-only research/exploration role, briefed with `references/survey-procedure.md` verbatim plus: target paths, ignore paths, repo name, the measurement JSON, the output file path, and any prior context map to extend. Use whichever subagent fits the context for read-only exploration — the procedure is self-contained, so no specific named agent is required.
+
+The survey is contextual knowledge, so it belongs in the vault. Default the output path to `${ENGINEERING_HOME:-$HOME/engineering}/artifacts/<YYYY-MM-DD>-<repo>-ddd-survey.md`. Never default to the repository root, and never write inside this skill directory. If the user names another path, use that one.
 
 ## 5. After
 
 Relay the subagent's summary including stated unknowns — do not paper over them. Surface the **Fact candidates** for promotion into the knowledge base, and the **Entry points for follow-up investigation** as suggested next steps.
+
+A survey describes system state, which is what a project brief holds. Offer to fold the contexts, the ubiquitous language, and the context map into the brief. Invoke the `project` skill to do that work. Link the survey artifact under **Key artifacts**. Do not write the brief yourself — the `project` skill owns that file.

@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
-# Reject any write to model/entities.tsv or model/bridges.tsv whose last column does not
-# name an existing probe file. A claim without a probe is a rumour.
+# Reject any write to entities.tsv or bridges.tsv whose last column does not name an
+# existing probe file. A claim without a probe is a rumour.
+#
+# The tables live in the knowledge vault, under reconcile/<repo>/. The probes live in the
+# repository, under model/probes/. This script runs from the repository, so it resolves the
+# probe id against the working directory.
 #
 # Install as a PreToolUse hook on Write|Edit in .claude/settings.json:
 #
@@ -16,7 +20,7 @@ input=$(cat)
 path=$(jq -r '.tool_input.file_path // ""' <<<"$input")
 
 case "$path" in
-  */model/entities.tsv|*/model/bridges.tsv) ;;
+  */reconcile/*/entities.tsv|*/reconcile/*/bridges.tsv) ;;
   *) exit 0 ;;
 esac
 
@@ -41,8 +45,9 @@ fi
 cat >&2 <<EOF
 blocked: claim without a probe.
 
-The last column of a row in $path must name an existing model/probes/<id>.sql,
-or be literally UNKNOWN if the relationship has not been measured yet.
+The last column of a row in $path must name a probe that exists in this repository
+as model/probes/<id>.sql, or be literally UNKNOWN if the relationship has not been
+measured yet.
 
 Got: '${probe}' (model/probes/${probe}.sql does not exist)
 

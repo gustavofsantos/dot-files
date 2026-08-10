@@ -13,6 +13,7 @@ SCRIPT="$BATS_TEST_DIRNAME/new.sh"
 setup() {
   TEST_HOME=$(mktemp -d)
   export HOME="$TEST_HOME"
+  unset ENGINEERING_HOME
   TODAY=$(date +%F)
 }
 
@@ -79,4 +80,21 @@ teardown() {
   run bash "$SCRIPT"
   [ "$status" -ne 0 ]
   [ ! -e "$HOME/engineering/spikes/${TODAY}-.md" ]
+}
+
+# ── The vault location is configuration, not a constant ────────────────────────
+
+@test "a spike lands in the vault the machine declares, not a hardcoded home" {
+  export ENGINEERING_HOME="$TEST_HOME/notes"
+
+  run bash "$SCRIPT" "fee-rounding-drift"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$TEST_HOME/notes/spikes/${TODAY}-fee-rounding-drift.md" ]
+  [ -f "$output" ]
+}
+
+@test "a machine that declares no vault still gets the default one" {
+  run bash "$SCRIPT" "fee-rounding-drift"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$HOME/engineering/spikes/${TODAY}-fee-rounding-drift.md" ]
 }

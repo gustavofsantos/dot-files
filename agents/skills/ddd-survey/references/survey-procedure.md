@@ -32,8 +32,8 @@ Orient by focus signal to choose zone order:
 Then load KB context before reading source:
 
 ```bash
-cat ~/engineering/DOMAIN_MAP.md 2>/dev/null
-rg -il 'TERM1|TERM2' ~/engineering/*.md ~/engineering/issues/ 2>/dev/null | head -8
+KB="${ENGINEERING_HOME:-$HOME/engineering}"
+rg -il 'TERM1|TERM2' "$KB"/projects/ "$KB"/issues/ "$KB"/artifacts/ 2>/dev/null | head -8
 ```
 
 Note relevant axioms as `[[Note Title]]`. Flag any contradiction between KB facts and what you find — never silently pick a side.
@@ -88,7 +88,8 @@ Use the zone findings as orientation. Proceed boundary-first, cheapest reads fir
 
 ## Output
 
-Write one markdown document (default `<repo-root>/survey.md`; use path from prompt if given):
+Write one markdown document to the output path given in the prompt. That path is in the
+knowledge vault, not in the surveyed repository. Never write the document into the repository.
 
 ```
 # Survey: <repo> (<scope>)

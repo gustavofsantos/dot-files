@@ -9,7 +9,7 @@ if [[ -z "$slug" ]]; then
   exit 64
 fi
 
-issues="$HOME/engineering/issues"
+issues="${ENGINEERING_HOME:-$HOME/engineering}/issues"
 [[ -d "$issues" ]] || exit 0
 
 # The project is declared in the frontmatter. A mention in the prose is not

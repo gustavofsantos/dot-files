@@ -6,10 +6,11 @@ description: >-
   populations of records — invoices vs orders, ledger vs subledger, source system vs
   downstream, expected vs actual. Also use it for "why doesn't X match Y", "where did this
   record go", "is this number right", "what happened to contract N", and for any exploratory
-  question about systems or tables whose relationships are not yet known. Reads and writes
-  `model/`: entities.tsv (grain and keys), bridges.tsv (how ids map across systems),
-  invariants.tsv + probes/ (claims that must hold), breaks.tsv (classified mismatches),
-  traces/ (per-entity timelines). Requires a query adapter skill (e.g. `datalake`) to execute
+  question about systems or tables whose relationships are not yet known. Keeps what it learns
+  in the knowledge vault under `reconcile/<repo>/`: entities.tsv (grain and keys), bridges.tsv
+  (how ids map across systems), invariants.tsv (claims that must hold), breaks.tsv (classified
+  mismatches). Keeps the SQL that proves them in the repository under `model/probes/` and
+  `model/traces/`. Requires a query adapter skill (e.g. `datalake`) to execute
   SQL. Use it even when the user only asks for a single number — the number is a probe.
 ---
 
@@ -17,6 +18,18 @@ description: >-
 
 Don't trust, verify. A belief about the business is worth nothing until it is a zero-row
 assertion.
+
+## Where the work lives
+
+Two homes, split by what the file is. This skill directory is never a home for either.
+
+| File | Home | Why |
+|---|---|---|
+| entities.tsv, bridges.tsv, invariants.tsv, breaks.tsv | `${ENGINEERING_HOME:-$HOME/engineering}/reconcile/<repo>/` | What you learned about the business. It outlives the repository. |
+| probes/*.sql, traces/*.sql, `model/ADAPTER` | `model/` in the repository | Executable assertions. They version with the code they assert against. |
+
+The `probe` column holds the bare probe id. It resolves to `model/probes/<id>.sql` in the
+repository you run from.
 
 ## Adapter (port)
 
@@ -40,8 +53,8 @@ Name the state before acting.
 
 ## Frame
 
-Read `model/*.tsv`; grep the adapter's query catalog for prior art. Then four lines, then stop
-for confirmation:
+Read the vault tables for this repo. Grep the adapter's query catalog for prior art. Then four
+lines, then stop for confirmation:
 
     GRAIN      one row = ?
     KEYS       left.col -> right.col   (cite bridges.tsv, else UNKNOWN)
@@ -80,8 +93,8 @@ On green only:
     claim               -> invariants.tsv + probes/<id>.sql
     irreducible breaks  -> breaks.tsv
 
-An unprobed row in entities.tsv or bridges.tsv is hearsay; `scripts/no-unproven-claims.sh`
-fails closed on it.
+The tables go to the vault. The SQL goes to the repository. An unprobed row in entities.tsv or
+bridges.tsv is hearsay; `scripts/no-unproven-claims.sh` fails closed on it.
 
 Red is equally mandatory: a failing probe is a falsified belief or a changed rule. Mark it red
 the moment it fails. Never delete a probe to green the suite.
@@ -89,7 +102,7 @@ the moment it fails. Never delete a probe to green the suite.
 ## Reporting
 
 Break counts by class, the two or three rows that matter, what was promoted. Never persist
-result sets into `model/` or the query catalog.
+result sets into the vault tables, into `model/`, or into the query catalog.
 
 ## References
 
@@ -97,4 +110,5 @@ result sets into `model/` or the query catalog.
   promoting any bridge.
 - `references/traces.md` — bitemporal timelines, watermark measurement, precedence
   constraints.
-- `assets/model/` — worked templates. Copy into the repo on first use.
+- `assets/model/` — worked templates for the four tables. Copy into
+  `${ENGINEERING_HOME:-$HOME/engineering}/reconcile/<repo>/` on first use.

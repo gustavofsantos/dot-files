@@ -9,7 +9,7 @@ if [[ -z "$slug" ]]; then
 fi
 
 today=$(date +%F)
-dir="$HOME/engineering/spikes"
+dir="${ENGINEERING_HOME:-$HOME/engineering}/spikes"
 mkdir -p "$dir"
 
 f="$dir/${today}-${slug}.md"
