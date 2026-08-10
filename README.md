@@ -10,7 +10,8 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 
 That's the only step. It's idempotent — re-run it any time. `setup.sh` delegates to
 the scripts in `scripts/`: it links dotfiles into `$HOME`, seeds local-override files,
-links `bin/` and XDG config, and installs the Claude Code plugins (below).
+links `bin/` and XDG config, and installs the agent config — skills, subagents,
+commands, rules, and hooks — for Claude Code and Cursor (below).
 
 ### Local overrides (never committed)
 
@@ -23,48 +24,34 @@ links `bin/` and XDG config, and installs the Claude Code plugins (below).
 
 Both are created empty by `setup.sh` if missing.
 
-## Plugins
+## Agent config
 
-Claude Code config ships as four plugins under `agents/plugins/` —
-`bruno`, `clojure`, `engineering`, `productivity` — each bundling its own skills, hooks,
-rules, and scripts. They're served from a single local marketplace named `personal`
-(`agents/plugins/.claude-plugin/marketplace.json`).
+Skills, subagents, commands, rules, and hooks live once each under `agents/` —
+`agents/skills/`, `agents/agents/`, `agents/commands/`, `agents/rules/`, `agents/hooks/` —
+in a harness-generic form. This is the source of truth; nothing under `.claude/` or
+`.cursor/` is hand-edited except `.claude/settings.json`'s `permissions`/`env`.
 
 ### Install
 
-`./setup.sh` installs them via `scripts/install-claude.sh`: it registers the `personal`
-marketplace, then `plugin install`s each plugin. Claude **copies** the plugin into
-`~/.claude/plugins/cache/personal/<name>/<version>/` from the repo's **committed HEAD** —
-not the working tree.
+`./setup.sh` runs `scripts/install-agents.sh`, which:
 
-### Use
+1. Compiles `agents/{rules,agents,commands,hooks}` into `.claude/` (and, where a
+   harness-specific block exists, `.cursor/`) via `rules-sync`, `agents-sync`,
+   `hooks-sync`.
+2. Symlinks skills, subagents, commands, themes, rules, and workflows into `~/.claude/`,
+   and rules and hooks into `~/.cursor/`.
+3. Merges `.claude/settings.json` into `~/.claude/settings.json` (global wins on
+   conflicts; `permissions`/`hooks` arrays are unioned).
 
-Skills are namespaced by plugin once installed — invoke them as `/<plugin>:<skill>`:
+Skills additionally get a per-harness frontmatter transform via `skills-sync` (a
+Claude-native `SKILL.md` rewritten for Cursor's narrower frontmatter), generating
+`~/.cursor/skills/`.
 
-```
-/engineering:create-pull-request
-/productivity:issue
-/clojure:clojure-datomic
-```
+### Add a skill, subagent, command, rule, or hook
 
-### Update
-
-Because Claude installs from committed HEAD, **commit first**, then re-run install:
-
-```bash
-git commit -am "…"      # uncommitted edits are NOT loaded by Claude
-./setup.sh              # or: ./scripts/install-claude.sh
-```
-
-`plugin update` is version-based and won't refresh a same-version (`1.0.0`) edit, so
-`install-claude.sh` compares each plugin's pinned commit to HEAD and uninstall+reinstalls
-only when they differ.
-
-### Add a skill or plugin
-
-- **New skill** → drop it under the right plugin's `skills/` dir, commit, re-run `./setup.sh`.
-- **New plugin** → also add it to `agents/plugins/.claude-plugin/marketplace.json` and the
-  `PLUGINS` list in `scripts/install-claude.sh`.
+Drop it under the matching `agents/` subdirectory, commit, and re-run `./setup.sh`.
+See [`CLAUDE.md`](CLAUDE.md) for each type's exact frontmatter shape and the
+per-harness compile step.
 
 ## More
 

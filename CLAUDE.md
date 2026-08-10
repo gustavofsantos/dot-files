@@ -34,9 +34,10 @@ Re-running `setup.sh` is idempotent (`ln -sf`).
 ## Directory layout
 
 - `bin/` — personal scripts added to `$PATH` via `~/.bin/`
-- `test_bin/` — bats tests for `bin/` scripts, one `<script>.bats` per script
+- `agents/` — harness-generic agent config: `rules/`, `skills/`, `agents/`, `commands/`, `hooks/`. This is the source of truth; `.claude/` and `.cursor/` are compiled from it (see "Skills", "Cross-harness skills", "Hooks" below)
+- `test_bin/` — bats tests for `bin/` scripts and `agents/hooks/` scripts, one `<script>.bats` per script
 - `config/` — XDG config dirs: `nvim/`, `ghostty/`, `bat/`, `lazygit/`, `zed/`, `wezterm/`, `tmux/`, `sheldon/`, `starship.toml`, `vale/`
-- `.claude/` — Claude Code config: `skills/`, `themes/`, `rules/`, `workflows/`, `settings.json`
+- `.claude/` — compiled/hand-maintained Claude Code config: `themes/`, `rules/`, `agents/`, `commands/`, `workflows/`, `settings.json`, `harness-profiles.yml`
 
 ## Skills
 
@@ -96,12 +97,11 @@ harness picks the agent that fits) or a Claude-only tool.
 |--------|--------------|
 | `skills-sync` | Derive per-harness skill trees from `agents/skills/` per `harness-profiles.yml`. Idempotent; `--source`, `--profiles`, `--harness NAME`, `--dry-run`. |
 
-Cursor reuses these same skills/agents by loading Claude's config directly (configured
-outside this repo). Hooks are unified the same way — see "Hooks" below.
-
-The `.claude/settings.json` merges into the global `~/.claude/settings.json` on install.
-Global settings win on scalar/object conflicts; `permissions.allow/deny/ask` arrays are
-unioned.
+Rules and hooks get the same treatment — `rules-sync` and `hooks-sync` generate
+`.cursor/rules/` and `.cursor/hooks.json` from `agents/rules/` and `agents/hooks/`, see
+"Hooks" below. Subagents and commands (`agents/agents/`, `agents/commands/`) are
+Claude-only today — `agents-sync` has no Cursor output for them yet, since Cursor has no
+subagent-tool equivalent and Cursor command support wasn't built out this round.
 
 ## Hooks
 
@@ -124,6 +124,11 @@ its own dedicated file, nothing else lives there). `hooks-sync` compiles them: i
 `permissions`/`env` untouched, since those stay hand-maintained) and generates
 `.cursor/hooks.json` wholesale from `cursor.hooks.json`.
 
+That compiled `.claude/settings.json` then merges into the global `~/.claude/settings.json`
+on install (`install-agents.sh`): global settings win on scalar/object conflicts,
+`permissions.allow/deny/ask` and `hooks` arrays are unioned. `.cursor/hooks.json` and
+`.cursor/rules/` install as plain symlinks — Cursor reads them directly, no merge step.
+
 | Script | What it does |
 |--------|--------------|
 | `hooks-sync` | Compile `agents/hooks/{claude.settings.json,cursor.hooks.json}` into `.claude/settings.json`'s `hooks` key and `.cursor/hooks.json`. Idempotent; `--dry-run`. |
@@ -144,21 +149,21 @@ commonly no-op, same as before.
 
 ## Agent checks
 
-A single global registry, `~/.checks.yml`, enrolls the repositories that run checks after each agent turn and defines them — each check a `name` + a `command`, modeled on the hooks shape. Repos are matched by `path` (main working tree), so every worktree is covered; unregistered repos are skipped. After every agent turn the `Stop` hook fires `checks-snapshot`, which (for enrolled repos) hashes the changed tracked files (`checks-hash`), versions them under `~/.checks/<session>/<hash>/`, and spawns `checks-runner` detached to run the checks and write `results.json`. The agent reads them via `checks-status`; enrollment is managed by the `setup-checks` skill. `~/.checks.local.yml` (same shape) overlays a repo's checks by name for machine-specific checks. `create-local-files.sh` seeds an empty `~/.checks.yml`.
+A single global registry, `~/.checks.yml`, enrolls the repositories that run checks after each agent turn and defines them — each check a `name` + a `command`, modeled on the hooks shape. Repos are matched by `path` (main working tree), so every worktree is covered; unregistered repos are skipped. After every agent turn (Claude or Cursor) `checks-snapshot` fires, which (for enrolled repos) hashes the changed tracked files (`checks-hash`), versions them under `~/.checks/<session>/<hash>/`, and spawns `checks-runner` detached to run the checks and write `results.json`. The agent reads them via `checks-status`; enrollment is manual — add a `path` + `checks` entry to `~/.checks.yml` by hand (see the commented example `create-local-files.sh` seeds in a fresh one). `~/.checks.local.yml` (same shape) overlays a repo's checks by name for machine-specific checks.
 
 | Script | What it does |
 |--------|--------------|
 | `checks-hash` | Stable content hash of tracked working-dir changes vs `HEAD` |
 | `checks-config` | Resolve a repo's checks from `~/.checks.yml` (handles worktrees); `--registered` for an enrolment check |
-| `checks-snapshot` | `Stop` hook: version changes for enrolled repos, fire the runner (no-op if unchanged) |
+| `checks-snapshot` | Turn-end hook (Claude and Cursor): version changes for enrolled repos, fire the runner (no-op if unchanged) |
 | `checks-runner` | Run a snapshot's checks; `--watch` for daemon mode |
 | `checks-status` | Show the latest result for a session/repo (`--json`, `--oneline`) |
 
-Session navigation is independent of checks and of hooks, and spans both Claude Code and Cursor Agent. `claude-sessions` (`bind a` in tmux) discovers live agent sessions by **scanning tmux pane processes** — it walks each pane's process subtree looking for an agent CLI (`claude`, `cursor-agent`, aider, codex, …; the matched set is the `AGENTS` list at the top of the script) and lists every match in one fzf picker (a `cc`/`cu` tag distinguishes them). There is no state file and no hook to keep in sync: a session exists exactly while its process is alive, so the list can never go stale and needs no configuration — a bare `claude` or `cursor-agent` in any pane just shows up. Enter jumps straight to that pane (switch session → select window → select pane); the preview (`claude-session-preview`) is a live `tmux capture-pane` of the agent plus its location and cwd. A pane whose window name carries the `⊡` waiting prefix (set by the `notify` hook) is shown as `waiting` and sorted first — best-effort only, not a dependency. Because discovery is process-based there is no `SessionEnd` hook; the `session-track` hooks that remain exist only to keep that `⊡` marker fresh for the `claude-run` flow and to record `track_name` for checks correlation. Per-turn telemetry still lands in `~/.agent-sessions/<id>.jsonl` via `session-log`, but the navigator no longer reads it.
+Session navigation is independent of checks and of hooks, and spans both Claude Code and Cursor Agent. `claude-sessions` (`bind a` in tmux) discovers live agent sessions by **scanning tmux pane processes** — it walks each pane's process subtree looking for an agent CLI (`claude`, `cursor-agent`, aider, codex, …; the matched set is the `AGENTS` list at the top of the script) and lists every match in one fzf picker (a `cc`/`cu` tag distinguishes them). There is no state file and no hook to keep in sync: a session exists exactly while its process is alive, so the list can never go stale and needs no configuration — a bare `claude` or `cursor-agent` in any pane just shows up. Enter jumps straight to that pane (switch session → select window → select pane); the preview (`claude-session-preview`) is a live `tmux capture-pane` of the agent plus its location and cwd. A pane whose window name carries the `⊡` waiting prefix (set by the `notify` hook) is shown as `waiting` and sorted first — best-effort only, not a dependency. Because discovery is process-based there is no `SessionEnd` hook; the `session-track` hook that remains exists only to keep that `⊡` marker fresh for the `claude-run` flow and to record `track_name` for checks correlation. Per-turn telemetry still lands in `~/.agent-sessions/<id>.jsonl` via `session-log`, but the navigator no longer reads it.
 
 ## GitButler provenance hooks
 
-Two hooks in `agents/hooks/`, wired via `.claude/settings.json` (merged into the global settings on install), enforce the `gitbutler-provenance` skill in repos with a `.git/gitbutler/` dir — and no-op instantly everywhere else. `gitbutler-stop` (`Stop`) blocks a turn from ending while the tree is dirty, at most once per turn (`stop_hook_active`), so a lane question can still reach the user. `gitbutler-git` (`PreToolUse` on Bash) denies raw git write commands (`commit`, `add`, `push`, `checkout`, `rebase`, …) — mutations must go through the `but` CLI; read-only git passes. Both are Claude-only today.
+Two hooks in `agents/hooks/`, wired via `claude.settings.json` like every other Claude hook (see "Hooks" above), enforce the `gitbutler-provenance` skill in repos with a `.git/gitbutler/` dir — and no-op instantly everywhere else. `gitbutler-stop` (`Stop`) blocks a turn from ending while the tree is dirty, at most once per turn (`stop_hook_active`), so a lane question can still reach the user. `gitbutler-git` (`PreToolUse` on Bash) denies raw git write commands (`commit`, `add`, `push`, `checkout`, `rebase`, …) — mutations must go through the `but` CLI; read-only git passes. Both are Claude-only today.
 
 ## AI session token stats
 
