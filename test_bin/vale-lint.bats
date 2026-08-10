@@ -62,11 +62,19 @@ EOF
 }
 
 @test "exits 0 (non-blocking) for a file with only suggestion-level issues" {
+  # Keep the prose short and plain. The Readability rules score the whole
+  # document at warning level, so a long word in a small file raises the score
+  # above the limit and the fixture stops being suggestion-only.
   cat > "$TEST_DIR/suggest.md" <<'EOF'
 # Test
 
-That is an acceptable approximately correct answer.
+The fix is acceptable. The test is green. The tool runs fast. We ship it now.
 EOF
+  # Guard the fixture: a clean file would also exit 0, which would make this a
+  # copy of the test above.
+  severities=$(cd "$TEST_DIR" && vale --output=JSON suggest.md | jq -r '[.[][].Severity] | unique | join(",")')
+  [ "$severities" = "suggestion" ]
+
   run bash "$SCRIPT" --harness claude <<< "$(payload "$TEST_DIR/suggest.md")"
   [ "$status" -eq 0 ]
 }
