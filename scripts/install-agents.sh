@@ -123,7 +123,13 @@ else
   # in the repo would otherwise leave the old, now-broken command duplicated
   # in every machine's global settings.json forever.
   # .[0] = global (machine-specific), .[1] = dotfiles (baseline defaults).
-  merged=$(jq -s '
+  # Written via a same-directory temp file + mv (atomic rename) rather than a
+  # direct `>` redirect, so a concurrent reader (another setup.sh run, or
+  # Claude Code itself persisting a setting) can never observe a truncated
+  # file mid-write. Same directory as GLOBAL_SETTINGS keeps mv on one
+  # filesystem, since a cross-filesystem mv falls back to non-atomic copy.
+  tmp=$(mktemp "$GLOBAL_SETTINGS.XXXXXX")
+  if jq -s '
     .[0] as $g |
     .[1] as $d |
     $d * $g |
@@ -131,7 +137,12 @@ else
     .permissions.deny  = (($g.permissions.deny  // []) + ($d.permissions.deny  // []) | unique | sort) |
     .permissions.ask   = (($g.permissions.ask   // []) + ($d.permissions.ask   // []) | unique | sort) |
     .hooks = ($d.hooks // {})
-  ' "$GLOBAL_SETTINGS" "$DOTFILES_SETTINGS")
-  echo "$merged" > "$GLOBAL_SETTINGS"
-  echo "Merging Claude settings... OK"
+  ' "$GLOBAL_SETTINGS" "$DOTFILES_SETTINGS" > "$tmp"; then
+    mv "$tmp" "$GLOBAL_SETTINGS"
+    echo "Merging Claude settings... OK"
+  else
+    rm -f "$tmp"
+    echo "Merging Claude settings... FAILED" >&2
+    exit 1
+  fi
 fi

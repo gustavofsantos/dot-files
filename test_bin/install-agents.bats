@@ -138,6 +138,25 @@ EOF
   [ "$(jq -r '.hooks.Stop[0].command' "$merged")" = "renamed-hook --harness claude" ]
 }
 
+@test "a concurrent reader never observes a truncated settings.json while install-agents.sh re-runs" {
+  bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
+
+  (
+    for i in $(seq 1 60); do
+      bash "$FIXTURE/scripts/install-agents.sh" >/dev/null 2>&1
+    done
+  ) &
+  writer=$!
+
+  invalid=0
+  while kill -0 "$writer" 2>/dev/null; do
+    [ -s "$HOME/.claude/settings.json" ] || invalid=$((invalid + 1))
+  done
+  wait "$writer"
+
+  [ "$invalid" -eq 0 ]
+}
+
 @test "is idempotent: running twice produces the same installed rule content" {
   bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
   first=$(cat "$HOME/.claude/rules/demo-rule.md")
