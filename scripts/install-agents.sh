@@ -1,7 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DOTFILES_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+DOTFILES_DIR="${DOTFILES_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
+
+echo "Compiling rules..."
+"$DOTFILES_DIR/bin/rules-sync" >/dev/null \
+  && echo "Compiling rules... OK" \
+  || echo "Compiling rules... FAILED (non-fatal)"
+
+echo "Compiling agents and commands..."
+"$DOTFILES_DIR/bin/agents-sync" >/dev/null \
+  && echo "Compiling agents and commands... OK" \
+  || echo "Compiling agents and commands... FAILED (non-fatal)"
+
+echo "Compiling hooks..."
+"$DOTFILES_DIR/bin/hooks-sync" >/dev/null \
+  && echo "Compiling hooks... OK" \
+  || echo "Compiling hooks... FAILED (non-fatal)"
 
 echo "Installing skills..."
 mkdir -p "$HOME/.claude/skills"
@@ -80,6 +95,28 @@ for wf in "$DOTFILES_DIR"/.claude/workflows/*; do
   ln -sf "$wf" "$HOME/.claude/workflows/$name"
 done
 echo "Installing custom workflows... OK"
+
+echo "Installing Cursor rules..."
+mkdir -p "$HOME/.cursor/rules"
+for rule in "$DOTFILES_DIR"/.cursor/rules/*.mdc; do
+  [ -f "$rule" ] || continue
+  name=$(basename "$rule")
+  ln -sf "$rule" "$HOME/.cursor/rules/$name"
+done
+# prune dangling rule symlinks (removed from dotfiles)
+find "$HOME/.cursor/rules" -maxdepth 1 -type l | while read -r link; do
+  [ -e "$link" ] || rm "$link"
+done
+echo "Installing Cursor rules... OK"
+
+echo "Installing Cursor hooks..."
+mkdir -p "$HOME/.cursor"
+if [ -f "$DOTFILES_DIR/.cursor/hooks.json" ]; then
+  ln -sf "$DOTFILES_DIR/.cursor/hooks.json" "$HOME/.cursor/hooks.json"
+  echo "Installing Cursor hooks... OK"
+else
+  echo "Installing Cursor hooks... skipped (no .cursor/hooks.json)"
+fi
 
 echo "Merging Claude settings..."
 DOTFILES_SETTINGS="$DOTFILES_DIR/.claude/settings.json"

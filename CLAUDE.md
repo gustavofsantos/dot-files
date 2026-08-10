@@ -19,9 +19,9 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 | `link-home-files.sh` | Symlinks dotfiles (`.zshrc`, `.gitconfig`, etc.) into `$HOME` |
 | `create-local-files.sh` | Touches `~/.gitconfig.local` and `~/.zshlocal` if missing |
 | `init-engineering-repo.sh` | Idempotently `git init`s `~/engineering`, writes its `.gitignore`, seeds the first commit |
-| `link-bin-files.sh` | Symlinks every file in `bin/` into `~/.bin/` |
+| `link-bin-files.sh` | Symlinks every file in `bin/` and every executable in `agents/hooks/` into `~/.bin/` |
 | `link-xdg-config.sh` | Symlinks each subdir of `config/` into `~/.config/` |
-| `install-claude.sh` | Symlinks `.claude/` skills/agents/commands/themes/rules/workflows into `~/.claude/`; merges `.claude/settings.json` into `~/.claude/settings.json` |
+| `install-agents.sh` | Compiles `agents/{rules,agents,commands,hooks}` (`rules-sync`/`agents-sync`/`hooks-sync`), then symlinks skills/agents/commands/themes/rules/workflows into `~/.claude/` and rules/hooks into `~/.cursor/`; merges `.claude/settings.json` into `~/.claude/settings.json` |
 | `set-caps-lock-ctrl.sh` | Sets the GNOME "Caps Lock as Ctrl" `xkb-options` key (`ctrl:nocaps`) via `gsettings`, no `gnome-tweaks` package needed. No-ops if `gsettings` is absent. |
 
 Re-running `setup.sh` is idempotent (`ln -sf`).
@@ -41,7 +41,7 @@ Re-running `setup.sh` is idempotent (`ln -sf`).
 ## Skills
 
 Skills live under `agents/skills/<name>/` — a `SKILL.md` plus optional `references/`
-and `scripts/`. No plugins, no marketplace: `install-claude.sh` (run by `setup.sh`)
+and `scripts/`. No plugins, no marketplace: `install-agents.sh` (run by `setup.sh`)
 symlinks each skill directory into `~/.claude/skills/`, so edits in the working tree
 take effect immediately (new/removed skills need a `./setup.sh` re-run to add/prune
 symlinks).
@@ -79,7 +79,7 @@ harnesses can't consume it as-is: Cursor reads `.claude`-style skills but only a
 per-harness tree from the one source: it rewrites only the SKILL.md frontmatter (dropping
 / renaming keys per `.claude/harness-profiles.yml`) and symlinks the body's `references/`
 and `scripts/` back to the source, so editing a skill reflects immediately — only
-frontmatter changes need a re-run. `install-claude.sh` (run by `setup.sh`) symlinks
+frontmatter changes need a re-run. `install-agents.sh` (run by `setup.sh`) symlinks
 `harness-profiles.yml` into `~/.claude/` and runs the sync; the default Cursor target is a
 generated `~/.cursor/skills/` tree.
 
