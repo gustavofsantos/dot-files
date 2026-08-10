@@ -1,6 +1,6 @@
 ---
 name: readable
-description: Reviews a slice of code (usually a diff between two revisions) for readability — hide mechanics, expose intention. Language-agnostic. Two phases: proposes a Change Contract for human review, then applies only approved changes.
+description: "Reviews a slice of code (usually a diff between two revisions) for readability — hide mechanics, expose intention. Language-agnostic. Two phases: proposes a Change Contract for human review, then applies only approved changes."
 ---
 
 # Readable
@@ -70,7 +70,7 @@ Do not proceed until the human responds.
 
 ## Phase 2 — Execute
 
-Apply only the approved items using Read/Edit/Write tools.
+Apply only the approved items, editing the files directly.
 
 After editing, report what was applied. Flag any item that couldn't be applied without
 touching behavior — the human decides those explicitly.

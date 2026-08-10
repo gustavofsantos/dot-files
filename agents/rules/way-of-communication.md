@@ -19,7 +19,7 @@ This rule covers what Vale cannot reach. Vale never sees a chat reply. Vale also
 - Use the simplest word that keeps the meaning. Write "use", not "utilize". Write "about", not "approximately". Write "before", not "prior to". `config/vale/styles/STE/Vocab.yml` holds the current list.
 - Keep technical names and technical verbs. STE permits domain vocabulary. "Symlink", "frontmatter", and "worktree" are correct words. Do not replace a precise technical name with a vague common word.
 - Give one word one meaning. If "check" means an agent check in this repository, do not also use "check" to mean "examine". Do not use idioms, metaphors, or slang. Write "the script fails", not "the script falls over". Write "this is difficult", not "this is a heavy lift".
-- Do not use Latin abbreviations. Write "for example", not "e.g.". Write "that is", not "i.e.".
+- Do not use Latin abbreviations. Write "for example", not `e.g.`. Write "that is", not `i.e.`.
 
 ## Sentences
 

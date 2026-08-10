@@ -26,7 +26,7 @@ This is your highest-value axis. Grep is cheap for you and expensive for a
 tired human. Always run this axis, always run it first.
 - Callers of any changed public var, especially ones that destructure by key
   or by position.
-- Other `defmethod`s of a changed multimethod; other implementations of a
+- Other `defmethod`s of a changed multimethod, or other implementations of a
   changed protocol.
 - The same invariant enforced in a second place that was not updated.
 - A key added to a map that an existing consumer will silently ignore.
@@ -40,7 +40,7 @@ Humans read tokens that exist. Enumerate deliberately.
 - A `cond`/`case`/`condp` with no default, over a value that can take an
   unlisted form.
 - A new branch or new input case with no corresponding test.
-- An error path with no cleanup; a resource acquired outside `with-open`.
+- An error path with no cleanup, or a resource acquired outside `with-open`.
 - `catch` that swallows without logging, rethrowing, or returning a decision.
 - A nil-able input with no nil handling, where nil arrives from a real caller
   you can point at.

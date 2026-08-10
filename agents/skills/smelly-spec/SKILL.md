@@ -15,7 +15,7 @@ A spec smell is only real if you can *see* it. Some smells live entirely inside 
 
 So sort every finding you're tempted to raise into one of three reaches, and let the reach set your voice:
 
-- **In-document** — the flaw is fully visible in the text. Two clauses contradict; a postcondition uses a word nothing could verify; a rule has no example. State these plainly. You are right.
+- **In-document** — the flaw is fully visible in the text. Two clauses contradict, a postcondition uses a word nothing could verify, or a rule has no example. State these plainly. You are right.
 - **Needs-context** — the flaw *might* be there, but confirming it requires something you can't see. Say what you'd need to check and why, as a question, not a verdict. "This assumes the ledger is already settled at entry — is that guaranteed by an earlier change, or is it an unstated precondition?"
 - **Out-of-reach** — confirming it would need runtime behavior, the full codebase, or domain knowledge you don't hold. Name that it's out of reach and stop. Do not manufacture a finding to fill the gap.
 

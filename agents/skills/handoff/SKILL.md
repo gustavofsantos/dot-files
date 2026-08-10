@@ -50,7 +50,7 @@ Output:
 
 ## Output file
 
-Write to `/tmp/handoff-<short-slug>.txt` using the Write tool (not shell heredocs — inline quoting breaks on backticks/`$`/quotes). No clipboard interaction; the user copies it manually. Report the path.
+Write to `/tmp/handoff-<short-slug>.txt` by writing the file directly (not shell heredocs — inline quoting breaks on backticks/`$`/quotes). No clipboard interaction; the user copies it manually. Report the path.
 
 ## Quality bar
 

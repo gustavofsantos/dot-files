@@ -12,15 +12,15 @@ The table below names the *families* of sugar that recur across languages, with 
 
 | Family | Keep when | Flag when | Examples by language |
 |---|---|---|---|
-| Scope-flow / "use" blocks | single, short, call site is clear | chained, nested, or long body | Kotlin `let`/`run`/`also`/`apply`/`with`; Ruby `tap`; JS early-return blocks |
-| Implicit call / `invoke` | well-known DSL only | non-DSL call sites — prefer a named method | Kotlin `operator fun invoke`; Python `__call__`; JS functor `x()` |
-| Infix / operator-like calls | well-known DSL (test assertions) | general application code | Kotlin `infix`; Scala infix; Elixir |
-| Operator overload | unambiguous math/collection types | any other domain concept (merge? sum?) | Kotlin/Scala/Python operators; Clojure transducer composition |
-| Delegation / proxy | well-documented surface | silent/undocumented — real surface invisible | Kotlin `by`; Python descriptors; Ruby `method_missing` |
-| Destructuring | 2 fields, stable type, or map pairs | 3+ fields or unstable order — positional, breaks silently | Kotlin/JS/Python/Clojure destructuring; `for ((k,v) in …)` |
-| Trailing lambda / block arg | body is 1–3 lines | long body — the tie to the enclosing call is lost | Kotlin/Scala/Go trailing blocks; Ruby `do…end`; Clojure `#()` |
-| Implicit/default parameter | one obvious referent | multi-line or nested — name it per level | Kotlin `it`; Clojure `%`, `->`/`->>` threading; JS implicit `this` |
-| Macro / metaprogramming | reads as the vocabulary it defines | shifts meaning a plain reader can't follow | Clojure macros; Rust macros; Elixir macros; Lisp reader macros |
+| Scope-flow / "use" blocks | single, short, call site is clear | chained, nested, or long body | Kotlin `let`/`run`/`also`/`apply`/`with`, Ruby `tap`, JS early-return blocks |
+| Implicit call / `invoke` | well-known DSL only | non-DSL call sites — prefer a named method | Kotlin `operator fun invoke`, Python `__call__`, JS functor `x()` |
+| Infix / operator-like calls | well-known DSL (test assertions) | general application code | Kotlin `infix`, Scala infix, Elixir |
+| Operator overload | unambiguous math/collection types | any other domain concept (merge? sum?) | Kotlin/Scala/Python operators, Clojure transducer composition |
+| Delegation / proxy | well-documented surface | silent/undocumented — real surface invisible | Kotlin `by`, Python descriptors, Ruby `method_missing` |
+| Destructuring | 2 fields, stable type, or map pairs | 3+ fields or unstable order — positional, breaks silently | Kotlin/JS/Python/Clojure destructuring, `for ((k,v) in …)` |
+| Trailing lambda / block arg | body is 1–3 lines | long body — the tie to the enclosing call is lost | Kotlin/Scala/Go trailing blocks, Ruby `do…end`, Clojure `#()` |
+| Implicit/default parameter | one obvious referent | multi-line or nested — name it per level | Kotlin `it`, Clojure `%` and `->`/`->>` threading, JS implicit `this` |
+| Macro / metaprogramming | reads as the vocabulary it defines | shifts meaning a plain reader can't follow | Clojure macros, Rust macros, Elixir macros, Lisp reader macros |
 
 ## Calibration notes
 

@@ -18,7 +18,7 @@ A candidate is confirmed as a context when it has its own model of at least one 
 | Module A imports B's domain types directly, no translation | Conformist (A conforms to B) |
 | Mapper/adapter at A's edge reshaping B's types into A's own | ACL in A against B |
 | Shared library of domain types (not utils) used by ≥2 contexts | Shared kernel — record which types exactly |
-| Event schemas (Avro/proto/EDN topics) consumed by many | Published language; producer is upstream |
+| Event schemas (Avro/proto/EDN topics) consumed by many | Published language, and the producer is upstream |
 | Versioned public API module with its own DTOs | Open host service |
 | Two contexts solving the same problem with zero integration | Separate ways |
 | Cross-module direct DB reads/writes | No boundary — big ball of mud, record honestly |
