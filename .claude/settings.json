@@ -122,54 +122,14 @@
     "Stop": [
       {
         "type": "command",
-        "command": "notify --harness claude"
-      },
-      {
-        "type": "command",
-        "command": "gitbutler-stop --harness claude"
-      },
-      {
-        "type": "command",
         "command": "engineering-autocommit --harness claude"
       },
       {
         "type": "command",
         "command": "checks-snapshot --harness claude"
-      },
-      {
-        "type": "command",
-        "command": "session-log --harness claude --event turn_end"
-      }
-    ],
-    "Notification": [
-      {
-        "type": "command",
-        "command": "notify --harness claude"
-      }
-    ],
-    "SubagentStart": [
-      {
-        "type": "command",
-        "command": "session-log --harness claude --event subagent_start"
-      }
-    ],
-    "SubagentStop": [
-      {
-        "type": "command",
-        "command": "session-log --harness claude --event subagent_stop"
       }
     ],
     "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "tap-hook gitbutler-git --harness claude",
-            "timeout": 5
-          }
-        ]
-      },
       {
         "matcher": "Edit|Write|MultiEdit",
         "hooks": [
