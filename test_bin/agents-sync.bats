@@ -180,3 +180,29 @@ EOF
 
   [ -f "$DEST/hand-made.md" ]
 }
+
+@test "--dry-run reports what it would generate without creating destinations or writing files" {
+  write_named_agent_source agent-a
+  local dest="$DEST/generated"
+
+  run "$SCRIPT" --agents-source "$SRC" --agents-dest "$dest" \
+    --commands-source "$CMD_SRC" --commands-dest "$CMD_DEST" --dry-run
+  [ "$status" -eq 0 ]
+
+  [[ "$output" == *"gen   agent-a.md"* ]]
+  [ ! -d "$dest" ]
+}
+
+@test "--dry-run reports a pending prune without deleting the file or touching the manifest" {
+  write_named_agent_source agent-a
+  write_named_agent_source agent-b
+  run_sync
+
+  rm "$SRC/agent-b.md"
+  run_sync --dry-run
+  [ "$status" -eq 0 ]
+
+  [[ "$output" == *"prune agent-b.md"* ]]
+  [ -f "$DEST/agent-b.md" ]
+  grep -qx "agent-b.md" "$DEST/.agents-sync-manifest"
+}
