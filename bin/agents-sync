@@ -208,6 +208,11 @@ def main(argv):
         return 1
 
     sync_kind(opts["agents_source"], opts["agents_dest"], "agents", opts["dry_run"])
+
+    if not os.path.isdir(opts["commands_source"]):
+        print(f"agents-sync: source not found: {opts['commands_source']}", file=sys.stderr)
+        return 1
+    sync_kind(opts["commands_source"], opts["commands_dest"], "commands", opts["dry_run"])
     return 0
 
 

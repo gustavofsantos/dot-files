@@ -4,10 +4,14 @@
 #
 # Slice 1: generate .claude/agents/*.md from agents/agents/*.md — merging each
 # source file's shared top-level frontmatter keys with its claude: overlay.
-# Commands land in a later slice.
+# Slice 2: generate .claude/commands/*.md from agents/commands/*.md too.
 #
-# Isolation strategy: --agents-source / --agents-dest point at tmpdirs, never
-# the repo's own agents/agents or .claude/agents.
+# Isolation strategy: --agents-source / --agents-dest / --commands-source /
+# --commands-dest point at tmpdirs, never the repo's own agents/agents,
+# agents/commands, .claude/agents, .claude/commands. Every invocation passes
+# all four flags explicitly, even in agents-only tests — rules-sync's tests
+# once fell back to real repo defaults when a later slice made a second sync
+# unconditional and a flag was left unpassed.
 #
 # Assertions use cmp against a byte-exact expected fixture — key order in the
 # merged frontmatter (shared keys, then the claude: block's own keys) is the
@@ -18,10 +22,17 @@ SCRIPT="$BATS_TEST_DIRNAME/../bin/agents-sync"
 setup() {
   SRC=$(mktemp -d)
   DEST=$(mktemp -d)
+  CMD_SRC=$(mktemp -d)
+  CMD_DEST=$(mktemp -d)
 }
 
 teardown() {
-  rm -rf "$SRC" "$DEST"
+  rm -rf "$SRC" "$DEST" "$CMD_SRC" "$CMD_DEST"
+}
+
+run_sync() {
+  run "$SCRIPT" --agents-source "$SRC" --agents-dest "$DEST" \
+    --commands-source "$CMD_SRC" --commands-dest "$CMD_DEST" "$@"
 }
 
 write_plain_agent_source() {
@@ -62,7 +73,7 @@ model: inherit
 Body text.
 EOF
 
-  run "$SCRIPT" --agents-source "$SRC" --agents-dest "$DEST"
+  run_sync
   [ "$status" -eq 0 ]
 
   [ -f "$DEST/clojure-advisor.md" ]
@@ -80,7 +91,7 @@ description: No harness overlay needed.
 Body text.
 EOF
 
-  run "$SCRIPT" --agents-source "$SRC" --agents-dest "$DEST"
+  run_sync
   [ "$status" -eq 0 ]
 
   [ -f "$DEST/plain-agent.md" ]
@@ -91,9 +102,42 @@ EOF
   printf 'No frontmatter here.\n' > "$SRC/no-frontmatter.md"
   write_plain_agent_source
 
-  run "$SCRIPT" --agents-source "$SRC" --agents-dest "$DEST"
+  run_sync
   [ "$status" -eq 0 ]
 
   [ ! -f "$DEST/no-frontmatter.md" ]
   [ -f "$DEST/plain-agent.md" ]
+}
+
+@test "a command's shared description and claude block are merged into the generated file's own frontmatter" {
+  cat > "$CMD_SRC/legacy-gate.md" <<'EOF'
+---
+description: Derive and verify .claude/legacy.json.
+claude:
+  argument-hint: "[optional: path hint]"
+  allowed-tools: Bash, Read, Write
+---
+
+# Task
+
+Body text.
+EOF
+
+  cat > "$CMD_DEST/expected-legacy-gate.md" <<'EOF'
+---
+description: Derive and verify .claude/legacy.json.
+argument-hint: "[optional: path hint]"
+allowed-tools: Bash, Read, Write
+---
+
+# Task
+
+Body text.
+EOF
+
+  run_sync
+  [ "$status" -eq 0 ]
+
+  [ -f "$CMD_DEST/legacy-gate.md" ]
+  cmp "$CMD_DEST/legacy-gate.md" "$CMD_DEST/expected-legacy-gate.md"
 }
