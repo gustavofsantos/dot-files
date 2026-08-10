@@ -199,3 +199,31 @@ EOF
 
   [ -f "$DEST/hand-made.md" ]
 }
+
+@test "--dry-run reports what it would generate without creating destinations or writing files" {
+  write_always_apply_source rule-a "Rule A body."
+  local claude_dest="$DEST/generated"
+  local cursor_dest="$CURSOR_DEST/generated"
+
+  run "$SCRIPT" --source "$SRC" --claude-dest "$claude_dest" --cursor-dest "$cursor_dest" --dry-run
+  [ "$status" -eq 0 ]
+
+  [[ "$output" == *"gen   rule-a.md"* ]]
+  [[ "$output" == *"gen   rule-a.mdc"* ]]
+  [ ! -d "$claude_dest" ]
+  [ ! -d "$cursor_dest" ]
+}
+
+@test "--dry-run reports a pending prune without deleting the file or touching the manifest" {
+  write_always_apply_source rule-a "Rule A body."
+  write_always_apply_source rule-b "Rule B body."
+  "$SCRIPT" --source "$SRC" --claude-dest "$DEST" --cursor-dest "$CURSOR_DEST"
+
+  rm "$SRC/rule-b.md"
+  run "$SCRIPT" --source "$SRC" --claude-dest "$DEST" --cursor-dest "$CURSOR_DEST" --dry-run
+  [ "$status" -eq 0 ]
+
+  [[ "$output" == *"prune rule-b.md"* ]]
+  [ -f "$DEST/rule-b.md" ]
+  grep -qx "rule-b.md" "$DEST/.rules-sync-manifest"
+}
