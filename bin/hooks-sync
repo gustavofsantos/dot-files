@@ -1,0 +1,109 @@
+#!/usr/bin/env python3
+"""
+hooks-sync -- compile agents/hooks/{claude.settings.json,cursor.hooks.json}
+into the real per-harness hook config.
+
+Claude hooks live inside .claude/settings.json alongside permissions/env,
+which stay hand-maintained: hooks-sync merges only the "hooks" key from
+agents/hooks/claude.settings.json into the existing settings.json, leaving
+every other key untouched.
+
+Cursor hooks have their own dedicated file (nothing else lives in
+.cursor/hooks.json), so hooks-sync generates it wholesale from
+agents/hooks/cursor.hooks.json.
+
+Usage:
+  hooks-sync [--claude-source FILE] [--claude-dest FILE]
+             [--cursor-source FILE] [--cursor-dest FILE] [--dry-run]
+
+Defaults (relative to the repo root):
+  --claude-source  agents/hooks/claude.settings.json
+  --claude-dest    .claude/settings.json
+  --cursor-source  agents/hooks/cursor.hooks.json
+  --cursor-dest    .cursor/hooks.json
+
+Idempotent: re-running with unchanged sources reproduces the same output.
+"""
+
+import json
+import os
+import sys
+
+DOTFILES_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def parse_args(argv):
+    opts = {
+        "claude_source": os.path.join(DOTFILES_DIR, "agents", "hooks", "claude.settings.json"),
+        "claude_dest": os.path.join(DOTFILES_DIR, ".claude", "settings.json"),
+        "cursor_source": os.path.join(DOTFILES_DIR, "agents", "hooks", "cursor.hooks.json"),
+        "cursor_dest": os.path.join(DOTFILES_DIR, ".cursor", "hooks.json"),
+        "dry_run": False,
+    }
+    args = list(argv)
+    while args:
+        arg = args.pop(0)
+        if arg == "--claude-source":
+            opts["claude_source"] = args.pop(0)
+        elif arg == "--claude-dest":
+            opts["claude_dest"] = args.pop(0)
+        elif arg == "--cursor-source":
+            opts["cursor_source"] = args.pop(0)
+        elif arg == "--cursor-dest":
+            opts["cursor_dest"] = args.pop(0)
+        elif arg == "--dry-run":
+            opts["dry_run"] = True
+        elif arg in ("-h", "--help"):
+            print(__doc__.strip())
+            sys.exit(0)
+        else:
+            print(f"hooks-sync: unknown argument {arg!r}", file=sys.stderr)
+            sys.exit(2)
+    return opts
+
+
+def read_json(path):
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def write_json(path, data, dry_run):
+    print(f"  gen   {path}")
+    if dry_run:
+        return
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+        f.write("\n")
+
+
+def sync_claude(source, dest, dry_run):
+    print(f"claude -> {dest}")
+    if not os.path.isfile(source):
+        print(f"  skip  source not found: {source}", file=sys.stderr)
+        return
+
+    src = read_json(source)
+    dest_data = read_json(dest) if os.path.isfile(dest) else {}
+    dest_data["hooks"] = src.get("hooks", {})
+    write_json(dest, dest_data, dry_run)
+
+
+def sync_cursor(source, dest, dry_run):
+    print(f"cursor -> {dest}")
+    if not os.path.isfile(source):
+        print(f"  skip  source not found: {source}", file=sys.stderr)
+        return
+
+    write_json(dest, read_json(source), dry_run)
+
+
+def main(argv):
+    opts = parse_args(argv)
+    sync_claude(opts["claude_source"], opts["claude_dest"], opts["dry_run"])
+    sync_cursor(opts["cursor_source"], opts["cursor_dest"], opts["dry_run"])
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
