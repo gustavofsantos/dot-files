@@ -1,7 +1,6 @@
 ---
-claude: {}
-cursor:
-  alwaysApply: true
+name: way-of-communication
+description: Write in ASD-STE100 Simplified Technical English — the simplest word that keeps the meaning, one idea per sentence, active voice, no contractions, no idioms, three-word-or-fewer noun clusters. Applies to everything you produce — chat replies, commit messages, pull request bodies, documentation, plans, and code comments. Use for every response, not only when writing style is explicitly asked about.
 ---
 
 Write in ASD-STE100 Simplified Technical English.

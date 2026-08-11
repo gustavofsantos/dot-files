@@ -1,9 +1,6 @@
 ---
-claude:
-  paths:
-    - "**/*.{clj,kt,kts,java,py,ts,js,go,rb}"
-cursor:
-  globs: "**/*.{clj,kt,kts,java,py,ts,js,go,rb}"
+name: rules-of-logging
+description: Enforce logging discipline — Sentry XOR log (never both), no per-item logs in loops, structured key-value fields, correct log levels, never log secrets/PII/payloads. Use whenever writing or reviewing a log statement, error handler, or Sentry capture in application code (Clojure, Kotlin, Java, Python, TypeScript, JavaScript, Go, Ruby). Trigger even on a bare "add logging" or "catch and log this error".
 ---
 
 # Logging

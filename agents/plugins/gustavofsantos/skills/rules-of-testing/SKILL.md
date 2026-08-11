@@ -1,11 +1,6 @@
 ---
-claude:
-  paths:
-    - "**/*test.{clj,kt,kts,java,py,ts,js,go,rb}"
-    - "**/*IT.{kt,java}"
-    - "**/*Test.{kt,java}"
-cursor:
-  globs: "**/*test.{clj,kt,kts,java,py,ts,js,go,rb},**/*IT.{kt,java},**/*Test.{kt,java}"
+name: rules-of-testing
+description: Steer test structure toward integration-first sequencing, BDD Given/When/Then naming, one behavior per test, and treating test friction (hard to instantiate, heavy mocking, long setup) as a signal to redesign production code rather than push through. Use whenever writing or reviewing a test file, choosing between an integration and a unit test, or noticing a test is hard to write. Pairs with `smelly-test` for how to name the test as a business promise.
 ---
 
 # Testing

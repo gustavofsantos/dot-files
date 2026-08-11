@@ -1,7 +1,6 @@
 ---
-claude: {}
-cursor:
-  alwaysApply: true
+name: way-of-planning
+description: Before starting a new feature or behavior change, agree a minimal plan first — EARS requirements plus an ordered list of vertical slices — and validate it with the user before executing any slice. Use whenever the user asks for a feature or behavior change that is not a one-line fix, before entering way-of-work. Skip for a direct ask too small to need slices.
 ---
 
 Before entering way-of-work for a new feature or behavior change, agree on a minimal plan with the user first. Skip this rule for a direct ask too small to need a plan — a one-line fix has no slices to sequence. The plan is a kickstart, not a spec. The acceptance tests written per slice inside way-of-work are the real documentation. Keep the plan short enough to fit in one message: EARS requirements plus an ordered list of vertical slices.

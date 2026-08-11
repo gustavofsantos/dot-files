@@ -21,7 +21,7 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 | `init-engineering-repo.sh` | Idempotently `git init`s `~/engineering`, writes its `.gitignore`, seeds the first commit |
 | `link-bin-files.sh` | Symlinks every file in `bin/` into `~/.bin/` (hook scripts live there too, prefixed `hooks-*`) |
 | `link-xdg-config.sh` | Symlinks each subdir of `config/` into `~/.config/` |
-| `install-agents.sh` | Single source of truth for installing agent config: compiles `agents/{rules,agents,commands,hooks}` via its own embedded `rules-sync`/`agents-sync`/`hooks-sync` subcommands, symlinks each `agents/plugins/<name>/` into `~/.claude/skills/` and `~/.cursor/plugins/local/`, then symlinks agents/commands/themes/rules/workflows into `~/.claude/` and rules/hooks into `~/.cursor/`; merges `.claude/settings.json` into `~/.claude/settings.json` |
+| `install-agents.sh` | Single source of truth for installing agent config: compiles `agents/{agents,commands,hooks}` via its own embedded `agents-sync`/`hooks-sync` subcommands, symlinks each `agents/plugins/<name>/` into `~/.claude/skills/` and `~/.cursor/plugins/local/`, then symlinks agents/commands/themes/workflows into `~/.claude/` and hooks into `~/.cursor/`; merges `.claude/settings.json` into `~/.claude/settings.json` |
 | `set-caps-lock-ctrl.sh` | Sets the GNOME "Caps Lock as Ctrl" `xkb-options` key (`ctrl:nocaps`) via `gsettings`, no `gnome-tweaks` package needed. No-ops if `gsettings` is absent. |
 
 Re-running `setup.sh` is idempotent (`ln -sf`).
@@ -34,10 +34,10 @@ Re-running `setup.sh` is idempotent (`ln -sf`).
 ## Directory layout
 
 - `bin/` — personal scripts added to `$PATH` via `~/.bin/`, including hook scripts (`hooks-*`)
-- `agents/` — harness-generic agent config: `rules/`, `agents/`, `commands/`, `hooks/`, `plugins/`. This is the source of truth; `.claude/` and `.cursor/` are compiled from it (see "Skills and plugins", "Hooks" below). `agents/hooks/` holds only the per-harness wiring config (`claude.settings.json`, `cursor.hooks.json`) — the hook scripts themselves live in `bin/`
+- `agents/` — harness-generic agent config: `agents/`, `commands/`, `hooks/`, `plugins/`. This is the source of truth; `.claude/` and `.cursor/` are compiled from it (see "Skills and plugins", "Hooks" below). `agents/hooks/` holds only the per-harness wiring config (`claude.settings.json`, `cursor.hooks.json`) — the hook scripts themselves live in `bin/`
 - `test_bin/` — bats tests for `bin/` scripts, one `<script>.bats` per script
 - `config/` — XDG config dirs: `nvim/`, `ghostty/`, `bat/`, `lazygit/`, `zed/`, `wezterm/`, `tmux/`, `sheldon/`, `starship.toml`, `vale/`
-- `.claude/` — compiled/hand-maintained Claude Code config: `themes/`, `rules/`, `agents/`, `commands/`, `workflows/`, `settings.json`
+- `.claude/` — compiled/hand-maintained Claude Code config: `themes/`, `agents/`, `commands/`, `workflows/`, `settings.json`
 
 ## Skills and plugins
 
@@ -58,11 +58,15 @@ or a manifest need `/reload-plugins` there. The CLI has no equivalent reload com
 needs none: every invocation is a fresh process, so it re-reads the plugin directory from
 scratch each time.
 
-Rules and hooks are not part of either plugin format (Claude Code's plugin schema has no
-"rules" component, and Cursor's plugin-hook support is unconfirmed), so they stay on
-`install-agents.sh`'s `rules-sync`/`hooks-sync` compile pipeline regardless of what moves
-into a plugin — see "Hooks" below. Likewise `agents/commands/legacy-gate.md` hasn't moved
-into a plugin, so it still goes through `agents-sync`'s Claude-only compile step.
+There is no separate "rules" mechanism anymore — every rule (including the always-apply
+`way-of-work`/`way-of-planning`/`way-of-communication` trio) is now a skill like any other,
+converted with the same eager, trigger-rich description style. Trading a rule's guaranteed
+always-on loading for a skill's model-decided invocation is a real trade-off, not a free
+repackaging — see "Conventions skills follow" below. Hooks alone are not part of either
+plugin format (Claude Code's plugin schema has no "rules" component either way, and
+Cursor's plugin-hook support is unconfirmed), so they stay on `install-agents.sh`'s
+`hooks-sync` compile pipeline — see "Hooks" below. A command not yet moved into a plugin
+still goes through `agents-sync`'s Claude-only compile step.
 
 An agent or command shipped inside a plugin uses the same frontmatter shape as
 `agents-sync`'s compiled `.claude/agents/`/`.claude/commands/` *output* — flat keys, no
@@ -72,9 +76,12 @@ to flatten one.
 Conventions skills follow (keep them when editing):
 - **Trigger is deliberate.** Skills the model should auto-load (format references like
   `bruno`, `clojure-datomic`; context-triggered workflows like `create-pull-request`)
-  have rich trigger descriptions. Explicit-command skills set
-  `disable-model-invocation: true` and keep the description to one line — it's only
-  shown to the human.
+  have rich trigger descriptions. The former always-apply rules (`way-of-work`,
+  `way-of-planning`, `way-of-communication`) need the eagerest descriptions of all, since a
+  skill has no guaranteed always-on loading the way a rule did — the description is the
+  only thing standing between "always followed" and "silently skipped this time."
+  Explicit-command skills set `disable-model-invocation: true` and keep the description to
+  one line — it's only shown to the human.
 - **Steps in `SKILL.md`, bulk reference behind pointers.** Branch-specific or
   phase-specific material lives in `references/*.md`, loaded only when that path runs
   (e.g. `bruno` detects the collection format and loads one of two format files).
@@ -104,11 +111,10 @@ until that's verified. Keep bodies harness-agnostic regardless: don't name a spe
 subagent (say "use a subagent to explore X" so each harness picks the agent that fits) or
 a Claude-only tool.
 
-Rules and hooks still go through `install-agents.sh rules-sync`/`hooks-sync` to generate
-`.cursor/rules/` and `.cursor/hooks.json` from `agents/rules/` and `agents/hooks/` — see
-"Hooks" below. `agents/commands/legacy-gate.md` likewise still goes through
-`agents-sync`'s Claude-only compile step, since Cursor has no subagent-tool equivalent and
-Cursor command support wasn't built out this round.
+Hooks still go through `install-agents.sh hooks-sync` to generate `.cursor/hooks.json`
+from `agents/hooks/` — see "Hooks" below. A command not yet moved into a plugin still
+goes through `agents-sync`'s Claude-only compile step, since Cursor has no subagent-tool
+equivalent and Cursor command support wasn't built out this round.
 
 ## Hooks
 
@@ -134,14 +140,14 @@ them: it merges `claude.settings.json`'s `hooks` key into the real `.claude/sett
 
 That compiled `.claude/settings.json` then merges into the global `~/.claude/settings.json`
 on install (`install-agents.sh`): global settings win on scalar/object conflicts,
-`permissions.allow/deny/ask` and `hooks` arrays are unioned. `.cursor/hooks.json` and
-`.cursor/rules/` install as plain symlinks — Cursor reads them directly, no merge step.
+`permissions.allow/deny/ask` and `hooks` arrays are unioned. `.cursor/hooks.json` installs
+as a plain symlink — Cursor reads it directly, no merge step.
 
-`install-agents.sh` is the single source of truth for installing agent config: `rules-sync`,
-`agents-sync`, and `hooks-sync` are subcommands it embeds directly (`install-agents.sh
-rules-sync|agents-sync|hooks-sync [flags]`), not separate `bin/` scripts, so there is one
-script to read to understand the whole compile-and-install pipeline. See the table under
-"Setup" above for what the default (no-subcommand) invocation does end to end.
+`install-agents.sh` is the single source of truth for installing agent config: `agents-sync`
+and `hooks-sync` are subcommands it embeds directly (`install-agents.sh
+agents-sync|hooks-sync [flags]`), not separate `bin/` scripts, so there is one script to
+read to understand the whole compile-and-install pipeline. See the table under "Setup"
+above for what the default (no-subcommand) invocation does end to end.
 
 `link-bin-files.sh` (part of `setup.sh`) symlinks every file in `bin/` into `~/.bin/`,
 including the `hooks-*` scripts, so a hook is reachable by bare name from generated

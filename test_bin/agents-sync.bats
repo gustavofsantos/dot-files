@@ -183,6 +183,21 @@ EOF
   [ -f "$DEST/hand-made.md" ]
 }
 
+@test "a missing agents-source directory is treated as empty, not fatal, and commands still sync" {
+  rm -rf "$SRC"
+  cat > "$CMD_SRC/legacy-gate.md" <<'EOF'
+---
+description: Derive and verify .claude/legacy.json.
+---
+Body text.
+EOF
+
+  run_sync
+  [ "$status" -eq 0 ]
+
+  [ -f "$CMD_DEST/legacy-gate.md" ]
+}
+
 @test "--dry-run reports what it would generate without creating destinations or writing files" {
   write_named_agent_source agent-a
   local dest="$DEST/generated"

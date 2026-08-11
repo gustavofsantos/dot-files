@@ -1,10 +1,8 @@
 ---
-claude:
-  paths:
-    - "**/*.sql"
-cursor:
-  globs: "**/*.sql"
+name: sql-comments
+description: Add COMMENT clauses to every table and column in SQL DDL, explaining why the field exists or any non-obvious constraint rather than restating the column name. Use whenever writing or modifying a CREATE TABLE, ALTER TABLE, or other DDL statement.
 ---
+
 When writing or modifying SQL DDL, always add `COMMENT` clauses to tables and columns.
 
 ```sql

@@ -1,7 +1,6 @@
 ---
-claude: {}
-cursor:
-  alwaysApply: true
+name: way-of-work
+description: When implementing an approved feature slice or behavior change, write a failing acceptance test first, validate it with the user, then drive an inner failing-unit-test-to-green TDD loop, commit the behavior change, and only then flock/refactor in a separate commit. Use whenever about to write production code for a feature or behavior change — before writing any implementation, not after.
 ---
 
 When implementing a feature or behavior change requested by the user, follow this outer acceptance loop with an inner unit TDD cycle.

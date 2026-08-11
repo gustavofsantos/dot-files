@@ -4,10 +4,10 @@
 #
 # Runs the real script against a from-scratch fixture repo (not the real
 # dotfiles checkout) so a test run never compiles into or symlinks from the
-# actual repo. rules-sync/agents-sync/hooks-sync are embedded in
-# install-agents.sh itself and default their paths from the DOTFILES_DIR env
-# var the script honors, so the fixture only needs to mirror agents/* and
-# .claude/ under one root, pointed at via DOTFILES_DIR.
+# actual repo. agents-sync/hooks-sync are embedded in install-agents.sh
+# itself and default their paths from the DOTFILES_DIR env var the script
+# honors, so the fixture only needs to mirror agents/* and .claude/ under
+# one root, pointed at via DOTFILES_DIR.
 #
 # Isolation strategy:
 #   DOTFILES_DIR -> a constructed fixture repo (tmpdir)
@@ -26,22 +26,11 @@ setup() {
   cp "$REAL_REPO/$SCRIPT_REL" "$FIXTURE/scripts/install-agents.sh"
   chmod +x "$FIXTURE/scripts/"*
 
-  mkdir -p "$FIXTURE/agents/rules" "$FIXTURE/agents/agents" "$FIXTURE/agents/commands" \
+  mkdir -p "$FIXTURE/agents/agents" "$FIXTURE/agents/commands" \
     "$FIXTURE/agents/hooks" "$FIXTURE/agents/plugins/demo-plugin/.claude-plugin" \
     "$FIXTURE/agents/plugins/demo-plugin/skills/demo-skill" \
-    "$FIXTURE/.claude/agents" "$FIXTURE/.claude/commands" "$FIXTURE/.claude/rules" \
+    "$FIXTURE/.claude/agents" "$FIXTURE/.claude/commands" \
     "$FIXTURE/.claude/themes" "$FIXTURE/.claude/workflows"
-
-  cat > "$FIXTURE/agents/rules/demo-rule.md" <<'EOF'
----
-claude:
-  paths:
-    - "**/*.demo"
-cursor:
-  globs: "**/*.demo"
----
-Demo rule body.
-EOF
 
   cat > "$FIXTURE/agents/agents/demo-agent.md" <<'EOF'
 ---
@@ -85,15 +74,6 @@ EOF
 
 teardown() {
   rm -rf "$FIXTURE" "$FAKE_HOME"
-}
-
-@test "compiles and installs rules for both harnesses" {
-  bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
-
-  [ -L "$HOME/.claude/rules/demo-rule.md" ]
-  grep -q "Demo rule body" "$HOME/.claude/rules/demo-rule.md"
-  [ -L "$HOME/.cursor/rules/demo-rule.mdc" ]
-  grep -q "Demo rule body" "$HOME/.cursor/rules/demo-rule.mdc"
 }
 
 @test "compiles and installs subagents and commands" {
@@ -174,22 +154,12 @@ EOF
   [ "$invalid" -eq 0 ]
 }
 
-@test "is idempotent: running twice produces the same installed rule content" {
+@test "is idempotent: running twice produces the same installed agent content" {
   bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
-  first=$(cat "$HOME/.claude/rules/demo-rule.md")
+  first=$(cat "$HOME/.claude/agents/demo-agent.md")
 
   bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
-  second=$(cat "$HOME/.claude/rules/demo-rule.md")
+  second=$(cat "$HOME/.claude/agents/demo-agent.md")
 
   [ "$first" = "$second" ]
-}
-
-@test "prunes a dangling rule symlink when the source rule is removed" {
-  bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
-  [ -L "$HOME/.claude/rules/demo-rule.md" ]
-
-  rm "$FIXTURE/agents/rules/demo-rule.md"
-  bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
-
-  [ ! -e "$HOME/.claude/rules/demo-rule.md" ]
 }
