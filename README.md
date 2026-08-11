@@ -10,8 +10,8 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 
 That's the only step. It's idempotent — re-run it any time. `setup.sh` delegates to
 the scripts in `scripts/`: it links dotfiles into `$HOME`, seeds local-override files,
-links `bin/` and XDG config, and installs the agent config — skills, subagents,
-commands, and hooks — for Claude Code and Cursor (below).
+links `bin/` and XDG config, and installs the agent config — plugins and settings — for
+Claude Code and Cursor (below).
 
 ### Local overrides (never committed)
 
@@ -26,34 +26,32 @@ Both are created empty by `setup.sh` if missing.
 
 ## Agent config
 
-Skills, subagents, commands, and hooks live once each under `agents/` —
-`agents/plugins/`, `agents/agents/`, `agents/commands/`, `agents/hooks/` —
-in a harness-generic form. This is the source of truth; nothing under `.claude/` or
-`.cursor/` is hand-edited except `.claude/settings.json`'s `permissions`/`env`. There is
-no separate "rules" mechanism — a rule is just a skill with an eager trigger description,
-like any other.
+Skills, subagents, hooks, and themes all live inside a single plugin per project at
+`agents/plugins/<name>/`, hand-authored directly in each harness's native plugin shape —
+there is no separate source format or compile step. This is the source of truth; nothing
+under `.claude/skills/` or `.cursor/plugins/local/` is hand-edited. `.claude/settings.json`
+holds the one thing that isn't plugin-scoped: `permissions`/`env`/`statusLine`/`theme`,
+hand-maintained and merged into the global settings file on install. There is no separate
+"rules" mechanism — a rule is just a skill with an eager trigger description, like any
+other.
 
 ### Install
 
 `./setup.sh` runs `scripts/install-agents.sh`, which:
 
-1. Compiles `agents/{agents,commands,hooks}` into `.claude/` (and, where a
-   harness-specific block exists, `.cursor/`) via its own embedded `agents-sync`,
-   `hooks-sync` subcommands.
-2. Symlinks each `agents/plugins/<name>/` into `~/.claude/skills/` (a Claude Code
+1. Symlinks each `agents/plugins/<name>/` into `~/.claude/skills/` (a Claude Code
    skills-directory plugin) and `~/.cursor/plugins/local/` (a Cursor local plugin, read by
-   both the desktop app and the CLI) — the only way skills reach either harness.
-3. Symlinks subagents, commands, themes, and workflows into `~/.claude/`, and hooks into
-   `~/.cursor/`.
-4. Merges `.claude/settings.json` into `~/.claude/settings.json` (global wins on
-   conflicts; `permissions`/`hooks` arrays are unioned).
+   both the desktop app and the CLI) — the only way a plugin's skills, agents, hooks, and
+   themes reach either harness.
+2. Merges `.claude/settings.json` into `~/.claude/settings.json` (global wins on
+   conflicts; `permissions` arrays are unioned).
 
-### Add a skill, subagent, command, or hook
+### Add a skill, subagent, hook, or theme
 
-A skill goes under a plugin's `agents/plugins/<name>/skills/<skill>/`; everything else
-drops under its matching `agents/` subdirectory. Commit and re-run `./setup.sh`.
-See [`CLAUDE.md`](CLAUDE.md) for each type's exact frontmatter shape and the
-per-harness compile step.
+Everything drops directly under a plugin's matching subdirectory —
+`agents/plugins/<name>/skills/<skill>/`, `agents/plugins/<name>/hooks/`,
+`agents/plugins/<name>/themes/`. Commit and re-run `./setup.sh`. See
+[`CLAUDE.md`](CLAUDE.md) for each type's exact frontmatter shape and per-harness quirks.
 
 ## More
 

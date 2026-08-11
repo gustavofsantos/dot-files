@@ -103,7 +103,7 @@
     "type": "command",
     "command": "claude-statusline"
   },
-  "theme": "custom:nord",
+  "theme": "custom:gustavofsantos:nord",
   "teammateMode": "tmux",
   "defaultMode": "auto"
 }
