@@ -227,7 +227,7 @@ The vault is `$ENGINEERING_HOME` (`.zshenv`, default `~/engineering`) — the lo
 | `artifacts/` | `issue` skill | Raw material: notes, transcripts, data, diagrams, DDD surveys, hypothesis verdicts |
 | `spikes/` | `spike` skill | Answered unknowns |
 | `projects/` | `project` skill | One brief per project: glossary, topology, data map, standing questions |
-| `reconcile/<repo>/` | `reconcile` skill | entities/bridges/invariants/breaks tables |
+| `reconcile/` | `reconcile` skill | entities/bridges/invariants/breaks tables, org-wide across every repository |
 | `facts/`, `.metadata/` | `facts-churn` | The facts base and its provenance mapping |
 
 A brief lives at `projects/<slug>.md`, named by a bare slug because other files point at it as a key. An issue names its project in an optional `project:` frontmatter key, and `members.sh` derives the membership — the brief keeps no list, so nothing rots. An issue holds a delta; a brief holds system state. A campaign moves to `projects/done/` at the end; a domain the team owns never moves.

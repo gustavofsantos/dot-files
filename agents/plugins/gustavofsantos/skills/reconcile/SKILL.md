@@ -6,12 +6,16 @@ description: >-
   populations of records — invoices vs orders, ledger vs subledger, source system vs
   downstream, expected vs actual. Also use it for "why doesn't X match Y", "where did this
   record go", "is this number right", "what happened to contract N", and for any exploratory
-  question about systems or tables whose relationships are not yet known. Keeps what it learns
-  in the knowledge vault under `reconcile/<repo>/`: entities.tsv (grain and keys), bridges.tsv
-  (how ids map across systems), invariants.tsv (claims that must hold), breaks.tsv (classified
-  mismatches). Keeps the SQL that proves them in the repository under `model/probes/` and
-  `model/traces/`. Requires a query adapter skill (e.g. `datalake`) to execute
-  SQL. Use it even when the user only asks for a single number — the number is a probe.
+  question about systems or tables whose relationships are not yet known. Models the whole
+  organization, not one repository — a monorepo can host several systems, and one system can
+  span several repositories. Keeps what it learns in one org-wide knowledge vault under
+  `reconcile/`: entities.tsv (grain and keys), bridges.tsv (how ids map across systems,
+  including across repositories), invariants.tsv (claims that must hold), breaks.tsv
+  (classified mismatches). Keeps the SQL that proves them in each repository under
+  `model/probes/` and `model/traces/`, addressed as `<repo>/<id>` from the vault so a claim
+  stays traceable to its proof wherever that proof lives. Requires a query adapter skill
+  (e.g. `datalake`) to execute SQL. Use it even when the user only asks for a single number —
+  the number is a probe.
 ---
 
 # Reconcile
@@ -25,11 +29,17 @@ Two homes, split by what the file is. This skill directory is never a home for e
 
 | File | Home | Why |
 |---|---|---|
-| entities.tsv, bridges.tsv, invariants.tsv, breaks.tsv | `${ENGINEERING_HOME:-$HOME/engineering}/reconcile/<repo>/` | What you learned about the business. It outlives the repository. |
-| probes/*.sql, traces/*.sql, `model/ADAPTER` | `model/` in the repository | Executable assertions. They version with the code they assert against. |
+| entities.tsv, bridges.tsv, invariants.tsv, breaks.tsv | `${ENGINEERING_HOME:-$HOME/engineering}/reconcile/` | What you learned about the business. It outlives any one repository, and the business rarely fits in one. |
+| probes/*.sql, traces/*.sql, `model/ADAPTER` | `model/` in each repository | Executable assertions. They version with the code they assert against. |
 
-The `probe` column holds the bare probe id. It resolves to `model/probes/<id>.sql` in the
-repository you run from.
+The vault holds one set of tables for the whole organization. A monorepo can hold two or more
+systems. Name each system with its own `context` in entities.tsv. One system can also span two
+or more repositories. Its bridges then cross repository lines, not only system lines.
+
+The `probe` column holds `<repo>/<id>`. `repo` is the short name of the repository that owns
+the SQL, for example `billing-service/INV-002`. This resolves to `model/probes/<id>.sql` in
+that repository. Write the id bare, without a `<repo>/` prefix, only when you are certain that
+no other repository will ever hold a probe with that id. In practice, always prefix it.
 
 ## Adapter (port)
 
@@ -37,8 +47,10 @@ Executes nothing itself. Requires a command shaped like:
 
     <run-query> --description "<why>" --execute "<sql>" --output-format CSV
 
-Resolve in order: `model/ADAPTER` → a query-running skill in this repo → ask. Never call the
-raw client, never inline credentials, always state *why* in `--description`.
+Resolve in order: `model/ADAPTER` → a query-running skill in this repo → ask. A probe belongs
+to the repository named in its `<repo>/<id>` prefix — run it from there, not from wherever the
+question started. Never call the raw client, never inline credentials, always state *why* in
+`--description`.
 
 ## States
 
@@ -53,8 +65,9 @@ Name the state before acting.
 
 ## Frame
 
-Read the vault tables for this repo. Grep the adapter's query catalog for prior art. Then four
-lines, then stop for confirmation:
+Read the vault tables. They span every repository. Search by `context` and by entity name, not
+by which repository you happen to be sitting in. Grep the adapter's query catalog for prior
+art. Then four lines, then stop for confirmation:
 
     GRAIN      one row = ?
     KEYS       left.col -> right.col   (cite bridges.tsv, else UNKNOWN)
@@ -88,13 +101,15 @@ breaks survive, then log those to `breaks.tsv`. Prose decays silently. Predicate
 
 On green only:
 
-    key path            -> bridges.tsv
+    key path            -> bridges.tsv          (probe: <repo>/<id>)
     grain / cardinality -> entities.tsv
-    claim               -> invariants.tsv + probes/<id>.sql
+    claim               -> invariants.tsv + <repo>/model/probes/<id>.sql
     irreducible breaks  -> breaks.tsv
 
-The tables go to the vault. The SQL goes to the repository. An unprobed row in entities.tsv or
-bridges.tsv is hearsay. `scripts/no-unproven-claims.sh` fails closed on it.
+The tables go to the org-wide vault. The SQL goes to the repository named in its `<repo>/`
+prefix. An unprobed row in entities.tsv or bridges.tsv is hearsay. `scripts/no-unproven-claims.sh`
+fails closed on it. That script can only verify that a probe exists in the repository you write
+from. Promote a row only while you sit in the repository its probe id names.
 
 Red is equally mandatory: a failing probe is a falsified belief or a changed rule. Mark it red
 the moment it fails. Never delete a probe to green the suite.
@@ -111,4 +126,5 @@ result sets into the vault tables, into `model/`, or into the query catalog.
 - `references/traces.md` — bitemporal timelines, watermark measurement, precedence
   constraints.
 - `assets/model/` — worked templates for the four tables. Copy into
-  `${ENGINEERING_HOME:-$HOME/engineering}/reconcile/<repo>/` on first use.
+  `${ENGINEERING_HOME:-$HOME/engineering}/reconcile/` once, the first time this skill runs
+  anywhere. Every repository after that appends to the same tables.
