@@ -1,8 +1,6 @@
 ---
+name: legacy-gate
 description: Derive and verify .claude/legacy.json so the change-point gate works in this repo
-claude:
-  argument-hint: "[optional: path hint, e.g. modules/billing]"
-  allowed-tools: Bash, Read, Write, Glob, Grep
 ---
 
 # Context
