@@ -105,52 +105,5 @@
   },
   "theme": "custom:nord",
   "teammateMode": "tmux",
-  "defaultMode": "auto",
-  "hooks": {
-    "SessionStart": [
-      {
-        "type": "command",
-        "command": "hooks-session-track --harness claude"
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "type": "command",
-        "command": "hooks-session-track --harness claude"
-      }
-    ],
-    "Stop": [
-      {
-        "type": "command",
-        "command": "hooks-engineering-autocommit --harness claude"
-      },
-      {
-        "type": "command",
-        "command": "hooks-checks-snapshot --harness claude"
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Edit|Write|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "hooks-change-point-gate --harness claude"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "hooks-vale-lint --harness claude",
-            "timeout": 5
-          }
-        ]
-      }
-    ]
-  }
+  "defaultMode": "auto"
 }

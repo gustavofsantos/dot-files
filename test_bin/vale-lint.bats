@@ -3,7 +3,9 @@
 # Tests for bin/hooks-vale-lint
 #
 # PostToolUse hook: after Edit/Write/MultiEdit on a *.md file, run vale and
-# feed warning+error severity issues back to Claude via stderr (exit 2).
+# feed warning+error severity issues back to the agent. Claude reads them
+# back via stderr (exit 2); Cursor's postToolUse can't block after the fact,
+# so it reads a {"additional_context": ...} JSON object on stdout (exit 0).
 # Suggestion-level alerts (Vocab, PassiveVoice, ...) are dropped — see
 # config/vale/README.md's "Dogfood results" for which STE checks are
 # error-level versus suggestion-level.
@@ -36,7 +38,7 @@ payload() {
 }
 
 @test "an unrecognized --harness value is rejected" {
-  run bash "$SCRIPT" --harness cursor <<< "$(payload "$TEST_DIR/x.md")"
+  run bash "$SCRIPT" --harness vscode <<< "$(payload "$TEST_DIR/x.md")"
   [ "$status" -ne 0 ]
 }
 
@@ -51,6 +53,18 @@ EOF
   [[ "$output" == *"SentenceLength"* ]]
 }
 
+@test "cursor: exits 0 and prints additional_context for an error-level violation" {
+  cat > "$TEST_DIR/bad.md" <<'EOF'
+# Test
+
+An extremely long sentence that goes on and on and on and on and on and on and on and on to trip the sentence length rule for sure.
+EOF
+  run bash "$SCRIPT" --harness cursor <<< "$(payload "$TEST_DIR/bad.md")"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"SentenceLength"* ]]
+  jq -e '.additional_context | contains("SentenceLength")' <<< "$output" >/dev/null
+}
+
 @test "exits 0 for a clean markdown file" {
   cat > "$TEST_DIR/good.md" <<'EOF'
 # Test
@@ -59,6 +73,17 @@ Short and clean.
 EOF
   run bash "$SCRIPT" --harness claude <<< "$(payload "$TEST_DIR/good.md")"
   [ "$status" -eq 0 ]
+}
+
+@test "cursor: exits 0 with no output for a clean markdown file" {
+  cat > "$TEST_DIR/good.md" <<'EOF'
+# Test
+
+Short and clean.
+EOF
+  run bash "$SCRIPT" --harness cursor <<< "$(payload "$TEST_DIR/good.md")"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }
 
 @test "exits 0 (non-blocking) for a file with only suggestion-level issues" {

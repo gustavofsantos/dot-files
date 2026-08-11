@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # hooks-vale-lint — PostToolUse(Edit|Write|MultiEdit) hook: lint markdown files with
-# vale after every edit, feeding warning+error prose issues back to Claude
-# via stderr so it can fix them inline. Suggestion-level alerts (Vocab,
+# vale after every edit, feeding warning+error prose issues back to the agent
+# so it can fix them inline. Suggestion-level alerts (Vocab,
 # PassiveVoice, ...) are dropped — see config/vale/README.md's "Dogfood
 # results" for which STE checks are error-level (unambiguous rules) versus
 # suggestion-level (heuristics with real false-positive rates). warning+
@@ -10,9 +10,18 @@
 # FleschReadingEase, ...) that vale's exit code alone would miss, since it
 # only goes non-zero on error-level alerts.
 #
-# Usage: hooks-vale-lint --harness claude
+# Usage: hooks-vale-lint --harness claude|cursor
 #
-# No Cursor implementation today.
+# Wire for Claude (plugin hooks/hooks.json), event: PostToolUse, matcher Edit|Write|MultiEdit
+# Wire for Cursor (plugin hooks/cursor.hooks.json), event: postToolUse, matcher Write
+#
+# Both harnesses' post-tool-use payload uses the same field names for what
+# this hook needs (.cwd, .tool_input.file_path), so the parsing below is
+# shared. Only the feedback channel differs: Claude reads the warning back
+# from a non-zero exit + stderr; Cursor's postToolUse "cannot block tool
+# execution — the tool has already completed" (its docs), so instead it
+# reads a JSON {"additional_context": ...} object on stdout, printed with
+# exit 0.
 set -euo pipefail
 
 HARNESS=""
@@ -23,10 +32,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ "$HARNESS" != "claude" ]]; then
-  echo "hooks-vale-lint: --harness must be 'claude' (got '${HARNESS}')" >&2
-  exit 1
-fi
+case "$HARNESS" in
+  claude|cursor) ;;
+  *)
+    echo "hooks-vale-lint: --harness must be 'claude' or 'cursor' (got '${HARNESS}')" >&2
+    exit 1
+    ;;
+esac
 
 command -v jq >/dev/null 2>&1 || exit 0
 command -v vale >/dev/null 2>&1 || exit 0
@@ -59,9 +71,15 @@ alerts=$(printf '%s' "$report" | jq -c '[.[][] | select(.Severity == "warning" o
 count=$(printf '%s' "$alerts" | jq 'length')
 [ "$count" -gt 0 ] || exit 0
 
-{
+message=$(
   echo "vale flagged $count issue(s) in $file:"
   printf '%s' "$alerts" | jq -r '.[] | "  \(.Line):\(.Span[0]) [\(.Severity)] \(.Check): \(.Message)"'
-} >&2
+)
 
-exit 2
+if [[ "$HARNESS" == "claude" ]]; then
+  printf '%s\n' "$message" >&2
+  exit 2
+else
+  jq -n --arg ctx "$message" '{additional_context: $ctx}'
+  exit 0
+fi
