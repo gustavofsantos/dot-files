@@ -8,3 +8,12 @@ lazygit = "latest"
 vale = "latest"
 fzf = "latest"
 bats = "latest"
+lua = "latest"
+luau = "latest"
+luajit = "latest"
+ruby = "latest"
+ripgrep = "latest"
+fd = "latest"
+
+[settings.ruby]
+compile = false
