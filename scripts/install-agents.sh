@@ -618,30 +618,24 @@ run_full_install() {
     && echo "Compiling hooks... OK" \
     || echo "Compiling hooks... FAILED (non-fatal)"
 
-  echo "Installing skills..."
-  mkdir -p "$HOME/.claude/skills"
-  for skill in "$DOTFILES_DIR"/agents/skills/*/; do
-    [ -f "$skill/SKILL.md" ] || continue
-    name=$(basename "$skill")
-    ln -sfn "${skill%/}" "$HOME/.claude/skills/$name"
+  # Every skill lives inside a plugin under agents/plugins/<name>/ -- installing
+  # a plugin is the only way skills reach either harness. Symlinking the whole
+  # plugin directory (rather than compiling/transforming its contents) makes it
+  # a Claude Code skills-directory plugin (`<name>@skills-dir`, discovered in
+  # place) and a Cursor local plugin, both live-edited from the one source.
+  echo "Installing plugins..."
+  mkdir -p "$HOME/.claude/skills" "$HOME/.cursor/plugins/local"
+  for plugin in "$DOTFILES_DIR"/agents/plugins/*/; do
+    [ -f "$plugin/.claude-plugin/plugin.json" ] || continue
+    name=$(basename "${plugin%/}")
+    ln -sfn "${plugin%/}" "$HOME/.claude/skills/$name"
+    ln -sfn "${plugin%/}" "$HOME/.cursor/plugins/local/$name"
   done
-  # prune dangling skill symlinks (removed from dotfiles)
-  find "$HOME/.claude/skills" -maxdepth 1 -type l | while read -r link; do
+  # prune dangling plugin symlinks (removed from dotfiles)
+  find "$HOME/.claude/skills" "$HOME/.cursor/plugins/local" -maxdepth 1 -type l | while read -r link; do
     [ -e "$link" ] || rm "$link"
   done
-  echo "Installing skills... OK"
-
-  echo "Syncing skills to other harnesses..."
-  ln -sf "$DOTFILES_DIR/.claude/harness-profiles.yml" "$HOME/.claude/harness-profiles.yml"
-  if command -v ruby >/dev/null 2>&1; then
-    ruby "$DOTFILES_DIR/bin/skills-sync" \
-      --source "$DOTFILES_DIR/agents/skills" \
-      --profiles "$DOTFILES_DIR/.claude/harness-profiles.yml" >/dev/null \
-      && echo "Syncing skills to other harnesses... OK" \
-      || echo "Syncing skills to other harnesses... FAILED (non-fatal)"
-  else
-    echo "Syncing skills to other harnesses... skipped (no ruby)"
-  fi
+  echo "Installing plugins... OK"
 
   echo "Installing custom subagents..."
   install_and_prune_symlinks "$DOTFILES_DIR/.claude/agents/*" "$HOME/.claude/agents"

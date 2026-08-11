@@ -27,7 +27,7 @@ Both are created empty by `setup.sh` if missing.
 ## Agent config
 
 Skills, subagents, commands, rules, and hooks live once each under `agents/` —
-`agents/skills/`, `agents/agents/`, `agents/commands/`, `agents/rules/`, `agents/hooks/` —
+`agents/plugins/`, `agents/agents/`, `agents/commands/`, `agents/rules/`, `agents/hooks/` —
 in a harness-generic form. This is the source of truth; nothing under `.claude/` or
 `.cursor/` is hand-edited except `.claude/settings.json`'s `permissions`/`env`.
 
@@ -38,18 +38,18 @@ in a harness-generic form. This is the source of truth; nothing under `.claude/`
 1. Compiles `agents/{rules,agents,commands,hooks}` into `.claude/` (and, where a
    harness-specific block exists, `.cursor/`) via its own embedded `rules-sync`,
    `agents-sync`, `hooks-sync` subcommands.
-2. Symlinks skills, subagents, commands, themes, rules, and workflows into `~/.claude/`,
-   and rules and hooks into `~/.cursor/`.
-3. Merges `.claude/settings.json` into `~/.claude/settings.json` (global wins on
+2. Symlinks each `agents/plugins/<name>/` into `~/.claude/skills/` (a Claude Code
+   skills-directory plugin) and `~/.cursor/plugins/local/` (a Cursor local plugin, read by
+   both the desktop app and the CLI) — the only way skills reach either harness.
+3. Symlinks subagents, commands, themes, rules, and workflows into `~/.claude/`, and
+   rules and hooks into `~/.cursor/`.
+4. Merges `.claude/settings.json` into `~/.claude/settings.json` (global wins on
    conflicts; `permissions`/`hooks` arrays are unioned).
-
-Skills additionally get a per-harness frontmatter transform via `skills-sync` (a
-Claude-native `SKILL.md` rewritten for Cursor's narrower frontmatter), generating
-`~/.cursor/skills/`.
 
 ### Add a skill, subagent, command, rule, or hook
 
-Drop it under the matching `agents/` subdirectory, commit, and re-run `./setup.sh`.
+A skill goes under a plugin's `agents/plugins/<name>/skills/<skill>/`; everything else
+drops under its matching `agents/` subdirectory. Commit and re-run `./setup.sh`.
 See [`CLAUDE.md`](CLAUDE.md) for each type's exact frontmatter shape and the
 per-harness compile step.
 

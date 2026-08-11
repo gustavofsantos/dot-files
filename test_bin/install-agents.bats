@@ -27,7 +27,8 @@ setup() {
   chmod +x "$FIXTURE/scripts/"*
 
   mkdir -p "$FIXTURE/agents/rules" "$FIXTURE/agents/agents" "$FIXTURE/agents/commands" \
-    "$FIXTURE/agents/hooks" "$FIXTURE/agents/skills/demo-skill" \
+    "$FIXTURE/agents/hooks" "$FIXTURE/agents/plugins/demo-plugin/.claude-plugin" \
+    "$FIXTURE/agents/plugins/demo-plugin/skills/demo-skill" \
     "$FIXTURE/.claude/agents" "$FIXTURE/.claude/commands" "$FIXTURE/.claude/rules" \
     "$FIXTURE/.claude/themes" "$FIXTURE/.claude/workflows"
 
@@ -68,7 +69,10 @@ EOF
 { "version": 1, "hooks": { "stop": [ { "command": "demo-hook --harness cursor" } ] } }
 EOF
 
-  cat > "$FIXTURE/agents/skills/demo-skill/SKILL.md" <<'EOF'
+  cat > "$FIXTURE/agents/plugins/demo-plugin/.claude-plugin/plugin.json" <<'EOF'
+{ "name": "demo-plugin", "description": "A demo plugin." }
+EOF
+  cat > "$FIXTURE/agents/plugins/demo-plugin/skills/demo-skill/SKILL.md" <<'EOF'
 ---
 name: demo-skill
 description: A demo skill.
@@ -77,7 +81,6 @@ Demo skill body.
 EOF
 
   echo '{"permissions": {"allow": ["Read"]}}' > "$FIXTURE/.claude/settings.json"
-  echo 'harnesses: {}' > "$FIXTURE/.claude/harness-profiles.yml"
 }
 
 teardown() {
@@ -102,10 +105,25 @@ teardown() {
   grep -q "Demo command body" "$HOME/.claude/commands/demo-command.md"
 }
 
-@test "installs skills" {
+@test "installs a plugin into both Claude Code and Cursor" {
   bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
-  [ -L "$HOME/.claude/skills/demo-skill" ]
-  [ -f "$HOME/.claude/skills/demo-skill/SKILL.md" ]
+
+  [ -L "$HOME/.claude/skills/demo-plugin" ]
+  [ -f "$HOME/.claude/skills/demo-plugin/skills/demo-skill/SKILL.md" ]
+  [ -L "$HOME/.cursor/plugins/local/demo-plugin" ]
+  [ -f "$HOME/.cursor/plugins/local/demo-plugin/skills/demo-skill/SKILL.md" ]
+}
+
+@test "prunes a dangling plugin symlink when the source plugin is removed" {
+  bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
+  [ -L "$HOME/.claude/skills/demo-plugin" ]
+  [ -L "$HOME/.cursor/plugins/local/demo-plugin" ]
+
+  rm -rf "$FIXTURE/agents/plugins/demo-plugin"
+  bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
+
+  [ ! -e "$HOME/.claude/skills/demo-plugin" ]
+  [ ! -e "$HOME/.cursor/plugins/local/demo-plugin" ]
 }
 
 @test "installs Cursor hooks.json" {

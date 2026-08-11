@@ -4,11 +4,14 @@
 #
 # Run: bats test_bin/skills-storage.bats
 
-SKILLS="$BATS_TEST_DIRNAME/../agents/skills"
+# Skills live nested inside a plugin (agents/plugins/<plugin>/skills/<name>/),
+# so a plugin's skills/ dir -- not the plugin dir itself -- is the boundary
+# this test guards.
+SKILLS_DIRS=("$BATS_TEST_DIRNAME"/../agents/plugins/*/skills)
 
 # Every path a skill is allowed to own. Anything else is stored data.
 allowed_paths() {
-  find "$SKILLS" -mindepth 2 -type f \
+  find "${SKILLS_DIRS[@]}" -mindepth 2 -type f \
     ! -name 'SKILL.md' \
     ! -path '*/references/*' \
     ! -path '*/scripts/*' \
@@ -24,7 +27,7 @@ allowed_paths() {
 }
 
 @test "the guard sees a skill that stored its own output" {
-  planted="$SKILLS/spike/answers.md"
+  planted="$BATS_TEST_DIRNAME/../agents/plugins/gustavofsantos/skills/spike/answers.md"
   : > "$planted"
 
   run allowed_paths
@@ -36,6 +39,6 @@ allowed_paths() {
 @test "no skill tells the agent to write inside the skill tree" {
   # A prohibition ("never write inside this skill directory") is the wanted wording,
   # so the pattern skips anything a negation introduces.
-  run grep -rnPi '(?<!never )(?<!not )write[^.]{0,30}(skill-dir|skill directory)|<skill-dir>/[a-z-]+\.md' "$SKILLS"
+  run grep -rnPi '(?<!never )(?<!not )write[^.]{0,30}(skill-dir|skill directory)|<skill-dir>/[a-z-]+\.md' "${SKILLS_DIRS[@]}"
   [ "$status" -ne 0 ]
 }

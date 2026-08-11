@@ -21,7 +21,7 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 | `init-engineering-repo.sh` | Idempotently `git init`s `~/engineering`, writes its `.gitignore`, seeds the first commit |
 | `link-bin-files.sh` | Symlinks every file in `bin/` into `~/.bin/` (hook scripts live there too, prefixed `hooks-*`) |
 | `link-xdg-config.sh` | Symlinks each subdir of `config/` into `~/.config/` |
-| `install-agents.sh` | Single source of truth for installing agent config: compiles `agents/{rules,agents,commands,hooks}` via its own embedded `rules-sync`/`agents-sync`/`hooks-sync` subcommands, then symlinks skills/agents/commands/themes/rules/workflows into `~/.claude/` and rules/hooks into `~/.cursor/`; merges `.claude/settings.json` into `~/.claude/settings.json` |
+| `install-agents.sh` | Single source of truth for installing agent config: compiles `agents/{rules,agents,commands,hooks}` via its own embedded `rules-sync`/`agents-sync`/`hooks-sync` subcommands, symlinks each `agents/plugins/<name>/` into `~/.claude/skills/` and `~/.cursor/plugins/local/`, then symlinks agents/commands/themes/rules/workflows into `~/.claude/` and rules/hooks into `~/.cursor/`; merges `.claude/settings.json` into `~/.claude/settings.json` |
 | `set-caps-lock-ctrl.sh` | Sets the GNOME "Caps Lock as Ctrl" `xkb-options` key (`ctrl:nocaps`) via `gsettings`, no `gnome-tweaks` package needed. No-ops if `gsettings` is absent. |
 
 Re-running `setup.sh` is idempotent (`ln -sf`).
@@ -34,20 +34,42 @@ Re-running `setup.sh` is idempotent (`ln -sf`).
 ## Directory layout
 
 - `bin/` — personal scripts added to `$PATH` via `~/.bin/`, including hook scripts (`hooks-*`)
-- `agents/` — harness-generic agent config: `rules/`, `skills/`, `agents/`, `commands/`, `hooks/`. This is the source of truth; `.claude/` and `.cursor/` are compiled from it (see "Skills", "Cross-harness skills", "Hooks" below). `agents/hooks/` holds only the per-harness wiring config (`claude.settings.json`, `cursor.hooks.json`) — the hook scripts themselves live in `bin/`
+- `agents/` — harness-generic agent config: `rules/`, `agents/`, `commands/`, `hooks/`, `plugins/`. This is the source of truth; `.claude/` and `.cursor/` are compiled from it (see "Skills and plugins", "Hooks" below). `agents/hooks/` holds only the per-harness wiring config (`claude.settings.json`, `cursor.hooks.json`) — the hook scripts themselves live in `bin/`
 - `test_bin/` — bats tests for `bin/` scripts, one `<script>.bats` per script
 - `config/` — XDG config dirs: `nvim/`, `ghostty/`, `bat/`, `lazygit/`, `zed/`, `wezterm/`, `tmux/`, `sheldon/`, `starship.toml`, `vale/`
-- `.claude/` — compiled/hand-maintained Claude Code config: `themes/`, `rules/`, `agents/`, `commands/`, `workflows/`, `settings.json`, `harness-profiles.yml`
+- `.claude/` — compiled/hand-maintained Claude Code config: `themes/`, `rules/`, `agents/`, `commands/`, `workflows/`, `settings.json`
 
-## Skills
+## Skills and plugins
 
-Skills live under `agents/skills/<name>/` — a `SKILL.md` plus optional `references/`
-and `scripts/`. No plugins, no marketplace: `install-agents.sh` (run by `setup.sh`)
-symlinks each skill directory into `~/.claude/skills/`, so edits in the working tree
-take effect immediately (new/removed skills need a `./setup.sh` re-run to add/prune
-symlinks).
+Every skill lives inside a plugin, under `agents/plugins/<name>/skills/<skill>/` — a
+`SKILL.md` plus optional `references/`, `scripts/`, and `assets/`. There is no loose
+`agents/skills/` anymore: a plugin is the only unit a skill installs through.
 
-Conventions the skills follow (keep them when editing):
+A plugin directory is self-contained: its own `.claude-plugin/plugin.json` and
+`.cursor-plugin/plugin.json`, plus `skills/`, `agents/`, and `commands/` subdirectories at
+the plugin root. `install-agents.sh` (run by `setup.sh`) is the only install step for it:
+it symlinks the whole plugin directory into `~/.claude/skills/<name>` (Claude Code's
+skills-directory plugin mechanism — auto-discovered next session as `<name>@skills-dir`,
+no marketplace, no copy) and into `~/.cursor/plugins/local/<name>` (Cursor's local-plugin
+path, read by both the desktop app and the `cursor-agent`/`agent` CLI). Both are loaded in
+place, not copied, so editing a file under `agents/plugins/<name>/` is the only step —
+`SKILL.md` edits apply live in Claude Code mid-session; edits to `agents/`, `commands/`,
+or a manifest need `/reload-plugins` there. The CLI has no equivalent reload command, but
+needs none: every invocation is a fresh process, so it re-reads the plugin directory from
+scratch each time.
+
+Rules and hooks are not part of either plugin format (Claude Code's plugin schema has no
+"rules" component, and Cursor's plugin-hook support is unconfirmed), so they stay on
+`install-agents.sh`'s `rules-sync`/`hooks-sync` compile pipeline regardless of what moves
+into a plugin — see "Hooks" below. Likewise `agents/commands/legacy-gate.md` hasn't moved
+into a plugin, so it still goes through `agents-sync`'s Claude-only compile step.
+
+An agent or command shipped inside a plugin uses the same frontmatter shape as
+`agents-sync`'s compiled `.claude/agents/`/`.claude/commands/` *output* — flat keys, no
+nested `claude:`/`cursor:` overlay block — since a plugin has no compile step of its own
+to flatten one.
+
+Conventions skills follow (keep them when editing):
 - **Trigger is deliberate.** Skills the model should auto-load (format references like
   `bruno`, `clojure-datomic`; context-triggered workflows like `create-pull-request`)
   have rich trigger descriptions. Explicit-command skills set
@@ -58,51 +80,35 @@ Conventions the skills follow (keep them when editing):
   (e.g. `bruno` detects the collection format and loads one of two format files).
 - **No dead pointers.** A skill may only reference skills, scripts, and agents that
   exist in this repo.
-- **Skill scripts test in place.** A script under `agents/skills/<name>/scripts/`
+- **Skill scripts test in place.** A script under a plugin's `skills/<name>/scripts/`
   keeps its bats tests beside it as `<script>_test.bats` — the skill directory stays
-  self-contained, and the symlink into `~/.claude/skills/` carries the tests with it.
-  `test_bin/` is only for `bin/` scripts, whose tests cannot travel with them.
+  self-contained, and the symlink into `~/.claude/skills/`/`~/.cursor/plugins/local/`
+  carries the tests with it. `test_bin/` is only for `bin/` scripts, whose tests cannot
+  travel with them.
 
 Both test locations run under `bats` (`brew install bats-core`), and neither is
 discovered by `listchangedtests`, which matches only `py|js|ts|clj`:
 
 ```bash
-bats test_bin/                                    # all bin/ script tests
-bats agents/skills/spike/scripts/new_test.bats    # one skill script
+bats test_bin/                                              # all bin/ script tests
+bats agents/plugins/gustavofsantos/skills/spike/scripts/new_test.bats    # one skill script
 ```
 
-## Cross-harness skills
+Every SKILL.md now ships to both harnesses byte-for-byte — there is no per-harness
+frontmatter transform anymore. Claude's plugin skills accept the full frontmatter
+(`disable-model-invocation`, `allowed-tools`, `context: fork`, …); Cursor's own documented
+fields are narrower (`name`/`description`/`paths`/`disable-model-invocation`/`metadata`),
+and it is not yet confirmed whether Cursor tolerates the extra Claude-only keys or trips
+on them, so avoid the Claude-only keys on any skill you actually need working in Cursor
+until that's verified. Keep bodies harness-agnostic regardless: don't name a specific
+subagent (say "use a subagent to explore X" so each harness picks the agent that fits) or
+a Claude-only tool.
 
-`agents/skills/` is the Claude-native source of truth (maximal frontmatter). Other
-harnesses can't consume it as-is: Cursor reads `.claude`-style skills but only acts on
-`name` + `description`, and Claude-only frontmatter (`disable-model-invocation`,
-`allowed-tools`, `context: fork`) leaks as misapplied config. `bin/skills-sync` derives a
-per-harness tree from the one source: it rewrites only the SKILL.md frontmatter (dropping
-/ renaming keys per `.claude/harness-profiles.yml`) and symlinks the body's `references/`
-and `scripts/` back to the source, so editing a skill reflects immediately — only
-frontmatter changes need a re-run. `install-agents.sh` (run by `setup.sh`) symlinks
-`harness-profiles.yml` into `~/.claude/` and runs the sync; the default Cursor target is a
-generated `~/.cursor/skills/` tree.
-
-The frontmatter transform is **textual**, not a YAML round-trip: descriptions are
-preserved byte-for-byte (some are plain scalars with `": "` that strict YAML rejects but
-Claude accepts). Generated skills carry a `.skills-sync` marker; pruning of stale skills
-only ever touches marked dirs, so hand-made skills in the same destination are left alone.
-Adding a harness = adding an entry to `harness-profiles.yml`, never editing a SKILL.md to
-fit a harness. Because a skill's *body* is shared verbatim across harnesses, keep bodies
-harness-agnostic: don't name a specific subagent (say "use a subagent to explore X" so each
-harness picks the agent that fits) or a Claude-only tool.
-
-| Script | What it does |
-|--------|--------------|
-| `skills-sync` | Derive per-harness skill trees from `agents/skills/` per `harness-profiles.yml`. Idempotent; `--source`, `--profiles`, `--harness NAME`, `--dry-run`. |
-
-Rules and hooks get the same treatment — `install-agents.sh rules-sync` and
-`install-agents.sh hooks-sync` generate `.cursor/rules/` and `.cursor/hooks.json` from
-`agents/rules/` and `agents/hooks/`, see "Hooks" below. Subagents and commands
-(`agents/agents/`, `agents/commands/`) are Claude-only today — `install-agents.sh
-agents-sync` has no Cursor output for them yet, since Cursor has no subagent-tool
-equivalent and Cursor command support wasn't built out this round.
+Rules and hooks still go through `install-agents.sh rules-sync`/`hooks-sync` to generate
+`.cursor/rules/` and `.cursor/hooks.json` from `agents/rules/` and `agents/hooks/` — see
+"Hooks" below. `agents/commands/legacy-gate.md` likewise still goes through
+`agents-sync`'s Claude-only compile step, since Cursor has no subagent-tool equivalent and
+Cursor command support wasn't built out this round.
 
 ## Hooks
 
