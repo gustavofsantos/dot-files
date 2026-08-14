@@ -5,10 +5,12 @@
 --- Workflow:
 ---   1. Select a region in Visual mode, press <CR> -> a floating input opens.
 ---   2. Type your comment. <C-s> saves it (ephemeral, in-memory) and drops a
----      sign in the sign column; <Esc> discards it.
+---      sign in the sign column; <C-c> cancels and closes the input. <Esc>
+---      only leaves insert mode -- it never closes the input.
 ---   3. Repeat across files/regions, then run :AgentCommentsFlush to render
 ---      everything into a markdown prompt, written to a temp file, opened in
----      a new buffer, and copied to the system clipboard.
+---      a new buffer, and copied to the system clipboard. Comments are
+---      rendered in the order they were written, not grouped by file.
 ---
 --- @class AgentComments
 local M = {}
@@ -45,6 +47,9 @@ local function format_range(comment)
 end
 
 --- Open a floating scratch buffer for entering a (possibly multi-line) comment.
+--- The only two ways out are the explicit <C-s> (save) and <C-c> (cancel)
+--- mappings; <Esc> is deliberately left alone so muscle memory doesn't throw
+--- the text away.
 --- @param on_save fun(text: string) called with the typed text if saved via <C-s>
 --- @param initial_lines string[]? pre-fill the input with existing text (edit mode)
 --- @param title string? override the floating window title
@@ -69,7 +74,7 @@ local function open_input(on_save, initial_lines, title)
     height = height,
     style = "minimal",
     border = "rounded",
-    title = title or " Comment  (<C-s> save · <Esc> cancel) ",
+    title = title or " Comment  (<C-s> save · <C-c> cancel) ",
     title_pos = "center",
   })
   vim.wo[win].wrap = true
@@ -93,7 +98,7 @@ local function open_input(on_save, initial_lines, title)
 
   local opts = { buffer = buf, nowait = true, silent = true }
   vim.keymap.set({ "n", "i" }, "<C-s>", function() close(true) end, opts)
-  vim.keymap.set({ "n", "i" }, "<Esc>", function() close(false) end, opts)
+  vim.keymap.set({ "n", "i" }, "<C-c>", function() close(false) end, opts)
 
   if initial_lines and #initial_lines > 0 then
     vim.api.nvim_win_set_cursor(win, { #initial_lines, #initial_lines[#initial_lines] })
@@ -226,7 +231,7 @@ function M.edit_comment(comment)
         format_range(comment)),
       vim.log.levels.INFO
     )
-  end, vim.split(comment.text, "\n", { plain = true }), " Edit comment  (<C-s> save · <Esc> cancel) ")
+  end, vim.split(comment.text, "\n", { plain = true }), " Edit comment  (<C-s> save · <C-c> cancel) ")
 end
 
 --- Delete the single comment nearest the cursor in the current buffer.
@@ -261,13 +266,13 @@ function M.list()
   end
 
   local items = {}
-  for _, c in ipairs(M._comments) do
+  for idx, c in ipairs(M._comments) do
     local first_line = vim.split(c.text, "\n", { plain = true })[1] or ""
     table.insert(items, {
       filename = c.filepath,
       lnum = c.start_line,
       col = 1,
-      text = string.format("[%s] %s", format_range(c), first_line),
+      text = string.format("%d. [%s] %s", idx, format_range(c), first_line),
     })
   end
 
@@ -300,35 +305,29 @@ function M.discard()
   end
 end
 
---- Render all pending comments into a single markdown prompt.
+--- Render all pending comments into a single markdown prompt, in the order
+--- they were written -- M._comments is append-only, so iterating it directly
+--- preserves authoring order across files. Comments are numbered so the
+--- order is explicit to whatever reads the prompt.
 --- @return string
 local function render()
-  local by_file = {}
-  local file_order = {}
-  for _, c in ipairs(M._comments) do
-    if not by_file[c.filepath] then
-      by_file[c.filepath] = {}
-      table.insert(file_order, c.filepath)
-    end
-    table.insert(by_file[c.filepath], c)
-  end
+  local out = {
+    "Please address the following comments about specific code regions,",
+    "in the order they are listed:",
+    "",
+  }
 
-  local out = { "Please address the following comments about specific code regions:", "" }
-
-  for _, filepath in ipairs(file_order) do
-    local comments = by_file[filepath]
-    for _, c in ipairs(comments) do
-      table.insert(out, string.format("## %s:%s", c.relpath, format_range(c)))
-      table.insert(out, "")
-      table.insert(out, "```" .. (c.filetype or ""))
-      vim.list_extend(out, c.code_lines)
-      table.insert(out, "```")
-      table.insert(out, "")
-      for _, line in ipairs(vim.split(c.text, "\n", { plain = true })) do
-        table.insert(out, "> " .. line)
-      end
-      table.insert(out, "")
+  for idx, c in ipairs(M._comments) do
+    table.insert(out, string.format("## %d. %s:%s", idx, c.relpath, format_range(c)))
+    table.insert(out, "")
+    table.insert(out, "```" .. (c.filetype or ""))
+    vim.list_extend(out, c.code_lines)
+    table.insert(out, "```")
+    table.insert(out, "")
+    for _, line in ipairs(vim.split(c.text, "\n", { plain = true })) do
+      table.insert(out, "> " .. line)
     end
+    table.insert(out, "")
   end
 
   return table.concat(out, "\n")
