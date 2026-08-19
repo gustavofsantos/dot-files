@@ -67,9 +67,9 @@ left              right            join                                 probe
 billing.invoice   cart.contract    invoice.contract_id = contract.id    billing-service/INV-002
 ```
 
-`probe` names the repository that owns the SQL, then the id. `billing.invoice` and
-`cart.contract` may each live in a different repository, and neither may be the one you are
-sitting in.
+`probe` uses the repository short name as a namespace, then the id. Its SQL lives in the
+vault at `probes/<repo>/<id>.sql`. `billing.invoice` and `cart.contract` may each come from a
+different repository; the proof still has one stable, org-wide home.
 
 If a carve-out was needed, it lives in the probe and the bridge points at it. Never record a
 half-true join and rely on the reader remembering the exception.

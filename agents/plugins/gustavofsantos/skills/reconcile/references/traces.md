@@ -19,7 +19,8 @@ One parameterized trace per entity type, not one query per investigation. Fold e
 into the same six columns:
 
 ```sql
--- model/traces/<entity>.sql   — replace :key
+-- ${ENGINEERING_HOME:-$HOME/engineering}/reconcile/traces/<repo>/<entity>.sql
+-- replace :key
 WITH ev AS (
   SELECT <key> AS k, <valid_ts> AS t, <cdc_ts> AS seen,
          '<context>' AS src, '<label>' AS event, cast(<id> AS varchar) AS ref
@@ -74,5 +75,5 @@ Each is one query, zero rows when healthy, and catches bugs no aggregate check w
 ## Promotion
 
     p99 lateness per source   -> entities.tsv, and into every probe's watermark
-    invariant ordering        -> invariants.tsv + <repo>/model/probes/<id>.sql
+    invariant ordering        -> invariants.tsv + probes/<repo>/<id>.sql
     new event source          -> another UNION ALL in the trace

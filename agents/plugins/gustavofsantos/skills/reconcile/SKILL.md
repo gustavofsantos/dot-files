@@ -1,130 +1,143 @@
 ---
 name: reconcile
 description: >-
-  Cross-system data analysis, reconciliation, and record-level investigation. Use this skill
-  whenever the task is to compare, audit, tie out, trace, or explain differences between two
-  populations of records — invoices vs orders, ledger vs subledger, source system vs
-  downstream, expected vs actual. Also use it for "why doesn't X match Y", "where did this
-  record go", "is this number right", "what happened to contract N", and for any exploratory
-  question about systems or tables whose relationships are not yet known. Models the whole
-  organization, not one repository — a monorepo can host several systems, and one system can
-  span several repositories. Keeps what it learns in one org-wide knowledge vault under
-  `reconcile/`: entities.tsv (grain and keys), bridges.tsv (how ids map across systems,
-  including across repositories), invariants.tsv (claims that must hold), breaks.tsv
-  (classified mismatches). Keeps the SQL that proves them in each repository under
-  `model/probes/` and `model/traces/`, addressed as `<repo>/<id>` from the vault so a claim
-  stays traceable to its proof wherever that proof lives. Requires a query adapter skill
-  (e.g. `datalake`) to execute SQL. Use it even when the user only asks for a single number —
-  the number is a probe.
+  Reconcile records or numbers across systems with executable SQL evidence. Use for compare,
+  audit, tie-out, missing-record, mismatch, lineage, and record-history questions such as
+  "why doesn't X match Y?", "where did this record go?", "is this number right?", or "what
+  happened to contract N?" Also use when exploring unknown joins between tables. Store shared
+  knowledge and SQL evidence together in the org-wide reconcile vault. Requires an available
+  query-running skill or adapter.
 ---
 
 # Reconcile
 
-Do not trust, verify. A belief about the business is worth nothing until it is a zero-row
-assertion.
+Turn each expectation into a SQL **probe**. A probe returns only violating rows: zero rows
+means the expectation currently holds. Do not accept matching totals or column names as proof.
 
-## Where the work lives
+## One home for all artifacts
 
-Two homes, split by what the file is. This skill directory is never a home for either.
+Store everything produced by this skill under:
 
-| File | Home | Why |
-|---|---|---|
-| entities.tsv, bridges.tsv, invariants.tsv, breaks.tsv | `${ENGINEERING_HOME:-$HOME/engineering}/reconcile/` | What you learned about the business. It outlives any one repository, and the business rarely fits in one. |
-| probes/*.sql, traces/*.sql, `model/ADAPTER` | `model/` in each repository | Executable assertions. They version with the code they assert against. |
+```text
+${ENGINEERING_HOME:-$HOME/engineering}/reconcile/
+├── entities.tsv
+├── bridges.tsv
+├── invariants.tsv
+├── breaks.tsv
+├── probes/<repo>/<id>.sql
+└── traces/<repo>/<entity>.sql
+```
 
-The vault holds one set of tables for the whole organization. A monorepo can hold two or more
-systems. Name each system with its own `context` in entities.tsv. One system can also span two
-or more repositories. Its bridges then cross repository lines, not only system lines.
+The TSV files hold shared knowledge. `probes/` holds zero-row assertions. `traces/` holds
+single-record timelines. `<repo>` is the short repository name used as a namespace, even
+though the SQL lives in the vault.
 
-The `probe` column holds `<repo>/<id>`. `repo` is the short name of the repository that owns
-the SQL, for example `billing-service/INV-002`. This resolves to `model/probes/<id>.sql` in
-that repository. Write the id bare, without a `<repo>/` prefix, only when you are certain that
-no other repository will ever hold a probe with that id. In practice, always prefix it.
+On the first run, create the vault directory and copy missing TSV files from `assets/model/`.
+Create `probes/` and `traces/` when needed. Never overwrite existing TSV files. Never store
+query result sets in the vault or repository.
 
-## Adapter (port)
+Identify a probe everywhere as `<repo>/<id>`, for example
+`billing-service/INV-002`. Its only SQL file is
+`${ENGINEERING_HOME:-$HOME/engineering}/reconcile/probes/billing-service/INV-002.sql`.
+Do not create `model/probes/`, `model/traces/`, or other reconciliation artifacts in a code
+repository.
 
-Executes nothing itself. Requires a command shaped like:
+## Follow this workflow
 
-    <run-query> --description "<why>" --execute "<sql>" --output-format CSV
+### 1. Read existing knowledge
 
-Resolve in order: `model/ADAPTER` → a query-running skill in this repo → ask. A probe belongs
-to the repository named in its `<repo>/<id>` prefix — run it from there, not from wherever the
-question started. Never call the raw client, never inline credentials, always state *why* in
-`--description`.
+Read all four vault TSV files. Search their `context`, entity, and probe columns for relevant
+rows. Search the vault's `probes/` and `traces/` directories and the query adapter's catalog.
+Reuse a matching probe rather than inventing another.
 
-## States
+### 2. Write the four-line frame
 
-| State | Given | Produce |
-|---|---|---|
-| **Frame** | a question | grain, keys, expectation, falsifier |
-| **Discover** | an UNKNOWN key | an inclusion dependency → `references/discovery.md` |
-| **Verify** | a claim | a zero-row assertion |
-| **Trace** | one record | a bitemporal timeline → `references/traces.md` |
+Before querying, write:
 
-Name the state before acting.
+```text
+GRAIN      one row represents <business object>
+KEYS       <left.column> -> <right.column>, or UNKNOWN
+EXPECT     rows where <violation> must not exist
+FALSIFIER  a query returning those violating rows
+```
 
-## Frame
+Ask for clarification only if the grain or expectation cannot be inferred. `UNKNOWN` is not
+an error: it means the key relationship must be measured in step 3.
 
-Read the vault tables. They span every repository. Search by `context` and by entity name, not
-by which repository you happen to be sitting in. Grep the adapter's query catalog for prior
-art. Then four lines, then stop for confirmation:
+### 3. Choose one path
 
-    GRAIN      one row = ?
-    KEYS       left.col -> right.col   (cite bridges.tsv, else UNKNOWN)
-    EXPECT     "these rows must not exist"
-    FALSIFIER  the query that refutes me
+| Situation | Action |
+|---|---|
+| `KEYS` is `UNKNOWN` or a join is only guessed | Read `references/discovery.md`; measure candidate keys, coverage in both directions, and fan-out. |
+| The question concerns one record or event order | Read `references/traces.md`; build or extend `traces/<repo>/<entity>.sql` in the vault. |
+| A relevant probe already exists | Confirm its watermark is still valid, run it unchanged, and continue at step 5. |
+| The join is proven and the expectation is clear | Continue at step 4. |
 
-UNKNOWN is the session's real work. Resolve by measurement — a matching column name is not
-evidence.
+Never infer a relationship from similar names alone. Do not add it to the vault until a probe
+proves it.
 
-## Verify
+### 4. Create and run one probe
 
-A probe is a singular test: **the rows it returns are the failures**. Never an eyeballed count,
-never a percentage the user must judge.
+Write `probes/<repo>/<id>.sql` in the vault so every returned row is a failure. Exclude records
+newer than the slowest source's measured p99 transaction-time lag:
 
-Every probe carries a watermark on transaction time, so late arrival is not read as absence:
+```sql
+AND <transaction_timestamp> < current_timestamp - interval '<measured p99>' hour
+```
 
-    AND <cdc_ts> < current_timestamp - interval '<p99>' hour
+If lateness has not been measured, read `references/traces.md` and measure it first. Do not
+guess a watermark.
 
-p99 is measured per source, not assumed — `references/traces.md`.
+Run SQL only through this adapter resolution order:
 
-## Breaks
+1. a query-running skill available for the data source;
+2. ask the user which adapter to use.
 
-Classify every returned row first:
+The adapter must support the equivalent of:
 
-    timing | in-transit | rounding | duplicate | missing-in-target | missing-in-source | misclassified
+```text
+<run-query> --description "<why this query is needed>" --execute "<sql>" --output-format CSV
+```
 
-**An explainable class is a predicate, not a note.** Tighten the probe until only irreducible
-breaks survive, then log those to `breaks.tsv`. Prose decays silently. Predicates cannot.
+Never call a raw database client or place credentials in commands or files.
 
-## Promotion
+### 5. Handle the result
 
-On green only:
+**If the probe returns zero rows:** promote only facts it proved:
 
-    key path            -> bridges.tsv          (probe: <repo>/<id>)
-    grain / cardinality -> entities.tsv
-    claim               -> invariants.tsv + <repo>/model/probes/<id>.sql
-    irreducible breaks  -> breaks.tsv
+- append a proven grain/cardinality to `entities.tsv`;
+- append a proven key path to `bridges.tsv`;
+- append the expectation and status to `invariants.tsv`;
+- keep the SQL at `probes/<repo>/<id>.sql` in the vault.
 
-The tables go to the org-wide vault. The SQL goes to the repository named in its `<repo>/`
-prefix. An unprobed row in entities.tsv or bridges.tsv is hearsay. `scripts/no-unproven-claims.sh`
-fails closed on it. That script can only verify that a probe exists in the repository you write
-from. Promote a row only while you sit in the repository its probe id names.
+Append only the applicable rows. For example, a probe that tests an existing join may prove
+an invariant without proving a new entity or bridge.
 
-Red is equally mandatory: a failing probe is a falsified belief or a changed rule. Mark it red
-the moment it fails. Never delete a probe to green the suite.
+Every promoted `entities.tsv`, `bridges.tsv`, or `invariants.tsv` row must name the probe as
+`<repo>/<id>`. Run `scripts/no-unproven-claims.sh` as the configured write hook when available.
 
-## Reporting
+**If the probe returns rows:** first classify each failure as one of:
 
-Break counts by class, the two or three rows that matter, what was promoted. Never persist
-result sets into the vault tables, into `model/`, or into the query catalog.
+```text
+timing | in-transit | rounding | duplicate | missing-in-target |
+missing-in-source | misclassified
+```
+
+Turn each explainable class into a SQL predicate and rerun the probe. Append only remaining,
+irreducible failures to `breaks.tsv`. Mark the invariant `red`; never delete or weaken a probe
+merely to make it green.
+
+### 6. Report
+
+Report:
+
+1. probe id and expectation;
+2. watermark and why it is valid;
+3. pass (zero rows) or failure counts by class;
+4. two or three representative failures, when present;
+5. files and vault rows created or updated.
 
 ## References
 
-- `references/discovery.md` — inclusion dependency, fan-out, verdict rubric. Read before
-  promoting any bridge.
-- `references/traces.md` — bitemporal timelines, watermark measurement, precedence
-  constraints.
-- `assets/model/` — worked templates for the four tables. Copy into
-  `${ENGINEERING_HOME:-$HOME/engineering}/reconcile/` once, the first time this skill runs
-  anywhere. Every repository after that appends to the same tables.
+- Read `references/discovery.md` before promoting any new bridge.
+- Read `references/traces.md` to trace one record, measure lateness, or test event ordering.

@@ -18,10 +18,10 @@ is numbered to a probe.
 
 ## The gate
 
-**Only probed data gets an exhibit.** Input is the output of a `model/probes/*.sql` or a
-`model/traces/*.sql`, piped through the adapter. Never write ad-hoc SQL for the sake of a
-picture. A chart is the most persuasive artifact in the repo. An unverified one is a lie
-with a legend.
+**Only probed data gets an exhibit.** Input is the output of a reconcile-vault
+`probes/<repo>/*.sql` or `traces/<repo>/*.sql`, piped through the adapter. Never write ad-hoc
+SQL for the sake of a picture. A chart is the most persuasive artifact in the repo. An
+unverified one is a lie with a legend.
 
 If the user asks for a chart of something no probe covers: write the probe first (`reconcile`),
 then render it.
@@ -49,8 +49,9 @@ scripts/exhibit.py <verb> [--file in.csv] \
 Reads CSV on stdin by default, so it composes directly with the adapter:
 
 ```bash
-<run-query> --description "breaks by class for INV-014" --file model/probes/INV-014.sql \
-            --output-format CSV \
+<run-query> --description "breaks by class for INV-014" \
+  --file "${ENGINEERING_HOME:-$HOME/engineering}/reconcile/probes/<repo>/INV-014.sql" \
+  --output-format CSV \
   | scripts/exhibit.py breaks --probe INV-014 --grain "one issued invoice" --watermark 4h
 ```
 

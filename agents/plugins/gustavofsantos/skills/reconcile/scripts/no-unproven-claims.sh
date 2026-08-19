@@ -2,11 +2,9 @@
 # Reject any write to entities.tsv or bridges.tsv whose last column does not name an
 # existing probe file. A claim without a probe is a rumour.
 #
-# The tables live in one org-wide knowledge vault, under reconcile/ — not one per repo, since
-# the business rarely fits in one repository. The probes live in the repository named in the
-# probe id itself: <repo>/<id> resolves to model/probes/<id>.sql. This script can only see the
-# working directory it runs in, so it checks that <repo> is the repository you are writing
-# from — promote a row while sitting in the repository whose probe it names.
+# The tables and probes live in one org-wide vault under reconcile/. A probe id
+# <repo>/<id> resolves to reconcile/probes/<repo>/<id>.sql. The repository name is only a
+# namespace; the hook works from any current directory.
 #
 # Install as a PreToolUse hook on Write|Edit in .claude/settings.json:
 #
@@ -40,37 +38,29 @@ case "$field" in
   probe|UNKNOWN|-) exit 0 ;;   # header row, or an honestly declared unknown
 esac
 
-# field is "<repo>/<id>" (preferred) or a bare "<id>" (only when no repo will ever collide).
-repo=""
-probe="$field"
-if [[ "$field" == */* ]]; then
-  repo="${field%/*}"
-  probe="${field##*/}"
-fi
-
-here=$(basename "$PWD")
-if [ -n "$repo" ] && [ "$repo" != "$here" ]; then
+if [[ "$field" != */* ]]; then
   cat >&2 <<EOF
-blocked: probe names a different repository than this one.
+blocked: probe id has no repository namespace.
 
-The probe '${field}' in $path names repository '${repo}', but this is '${here}'. Promote
-the row from inside '${repo}', where model/probes/${probe}.sql actually lives.
+The last column must be '<repo>/<id>', for example 'billing-service/INV-002'. Got: '${field}'.
 EOF
   exit 2
 fi
 
-if [ -f "model/probes/${probe}.sql" ]; then
+vault="${path%/*}"
+probe_path="$vault/probes/$field.sql"
+
+if [ -f "$probe_path" ]; then
   exit 0
 fi
 
 cat >&2 <<EOF
 blocked: claim without a probe.
 
-The last column of a row in $path must be '<repo>/<id>' naming a probe that exists in that
-repository as model/probes/<id>.sql, or be literally UNKNOWN if the relationship has not been
-measured yet.
+The last column of a row in $path must be '<repo>/<id>' naming a probe in the org-wide vault,
+or be literally UNKNOWN if the relationship has not been measured yet.
 
-Got: '${field}' (model/probes/${probe}.sql does not exist here)
+Got: '${field}' (${probe_path} does not exist)
 
 Measure coverage first (references/discovery.md), write the probe, then promote.
 EOF

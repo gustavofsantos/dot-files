@@ -234,4 +234,6 @@ A brief lives at `projects/<slug>.md`, named by a bare slug because other files 
 
 A skill directory holds `SKILL.md`, `references/`, `scripts/`, and `assets/`. Nothing else. Whatever a skill learns goes to the vault. A skill that needs durable storage delegates to the skill that owns that section, rather than inventing a path. `outcome-builder` invokes `issue`. `ddd-survey` and `reflect` offer their findings to `project`. `test_bin/skills-storage.bats` fails if a skill stores its own output.
 
-Two kinds of output stay out of the vault on purpose. Ephemeral output goes to `/tmp` (`handoff`). Executable assertions stay beside the code they assert against: `reconcile` keeps `model/probes/*.sql` and `model/traces/*.sql` in the repository, while its knowledge tables move to the vault.
+Ephemeral output stays out of the vault and goes to `/tmp` (`handoff`). Reconciliation is the
+opposite: `reconcile` keeps both its knowledge tables and executable SQL under the org-wide
+`reconcile/` vault directory, namespacing probes and traces by repository.
