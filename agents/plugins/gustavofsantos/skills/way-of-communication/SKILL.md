@@ -52,4 +52,6 @@ This rule covers what Vale cannot reach. Vale never sees a chat reply. Vale also
 ## Consistency
 
 - Name a thing once, then use that exact name every time. Do not vary the word for style.
-- Spell out an acronym on first use. Then use the short form.
+- Write the established domain name every time. Do not invent a short form.
+- Allowed short forms are only: (1) a form the reader already used in this thread, or (2) a form that is already a code symbol or industry name (`HTTP`, `UTC`, `SQL`, `SAP`, `CSV`).
+- Do not invent an acronym. A first-use expansion does not license a new short form.
