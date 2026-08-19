@@ -1,0 +1,18 @@
+---
+description: Start source-code investigation by reading tests — they describe behavior and invariants.
+alwaysApply: true
+---
+
+# Tests First
+
+When investigating how the system works, **start with tests** before reading production code.
+
+Tests are where behavior is described and where invariants should live.
+
+## How to investigate
+
+1. **Find the test file** — mirror `src/` under `test/` with a `_test` suffix.
+2. **Read tests for the behavior in question** — integration/acceptance tests for end-to-end flows; unit tests for domain rules and edge cases.
+3. **Then read production code** — use tests as a map: what is asserted, what setup is required, what failure modes are covered.
+
+Do not skip tests and jump straight to implementation unless the user explicitly asks for a quick code-only scan.

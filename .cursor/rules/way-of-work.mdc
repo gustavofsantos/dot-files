@@ -1,0 +1,26 @@
+---
+description: Follow way-of-work acceptance-first TDD when implementing behavior changes with Gustavo
+alwaysApply: true
+---
+
+# Way of work
+
+When the user asks for a feature or behavior change, follow the `way-of-work` skill before writing production code.
+
+## When it applies
+
+- New features or behavior changes
+- Bug fixes that change observable behavior
+- Refactors that should preserve behavior (write/extend tests first)
+
+## When to skip
+
+- Questions, reviews, investigations, or docs-only requests
+- Pure config/tooling with no behavior under test
+- Explicit user instruction to skip the loop (e.g. "just commit", "quick fix")
+
+## Companion skills
+
+- Planning slices: `way-of-planning`
+- Test quality: `smelly-test`
+- Post-green cleanup: `rules-of-refactoring`
