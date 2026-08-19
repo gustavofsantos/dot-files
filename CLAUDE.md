@@ -225,6 +225,7 @@ The vault is `$ENGINEERING_HOME` (`.zshenv`, default `~/engineering`) — the lo
 | `artifacts/` | `issue` skill | Raw material: notes, transcripts, data, diagrams, DDD surveys, hypothesis verdicts |
 | `spikes/` | `spike` skill | Answered unknowns |
 | `projects/` | `project` skill | One brief per project: glossary, topology, data map, standing questions |
+| `VOCABULARY.md` | `vocabulary` skill | Canonical cross-project terms, aliases, usage, and relationships |
 | `reconcile/` | `reconcile` skill | entities/bridges/invariants/breaks tables, org-wide across every repository |
 | `facts/`, `.metadata/` | `facts-churn` | The facts base and its provenance mapping |
 
