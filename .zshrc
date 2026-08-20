@@ -24,6 +24,10 @@ if command -v "/opt/homebrew/bin/brew" &> /dev/null; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
+if command -v "/home/linuxbrew/.linuxbrew/bin/brew" &> /dev/null; then
+    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv zsh)"
+fi
+
 if command -v "zoxide" &> /dev/null; then
   eval "$(zoxide init zsh)"
 fi
@@ -77,3 +81,6 @@ export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
 export PATH="$HOME/.git-ai/bin:$PATH"
+
+# Entire CLI shell completion
+autoload -Uz compinit && compinit && source <(entire completion zsh)
