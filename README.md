@@ -53,6 +53,58 @@ Everything drops directly under a plugin's matching subdirectory —
 `agents/plugins/<name>/themes/`. Commit and re-run `./setup.sh`. See
 [`CLAUDE.md`](CLAUDE.md) for each type's exact frontmatter shape and per-harness quirks.
 
+### Causality
+
+The `causality` skill bundles a standard-library Python CLI for verified semantic-graph
+retrieval, query planning, and persistent root-cause investigations. The executable, its
+tests, references, and demo assets all live under
+`agents/plugins/gustavofsantos/skills/causality/`, so the plugin installs as one portable
+unit. The skill invokes `python3 <skill-dir>/scripts/causality`; it does not depend on a
+separate PATH-visible binary.
+
+In a project that uses Causality, create `causality.toml` and keep trusted declarative
+sources under its configured `model_dir`. The command discovers configuration from the
+current directory upward:
+
+```toml
+model_dir = "model"
+proposals_dir = "proposals"
+investigations_dir = "investigations"
+sqlite_path = ".generated/causality.sqlite"
+
+[safety]
+large_table_rows = 100000000
+large_table_bytes = 100000000000
+```
+
+Then verify and compile the model before using it:
+
+```bash
+CAUSALITY=/path/to/installed/causality/scripts/causality
+python3 "$CAUSALITY" validate
+python3 "$CAUSALITY" test
+python3 "$CAUSALITY" compile
+python3 "$CAUSALITY" resolve "delivery cancellations"
+```
+
+For a five-minute local trial, copy
+`agents/plugins/gustavofsantos/skills/causality/assets/demo/` to a temporary directory,
+enter it, and run the commands above. The demo includes a cross-domain causal path, a
+current and historical binding, large-table partition metadata, an isolated concept, and
+declarative regression tests.
+
+Trusted sources remain in `model/`; agent-created relationship proposals go only to
+`proposals/`, incident-specific reasoning goes to `investigations/`, and the SQLite index
+is an atomically replaced build artifact. The installed skill teaches Claude Code and
+Cursor to retrieve bounded neighborhoods, inspect physical scale and grain before querying,
+and preserve refuted explanations across sessions.
+
+The bundled end-to-end tests run directly with Python:
+
+```bash
+python3 agents/plugins/gustavofsantos/skills/causality/scripts/causality_test.py
+```
+
 ## More
 
 See [`CLAUDE.md`](CLAUDE.md) for the full layout: agent checks, session navigation,

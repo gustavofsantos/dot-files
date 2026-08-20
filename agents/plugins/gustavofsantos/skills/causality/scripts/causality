@@ -1,0 +1,521 @@
+#!/usr/bin/env python3
+"""Causality: a verified, local semantic graph for data-lake investigations."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import sqlite3
+import sys
+import tempfile
+import tomllib
+from collections import defaultdict, deque
+from datetime import date, datetime, timezone
+from pathlib import Path
+
+EXIT_VALIDATION, EXIT_NOT_FOUND, EXIT_CONFLICT, EXIT_STORAGE = 3, 4, 5, 6
+ID_RE = re.compile(r"^[a-z][a-z0-9_.-]*$")
+DURATION_RE = re.compile(r"^(\d+)(ms|s|m|h|d|w)$")
+UNITS = {"ms": 1, "s": 1000, "m": 60_000, "h": 3_600_000, "d": 86_400_000, "w": 604_800_000}
+KINDS = {"event", "signal", "state", "decision", "latent", "derived"}
+REL_KINDS = {"causal", "statistical", "temporal", "structural", "semantic", "lineage"}
+EFFECTS = {"increase", "decrease", "enable", "disable", "change", "unknown", "none"}
+STATUSES = {"candidate", "hypothesis", "supported", "verified", "disputed", "rejected"}
+TIME_MODES = {"synchronous", "asynchronous", "cumulative", "unknown"}
+ROLES = {"canonical", "alternate", "legacy", "proxy"}
+TEST_KINDS = {"path_exists", "no_path", "binding_exists", "upstream_contains"}
+TOP_KEYS = {"phenomena", "relations", "bindings", "evidence", "tests"}
+
+
+class CausalityError(Exception):
+    def __init__(self, code: str, message: str, details=None, exit_code=EXIT_VALIDATION):
+        super().__init__(message)
+        self.code, self.message, self.details, self.exit_code = code, message, details or [], exit_code
+
+
+def find_config(start: Path) -> tuple[Path, dict]:
+    for directory in (start.resolve(), *start.resolve().parents):
+        path = directory / "causality.toml"
+        if path.is_file():
+            try:
+                raw = tomllib.loads(path.read_text())
+            except (OSError, tomllib.TOMLDecodeError) as exc:
+                raise CausalityError("CONFIG_ERROR", f"Cannot read {path}: {exc}") from exc
+            cfg = {
+                "root": directory,
+                "model_dir": directory / raw.get("model_dir", "model"),
+                "proposals_dir": directory / raw.get("proposals_dir", "proposals"),
+                "investigations_dir": directory / raw.get("investigations_dir", "investigations"),
+                "sqlite_path": directory / raw.get("sqlite_path", ".generated/causality.sqlite"),
+                "default_neighborhood_depth": int(raw.get("default_neighborhood_depth", 1)),
+                "default_path_limit": int(raw.get("default_path_limit", 20)),
+                "default_result_limit": int(raw.get("default_result_limit", 50)),
+                "safety": raw.get("safety", {}),
+            }
+            return path, cfg
+    raise CausalityError("CONFIG_NOT_FOUND", "No causality.toml found in this directory or its parents.", exit_code=EXIT_NOT_FOUND)
+
+
+def duration(value, field, source, obj_id, diagnostics):
+    if value in (None, ""):
+        return None
+    match = DURATION_RE.fullmatch(str(value))
+    if not match:
+        diagnostics.append(diag("ERROR", source, obj_id, field, "duration must use ms, s, m, h, d, or w", value))
+        return None
+    return int(match.group(1)) * UNITS[match.group(2)]
+
+
+def diag(level, source, obj_id, field, message, actual=None):
+    out = {"level": level, "file": str(source), "object": obj_id, "field": field, "message": message}
+    if actual is not None:
+        out["actual"] = actual
+    return out
+
+
+def parse_sources(cfg, include_proposals=True):
+    model = {key: [] for key in TOP_KEYS}
+    diagnostics = []
+    roots = [(cfg["model_dir"], "trusted")]
+    if include_proposals:
+        roots.append((cfg["proposals_dir"], "proposed"))
+    for root, trust in roots:
+        if not root.exists():
+            continue
+        for path in sorted(root.rglob("*.causal.toml")):
+            try:
+                raw = tomllib.loads(path.read_text())
+            except (OSError, tomllib.TOMLDecodeError) as exc:
+                diagnostics.append(diag("ERROR", path, "file", "syntax", str(exc)))
+                continue
+            for key in sorted(set(raw) - TOP_KEYS):
+                diagnostics.append(diag("ERROR", path, "file", key, "unknown top-level key"))
+            for key in TOP_KEYS:
+                values = raw.get(key, [])
+                if not isinstance(values, list):
+                    diagnostics.append(diag("ERROR", path, "file", key, "must be an array of tables", type(values).__name__))
+                    continue
+                for value in values:
+                    if not isinstance(value, dict):
+                        diagnostics.append(diag("ERROR", path, "file", key, "entry must be a table"))
+                        continue
+                    item = dict(value)
+                    item["_source"], item["trust_scope"] = str(path), trust
+                    if key == "relations":
+                        for field in ("min_lag", "max_lag", "exposure_window", "effect_window"):
+                            item[field + "_ms"] = duration(item.get(field), field, path, item.get("id", "?"), diagnostics)
+                    model[key].append(item)
+    return model, diagnostics
+
+
+def parse_day(value):
+    if not value:
+        return None
+    return date.fromisoformat(str(value))
+
+
+def overlap(a, b):
+    try:
+        af, au, bf, bu = parse_day(a.get("valid_from")), parse_day(a.get("valid_until")), parse_day(b.get("valid_from")), parse_day(b.get("valid_until"))
+    except ValueError:
+        return True
+    return (au is None or bf is None or bf <= au) and (bu is None or af is None or af <= bu)
+
+
+def causal_edges(model, trusted_only=True, zero_only=False):
+    edges = []
+    for rel in model["relations"]:
+        if rel.get("kind") != "causal" or rel.get("status") == "rejected":
+            continue
+        if trusted_only and rel.get("trust_scope") != "trusted":
+            continue
+        if zero_only and (rel.get("max_lag_ms") != 0 or rel.get("temporal_mode") == "cumulative"):
+            continue
+        for source in rel.get("from", []):
+            for target in rel.get("to", []):
+                edges.append((source, target, rel))
+    return edges
+
+
+def has_cycle(nodes, edges):
+    graph = defaultdict(list)
+    for source, target, _ in edges:
+        graph[source].append(target)
+    visiting, visited = set(), set()
+    def visit(node):
+        if node in visiting:
+            return True
+        if node in visited:
+            return False
+        visiting.add(node)
+        if any(visit(nxt) for nxt in graph[node]):
+            return True
+        visiting.remove(node); visited.add(node)
+        return False
+    return any(visit(node) for node in nodes)
+
+
+def validate(model, initial, cfg):
+    ds = list(initial)
+    ids, phenomena = {}, {}
+    for collection in ("phenomena", "relations", "bindings", "evidence"):
+        for item in model[collection]:
+            ident, source = item.get("id"), item["_source"]
+            if not isinstance(ident, str) or not ID_RE.fullmatch(ident):
+                ds.append(diag("ERROR", source, ident or "?", "id", "must match [a-z][a-z0-9_.-]*", ident))
+            elif ident in ids:
+                ds.append(diag("ERROR", source, ident, "id", f"duplicate ID; first defined in {ids[ident]}"))
+            else:
+                ids[ident] = source
+            if collection == "phenomena":
+                phenomena[ident] = item
+                if item.get("kind") not in KINDS: ds.append(diag("ERROR", source, ident, "kind", f"must be one of {sorted(KINDS)}", item.get("kind")))
+                for field in ("domain", "description"):
+                    if not item.get(field): ds.append(diag("ERROR", source, ident, field, "must be non-empty"))
+    relation_shapes = {}
+    for rel in model["relations"]:
+        ident, source = rel.get("id", "?"), rel["_source"]
+        for field, allowed in (("kind", REL_KINDS), ("effect", EFFECTS), ("status", STATUSES), ("temporal_mode", TIME_MODES)):
+            value = rel.get(field, "unknown" if field in ("effect", "temporal_mode") else None)
+            if value not in allowed: ds.append(diag("ERROR", source, ident, field, f"must be one of {sorted(allowed)}", value))
+        if rel.get("kind") != "causal" and rel.get("effect") in ("enable", "disable"):
+            ds.append(diag("ERROR", source, ident, "effect", "enable and disable effects require a causal relation", rel.get("effect")))
+        for side in ("from", "to"):
+            values = rel.get(side)
+            if not isinstance(values, list) or not values: ds.append(diag("ERROR", source, ident, side, "must be a non-empty array")); continue
+            for ref in values:
+                if ref not in phenomena: ds.append(diag("ERROR", source, ident, side, "references unknown phenomenon", ref))
+        minimum, maximum = rel.get("min_lag_ms"), rel.get("max_lag_ms")
+        if minimum is not None and maximum is not None and minimum > maximum:
+            ds.append(diag("ERROR", source, ident, "max_lag", "must be greater than or equal to min_lag", rel.get("max_lag")))
+        if rel.get("temporal_mode") == "synchronous" and (minimum != 0 or maximum != 0):
+            ds.append(diag("ERROR", source, ident, "temporal_mode", "synchronous relations require min_lag=max_lag=0"))
+        if rel.get("temporal_mode") == "cumulative" and (not rel.get("exposure_window_ms") or not rel.get("effect_window_ms")):
+            ds.append(diag("ERROR", source, ident, "exposure_window", "cumulative relations require positive exposure_window and effect_window"))
+        shape = (tuple(rel.get("from", [])), tuple(rel.get("to", [])), rel.get("kind"), rel.get("effect"), rel.get("trust_scope"))
+        if shape in relation_shapes: ds.append(diag("ERROR", source, ident, "relation", f"duplicates {relation_shapes[shape]}"))
+        relation_shapes[shape] = ident
+    trusted = [r for r in model["relations"] if r.get("trust_scope") == "trusted" and r.get("kind") == "causal" and r.get("status") not in ("rejected", "disputed")]
+    for i, left in enumerate(trusted):
+        for right in trusted[i + 1:]:
+            if left.get("from") == right.get("from") and left.get("to") == right.get("to") and {left.get("effect"), right.get("effect")} == {"increase", "decrease"}:
+                ds.append(diag("ERROR", right["_source"], right.get("id"), "effect", f"contradicts {left.get('id')} at identical scope"))
+    if has_cycle(phenomena, causal_edges(model, True, True)):
+        ds.append(diag("ERROR", "model", "graph", "relations", "trusted zero-lag causal graph contains a cycle"))
+    by_concept = defaultdict(list)
+    for binding in model["bindings"]:
+        ident, source = binding.get("id", "?"), binding["_source"]
+        if binding.get("concept") not in phenomena: ds.append(diag("ERROR", source, ident, "concept", "references unknown phenomenon", binding.get("concept")))
+        if binding.get("role") not in ROLES: ds.append(diag("ERROR", source, ident, "role", f"must be one of {sorted(ROLES)}", binding.get("role")))
+        for field in ("schema", "table"):
+            if not binding.get(field): ds.append(diag("ERROR", source, ident, field, "must be non-empty"))
+        if binding.get("role") == "canonical" and (not binding.get("grain_entity") or not binding.get("grain_time")):
+            ds.append(diag("ERROR", source, ident, "grain", "canonical bindings require grain_entity and grain_time"))
+        if binding.get("require_partition_filter") and not binding.get("partition_keys"):
+            ds.append(diag("ERROR", source, ident, "partition_keys", "required when require_partition_filter is true"))
+        try:
+            start, end = parse_day(binding.get("valid_from")), parse_day(binding.get("valid_until"))
+            if start and end and start > end: ds.append(diag("ERROR", source, ident, "valid_until", "must be on or after valid_from"))
+        except ValueError as exc: ds.append(diag("ERROR", source, ident, "validity", f"must use ISO dates: {exc}"))
+        by_concept[binding.get("concept")].append(binding)
+        large_rows = int(cfg["safety"].get("large_table_rows", 100_000_000))
+        large_bytes = int(cfg["safety"].get("large_table_bytes", 100_000_000_000))
+        if (binding.get("estimated_rows", 0) >= large_rows or binding.get("estimated_bytes", 0) >= large_bytes) and not binding.get("partition_keys"):
+            ds.append(diag("WARNING", source, ident, "partition_keys", "large binding has no partition metadata"))
+        if binding.get("role") == "legacy" and not binding.get("valid_until"):
+            ds.append(diag("WARNING", source, ident, "valid_until", "legacy binding is still active"))
+    for concept, bindings in by_concept.items():
+        canonical = [b for b in bindings if b.get("role") == "canonical" and b.get("trust_scope") == "trusted"]
+        for i, left in enumerate(canonical):
+            for right in canonical[i + 1:]:
+                if overlap(left, right): ds.append(diag("ERROR", right["_source"], right.get("id"), "validity", f"overlaps canonical binding {left.get('id')} for {concept}"))
+    evidence_relations = set()
+    for evidence in model["evidence"]:
+        target = evidence.get("relation") or evidence.get("concept") or evidence.get("binding")
+        if target not in ids: ds.append(diag("ERROR", evidence["_source"], evidence.get("id"), "target", "references unknown target", target))
+        if evidence.get("relation"): evidence_relations.add(evidence["relation"])
+    for rel in model["relations"]:
+        if rel.get("kind") == "causal" and rel.get("status") in ("hypothesis", "supported", "verified") and rel.get("id") not in evidence_relations:
+            ds.append(diag("WARNING", rel["_source"], rel.get("id"), "evidence", "causal relation has no evidence"))
+    aliases = defaultdict(set)
+    for p in model["phenomena"]:
+        for alias in p.get("aliases", []): aliases[str(alias).casefold()].add(p.get("id"))
+    for alias, owners in aliases.items():
+        if len(owners) > 1: ds.append(diag("WARNING", "model", ",".join(sorted(owners)), "aliases", f"alias collision: {alias}"))
+    connected = defaultdict(set)
+    for rel in model["relations"]:
+        if rel.get("trust_scope") != "trusted": continue
+        for source in rel.get("from", []):
+            for target in rel.get("to", []): connected[source].add(target); connected[target].add(source)
+    seen, sizes, isolated = set(), [], []
+    for node in phenomena:
+        if node in seen: continue
+        q, size = [node], 0; seen.add(node)
+        while q:
+            current = q.pop(); size += 1
+            for nxt in connected[current]:
+                if nxt not in seen: seen.add(nxt); q.append(nxt)
+        sizes.append(size)
+        if size == 1: isolated.append(node); ds.append(diag("WARNING", phenomena[node]["_source"], node, "relations", "isolated phenomenon"))
+        if node not in by_concept: ds.append(diag("WARNING", phenomena[node]["_source"], node, "bindings", "phenomenon has no binding"))
+    ds.append({"level": "INFO", "file": "model", "object": "graph", "field": "connectivity", "message": "graph diagnostics", "connected_components": len(sizes), "largest_component": max(sizes, default=0), "isolated_phenomena": len(isolated)})
+    return ds
+
+
+def adjacency(model, kinds={"causal"}, include_proposed=False, reverse=False):
+    graph = defaultdict(list)
+    for rel in model["relations"]:
+        if rel.get("kind") not in kinds or rel.get("status") == "rejected": continue
+        if rel.get("trust_scope") == "proposed" and not include_proposed: continue
+        for source in rel.get("from", []):
+            for target in rel.get("to", []): graph[target if reverse else source].append((source if reverse else target, rel))
+    return graph
+
+
+def reachable(model, source, target, depth, reverse=False):
+    graph = adjacency(model, reverse=reverse)
+    q, seen = deque([(source, 0)]), {source}
+    while q:
+        node, d = q.popleft()
+        if node == target: return True
+        if d >= depth: continue
+        for nxt, _ in graph[node]:
+            if nxt not in seen: seen.add(nxt); q.append((nxt, d + 1))
+    return False
+
+
+def run_model_tests(model):
+    results = []
+    for index, test in enumerate(model["tests"], 1):
+        kind, depth = test.get("kind"), int(test.get("max_depth", 6))
+        if kind not in TEST_KINDS:
+            results.append({"id": test.get("id", index), "kind": kind, "passed": False, "message": "unknown test kind"}); continue
+        if kind == "path_exists": passed = reachable(model, test.get("from"), test.get("to"), depth)
+        elif kind == "no_path": passed = not reachable(model, test.get("from"), test.get("to"), depth)
+        elif kind == "binding_exists": passed = any(b.get("concept") == test.get("concept") and b.get("role") == test.get("role") for b in model["bindings"] if b.get("trust_scope") == "trusted")
+        else: passed = all(reachable(model, item, test.get("concept"), depth) for item in test.get("contains", []))
+        results.append({"id": test.get("id", index), "kind": kind, "passed": passed})
+    return results
+
+
+SCHEMA = """
+CREATE TABLE phenomena(id TEXT PRIMARY KEY, kind TEXT, domain TEXT, description TEXT, trust_scope TEXT);
+CREATE TABLE aliases(concept_id TEXT, alias TEXT);
+CREATE TABLE relations(id TEXT PRIMARY KEY, kind TEXT, effect TEXT, status TEXT, temporal_mode TEXT, min_lag_ms INTEGER, max_lag_ms INTEGER, description TEXT, trust_scope TEXT);
+CREATE TABLE relation_inputs(relation_id TEXT, concept_id TEXT); CREATE TABLE relation_outputs(relation_id TEXT, concept_id TEXT);
+CREATE TABLE bindings(id TEXT PRIMARY KEY, concept TEXT, role TEXT, schema_name TEXT, table_name TEXT, data_json TEXT, trust_scope TEXT);
+CREATE TABLE binding_partition_keys(binding_id TEXT, key TEXT); CREATE TABLE binding_cluster_keys(binding_id TEXT, key TEXT); CREATE TABLE binding_null_rates(binding_id TEXT, column_name TEXT, rate REAL);
+CREATE TABLE evidence(id TEXT PRIMARY KEY, relation_id TEXT, concept_id TEXT, binding_id TEXT, type TEXT, source TEXT, description TEXT, measurement_json TEXT, trust_scope TEXT);
+CREATE TABLE metadata(key TEXT PRIMARY KEY, value TEXT);
+CREATE INDEX idx_alias ON aliases(alias); CREATE INDEX idx_binding_concept ON bindings(concept); CREATE INDEX idx_input ON relation_inputs(concept_id); CREATE INDEX idx_output ON relation_outputs(concept_id);
+"""
+
+
+def clean(item): return {k: v for k, v in item.items() if not k.startswith("_")}
+
+
+def build_db(model, destination):
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix="causality-", suffix=".sqlite", dir=destination.parent); os.close(fd)
+    path = Path(temporary)
+    try:
+        con = sqlite3.connect(path); con.executescript(SCHEMA)
+        for p in model["phenomena"]:
+            con.execute("INSERT INTO phenomena VALUES(?,?,?,?,?)", (p["id"], p.get("kind"), p.get("domain"), p.get("description"), p["trust_scope"]))
+            con.executemany("INSERT INTO aliases VALUES(?,?)", [(p["id"], a) for a in p.get("aliases", [])])
+        for r in model["relations"]:
+            con.execute("INSERT INTO relations VALUES(?,?,?,?,?,?,?,?,?)", (r["id"], r.get("kind"), r.get("effect", "unknown"), r.get("status", "candidate"), r.get("temporal_mode", "unknown"), r.get("min_lag_ms"), r.get("max_lag_ms"), r.get("description", ""), r["trust_scope"]))
+            con.executemany("INSERT INTO relation_inputs VALUES(?,?)", [(r["id"], x) for x in r.get("from", [])]); con.executemany("INSERT INTO relation_outputs VALUES(?,?)", [(r["id"], x) for x in r.get("to", [])])
+        for b in model["bindings"]:
+            con.execute("INSERT INTO bindings VALUES(?,?,?,?,?,?,?)", (b["id"], b.get("concept"), b.get("role"), b.get("schema"), b.get("table"), json.dumps(clean(b), sort_keys=True), b["trust_scope"]))
+            con.executemany("INSERT INTO binding_partition_keys VALUES(?,?)", [(b["id"], x) for x in b.get("partition_keys", [])]); con.executemany("INSERT INTO binding_cluster_keys VALUES(?,?)", [(b["id"], x) for x in b.get("cluster_keys", [])]); con.executemany("INSERT INTO binding_null_rates VALUES(?,?,?)", [(b["id"], k, v) for k, v in b.get("null_rates", {}).items()])
+        for e in model["evidence"]:
+            con.execute("INSERT INTO evidence VALUES(?,?,?,?,?,?,?,?,?)", (e["id"], e.get("relation"), e.get("concept"), e.get("binding"), e.get("type"), e.get("source"), e.get("description"), json.dumps(e.get("measurement")) if e.get("measurement") else None, e["trust_scope"]))
+        con.execute("INSERT INTO metadata VALUES('compiled_at',?)", (datetime.now(timezone.utc).isoformat(),)); con.commit()
+        if con.execute("PRAGMA integrity_check").fetchone()[0] != "ok": raise RuntimeError("SQLite integrity check failed")
+        con.close(); os.replace(path, destination)
+    except Exception:
+        path.unlink(missing_ok=True); raise
+
+
+def load_valid(cfg, proposals=True):
+    model, initial = parse_sources(cfg, proposals); diagnostics = validate(model, initial, cfg)
+    errors = [d for d in diagnostics if d["level"] == "ERROR"]
+    if errors: raise CausalityError("VALIDATION_FAILED", "Model validation failed.", diagnostics)
+    return model, diagnostics
+
+
+def binding_active(binding, start, end):
+    try:
+        bf, bu = parse_day(binding.get("valid_from")), parse_day(binding.get("valid_until")); start, end = parse_day(start), parse_day(end)
+    except ValueError: return False
+    return (not start or not bu or start <= bu) and (not end or not bf or end >= bf)
+
+
+def investigation_path(cfg, ident):
+    if not ID_RE.fullmatch(ident): raise CausalityError("INVALID_ID", "Investigation ID is invalid.", exit_code=EXIT_CONFLICT)
+    return cfg["investigations_dir"] / f"{ident}.json"
+
+
+def read_investigation(cfg, ident):
+    path = investigation_path(cfg, ident)
+    if not path.is_file(): raise CausalityError("NOT_FOUND", f"Investigation {ident!r} not found.", exit_code=EXIT_NOT_FOUND)
+    return path, json.loads(path.read_text())
+
+
+def write_json_atomic(path, data):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix=path.name, dir=path.parent, text=True)
+    with os.fdopen(fd, "w") as handle: json.dump(data, handle, indent=2, sort_keys=True); handle.write("\n")
+    os.replace(temporary, path)
+
+
+def parser_for_cli():
+    p = argparse.ArgumentParser(prog="causality"); p.add_argument("--format", choices=("json", "human"), default="json")
+    sub = p.add_subparsers(dest="command", required=True)
+    for name in ("validate", "test", "compile"): sub.add_parser(name)
+    r = sub.add_parser("resolve"); r.add_argument("phrase"); r.add_argument("--limit", type=int)
+    s = sub.add_parser("show"); s.add_argument("concept")
+    n = sub.add_parser("neighborhood"); n.add_argument("concept"); n.add_argument("--direction", choices=("upstream", "downstream", "both"), default="both"); n.add_argument("--depth", type=int); n.add_argument("--limit", type=int); n.add_argument("--include-statistical", action="store_true"); n.add_argument("--include-structural", action="store_true"); n.add_argument("--include-semantic", action="store_true"); n.add_argument("--include-lineage", action="store_true"); n.add_argument("--include-proposed", action="store_true"); n.add_argument("--with-bindings", action="store_true")
+    paths = sub.add_parser("paths"); paths.add_argument("source"); paths.add_argument("target"); paths.add_argument("--max-depth", type=int, default=6); paths.add_argument("--limit", type=int); paths.add_argument("--relation-kind", choices=sorted(REL_KINDS), default="causal"); paths.add_argument("--include-proposed", action="store_true")
+    b = sub.add_parser("binding"); b.add_argument("concept"); b.add_argument("--from", dest="start"); b.add_argument("--to", dest="end")
+    q = sub.add_parser("query-plan"); q.add_argument("concept"); q.add_argument("--from", dest="start"); q.add_argument("--to", dest="end")
+    inv = sub.add_parser("investigate").add_subparsers(dest="action", required=True)
+    start = inv.add_parser("start"); start.add_argument("--id", required=True); start.add_argument("--effect", required=True); start.add_argument("--direction", required=True); start.add_argument("--from", dest="start", required=True); start.add_argument("--to", dest="end", required=True); start.add_argument("--scope")
+    status = inv.add_parser("status"); status.add_argument("id")
+    candidate = inv.add_parser("candidate").add_subparsers(dest="candidate_action", required=True).add_parser("add"); candidate.add_argument("investigation"); candidate.add_argument("--id", required=True); candidate.add_argument("--path"); candidate.add_argument("--description")
+    evidence = inv.add_parser("evidence").add_subparsers(dest="evidence_action", required=True).add_parser("add"); evidence.add_argument("investigation"); evidence.add_argument("--candidate", required=True); evidence.add_argument("--type", required=True); evidence.add_argument("--source", required=True); evidence.add_argument("--summary", required=True)
+    for action in ("refute", "support"):
+        x = inv.add_parser(action); x.add_argument("investigation"); x.add_argument("candidate"); x.add_argument("--reason", required=True)
+    prop = sub.add_parser("propose").add_subparsers(dest="proposal_type", required=True); rel = prop.add_parser("relation"); rel.add_argument("--id", required=True); rel.add_argument("--from", dest="sources", action="append", required=True); rel.add_argument("--to", dest="targets", action="append", required=True); rel.add_argument("--kind", choices=sorted(REL_KINDS), required=True); rel.add_argument("--effect", choices=sorted(EFFECTS), default="unknown"); rel.add_argument("--evidence"); rel.add_argument("--description", default="Agent-proposed relationship.")
+    return p
+
+
+def output(command, data, warnings, fmt="json"):
+    envelope = {"ok": True, "command": command, "data": data, "warnings": warnings}
+    print(json.dumps(envelope, indent=2, sort_keys=True) if fmt == "json" else human(data, warnings))
+
+
+def human(data, warnings):
+    rendered = json.dumps(data, indent=2, sort_keys=True)
+    if warnings: rendered += "\nWarnings:\n" + "\n".join(f"- {w}" for w in warnings)
+    return rendered
+
+
+def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    # argparse only accepts a root option before the subcommand. Agents and humans commonly
+    # append formatting options, so normalize either spelling before parsing.
+    for index, token in enumerate(argv):
+        if token == "--format" and index + 1 < len(argv):
+            value = argv[index + 1]; del argv[index:index + 2]; argv[0:0] = ["--format", value]; break
+        if token.startswith("--format="):
+            value = token.split("=", 1)[1]; del argv[index]; argv[0:0] = ["--format", value]; break
+    args = parser_for_cli().parse_args(argv); _, cfg = find_config(Path.cwd()); command = args.command
+    if command in ("validate", "test", "compile"):
+        model, initial = parse_sources(cfg, True); diagnostics = validate(model, initial, cfg); errors = [d for d in diagnostics if d["level"] == "ERROR"]
+        if errors: raise CausalityError("VALIDATION_FAILED", "Model validation failed.", diagnostics)
+        results = run_model_tests(model); failed = [r for r in results if not r["passed"]]
+        if command in ("test", "compile") and failed: raise CausalityError("MODEL_TEST_FAILED", "One or more model tests failed.", failed)
+        if command == "compile":
+            try: build_db(model, cfg["sqlite_path"])
+            except Exception as exc: raise CausalityError("COMPILE_FAILED", str(exc), exit_code=EXIT_STORAGE) from exc
+            data = {"sqlite_path": str(cfg["sqlite_path"]), "model_tests": results}
+        elif command == "test": data = {"tests": results, "passed": len(results)}
+        else: data = {"diagnostics": diagnostics, "errors": 0, "warnings": sum(d["level"] == "WARNING" for d in diagnostics)}
+        output(command, data, [d["message"] for d in diagnostics if d["level"] == "WARNING"], args.format); return
+    model, diagnostics = load_valid(cfg, True); phenomena = {p["id"]: p for p in model["phenomena"]}
+    if command == "resolve":
+        needle = args.phrase.casefold(); scored = []
+        for p in model["phenomena"]:
+            if p["trust_scope"] != "trusted": continue
+            aliases = [str(a).casefold() for a in p.get("aliases", [])]; pid = p["id"].casefold(); description = p.get("description", "").casefold(); domain = p.get("domain", "").casefold()
+            score = 100 if needle == pid else 90 if needle in aliases else 70 if needle in pid else 55 if any(needle in a for a in aliases) else 30 if needle in description or needle in domain else 0
+            if score: scored.append({"id": p["id"], "score": score, "kind": p.get("kind"), "domain": p.get("domain"), "description": p.get("description")})
+        scored.sort(key=lambda x: (-x["score"], x["id"])); output(command, {"query": args.phrase, "candidates": scored[:args.limit or cfg["default_result_limit"]]}, [], args.format); return
+    if command in ("show", "neighborhood", "binding", "query-plan") and args.concept not in phenomena: raise CausalityError("NOT_FOUND", f"Concept {args.concept!r} not found.", exit_code=EXIT_NOT_FOUND)
+    if command == "show":
+        p = clean(phenomena[args.concept]); p["relations"] = [clean(r) for r in model["relations"] if r["trust_scope"] == "trusted" and args.concept in r.get("from", []) + r.get("to", [])]; p["bindings"] = [{"id": b["id"], "role": b.get("role"), "valid_from": b.get("valid_from"), "valid_until": b.get("valid_until")} for b in model["bindings"] if b.get("concept") == args.concept and b["trust_scope"] == "trusted"]; p["evidence"] = [clean(e) for e in model["evidence"] if e.get("concept") == args.concept or e.get("relation") in {r["id"] for r in p["relations"]}]
+        output(command, p, [], args.format); return
+    if command == "neighborhood":
+        kinds = {"causal"} | {kind for kind in ("statistical", "structural", "semantic", "lineage") if getattr(args, "include_" + kind)}; depth, limit = args.depth or cfg["default_neighborhood_depth"], args.limit or cfg["default_result_limit"]
+        found_nodes, found_relations = {args.concept: 0}, {}
+        directions = ([False] if args.direction == "downstream" else [True] if args.direction == "upstream" else [False, True])
+        for reverse in directions:
+            graph, q = adjacency(model, kinds, args.include_proposed, reverse), deque([(args.concept, 0)])
+            while q and len(found_nodes) < limit:
+                node, distance = q.popleft()
+                if distance >= depth: continue
+                for nxt, rel in graph[node]:
+                    found_relations[rel["id"]] = clean(rel)
+                    if nxt not in found_nodes: found_nodes[nxt] = distance + 1; q.append((nxt, distance + 1))
+        data = {"root": args.concept, "nodes": [{"id": n, "depth": d, "kind": phenomena[n].get("kind"), "domain": phenomena[n].get("domain")} for n, d in sorted(found_nodes.items(), key=lambda x: (x[1], x[0]))], "relations": list(found_relations.values())}
+        if args.with_bindings: data["bindings"] = [{"id": b["id"], "concept": b.get("concept"), "role": b.get("role")} for b in model["bindings"] if b.get("concept") in found_nodes and b["trust_scope"] == "trusted"]
+        output(command, data, [], args.format); return
+    if command == "paths":
+        if args.source not in phenomena or args.target not in phenomena: raise CausalityError("NOT_FOUND", "Source or target concept not found.", exit_code=EXIT_NOT_FOUND)
+        graph, paths, limit = adjacency(model, {args.relation_kind}, args.include_proposed), [], args.limit or cfg["default_path_limit"]
+        q = deque([(args.source, [args.source], [])])
+        while q and len(paths) < limit:
+            node, nodes, rels = q.popleft()
+            if len(rels) >= args.max_depth: continue
+            for nxt, rel in graph[node]:
+                if nxt in nodes: continue
+                candidate = (nxt, nodes + [nxt], rels + [rel["id"]])
+                if nxt == args.target: paths.append({"nodes": candidate[1], "relations": candidate[2]})
+                else: q.append(candidate)
+        output(command, {"from": args.source, "to": args.target, "paths": paths}, [], args.format); return
+    if command in ("binding", "query-plan"):
+        bindings = [clean(b) for b in model["bindings"] if b.get("concept") == args.concept and b["trust_scope"] == "trusted" and binding_active(b, args.start, args.end)]
+        bindings.sort(key=lambda b: (b.get("role") != "canonical", b.get("valid_from", "")), reverse=False)
+        if not bindings: raise CausalityError("NOT_FOUND", f"No binding for {args.concept!r} covers the requested window.", exit_code=EXIT_NOT_FOUND)
+        if command == "binding": output(command, {"concept": args.concept, "bindings": bindings}, [], args.format); return
+        binding = bindings[0]; warnings = []
+        if binding.get("require_partition_filter"): warnings.append("Do not scan without a predicate on: " + ", ".join(binding.get("partition_keys", [])))
+        data = {"concept": args.concept, "binding": binding["id"], "window": {"from": args.start, "to": args.end}, "grain": {"entity": binding.get("grain_entity"), "time": binding.get("grain_time")}, "population": {k: binding.get(k) for k in ("population", "numerator", "denominator") if binding.get(k)}, "physical": {"schema": binding.get("schema"), "table": binding.get("table"), "time_column": binding.get("time_column"), "entity_key": binding.get("entity_key"), "estimated_rows": binding.get("estimated_rows"), "estimated_bytes": binding.get("estimated_bytes"), "partition_keys": binding.get("partition_keys", []), "cluster_keys": binding.get("cluster_keys", []), "null_rates": binding.get("null_rates", {})}, "safety": {"require_time_predicate": bool(binding.get("time_column")), "require_partition_filter": bool(binding.get("require_partition_filter")), "recommended_time_window": binding.get("recommended_time_window")}, "query_ref": binding.get("query_ref")}
+        output(command, data, warnings, args.format); return
+    if command == "investigate":
+        now = datetime.now(timezone.utc).isoformat()
+        if args.action == "start":
+            path = investigation_path(cfg, args.id)
+            if path.exists(): raise CausalityError("CONFLICT", f"Investigation {args.id!r} already exists.", exit_code=EXIT_CONFLICT)
+            if args.effect not in phenomena: raise CausalityError("NOT_FOUND", f"Effect {args.effect!r} not found.", exit_code=EXIT_NOT_FOUND)
+            try: datetime.fromisoformat(args.start); datetime.fromisoformat(args.end)
+            except ValueError as exc: raise CausalityError("INVALID_TIME", str(exc), exit_code=EXIT_CONFLICT) from exc
+            record = {"investigation": {"id": args.id, "effect": args.effect, "direction": args.direction, "window_start": args.start, "window_end": args.end, "scope": args.scope, "created_at": now, "updated_at": now}, "candidates": [], "evidence": [], "notes": []}; write_json_atomic(path, record); output("investigate start", record, [], args.format); return
+        ident = args.id if args.action == "status" else args.investigation; path, record = read_investigation(cfg, ident)
+        if args.action == "status":
+            groups = {state: [c for c in record["candidates"] if c["status"] == state] for state in ("candidate", "testing", "supported", "refuted", "inconclusive")}; output("investigate status", {"observation": record["investigation"], "candidates": groups, "evidence": record["evidence"], "next_unresolved": groups["candidate"] + groups["testing"]}, [], args.format); return
+        if args.action == "candidate":
+            if not args.path and not args.description: raise CausalityError("USAGE", "Candidate requires --path or --description.", exit_code=2)
+            if any(c["id"] == args.id for c in record["candidates"]): raise CausalityError("CONFLICT", f"Candidate {args.id!r} already exists.", exit_code=EXIT_CONFLICT)
+            record["candidates"].append({"id": args.id, "path": args.path.split(",") if args.path else None, "description": args.description, "status": "candidate", "created_at": now})
+        elif args.action == "evidence":
+            if not any(c["id"] == args.candidate for c in record["candidates"]): raise CausalityError("NOT_FOUND", f"Candidate {args.candidate!r} not found.", exit_code=EXIT_NOT_FOUND)
+            record["evidence"].append({"candidate": args.candidate, "type": args.type, "source": args.source, "summary": args.summary, "created_at": now})
+        else:
+            candidate = next((c for c in record["candidates"] if c["id"] == args.candidate), None)
+            if not candidate: raise CausalityError("NOT_FOUND", f"Candidate {args.candidate!r} not found.", exit_code=EXIT_NOT_FOUND)
+            candidate.update({"status": "refuted" if args.action == "refute" else "supported", "reason": args.reason, "decided_at": now})
+        record["investigation"]["updated_at"] = now; write_json_atomic(path, record); output(f"investigate {args.action}", record, [], args.format); return
+    if command == "propose":
+        if not ID_RE.fullmatch(args.id): raise CausalityError("INVALID_ID", "Proposal ID is invalid.", exit_code=EXIT_CONFLICT)
+        cfg["proposals_dir"].mkdir(parents=True, exist_ok=True); path = cfg["proposals_dir"] / f"{args.id}.causal.toml"
+        if path.exists(): raise CausalityError("CONFLICT", f"Proposal {args.id!r} already exists.", exit_code=EXIT_CONFLICT)
+        def toml_array(values): return "[" + ", ".join(json.dumps(v) for v in values) + "]"
+        text = f'[[relations]]\nid = {json.dumps(args.id)}\nfrom = {toml_array(args.sources)}\nto = {toml_array(args.targets)}\nkind = {json.dumps(args.kind)}\neffect = {json.dumps(args.effect)}\nstatus = "candidate"\ntemporal_mode = "unknown"\ndescription = {json.dumps(args.description)}\n'
+        if args.evidence: text += f'\n[[evidence]]\nid = {json.dumps(args.id + ".evidence")}\nrelation = {json.dumps(args.id)}\ntype = "observational_analysis"\nsource = {json.dumps(args.evidence)}\ndescription = "Evidence supplied with proposal."\n'
+        path.write_text(text); output("propose relation", {"path": str(path), "trust_scope": "proposed"}, [], args.format)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except CausalityError as exc:
+        command = next((a for a in sys.argv[1:] if not a.startswith("-")), "unknown")
+        error = {"ok": False, "command": command, "error": {"code": exc.code, "message": exc.message, "details": exc.details}}
+        print(json.dumps(error, indent=2, sort_keys=True), file=sys.stderr); raise SystemExit(exc.exit_code)
+    except KeyboardInterrupt:
+        raise SystemExit(130)
