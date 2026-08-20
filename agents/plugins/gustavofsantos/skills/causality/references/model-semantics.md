@@ -11,6 +11,9 @@ Use aliases and descriptions only to resolve a phrase. Once resolved, reason wit
 concept ID. Select a binding whose validity interval covers the investigation window; do
 not assume the current canonical table represents historical data.
 
+Binding validity accepts ISO dates and full ISO-8601 timestamps. Binding intervals remain
+calendar-date metadata, so timestamp windows are compared using their stated local dates.
+
 ## Relation kinds
 
 | Kind | Meaning | Permitted inference |
@@ -38,6 +41,12 @@ Treat `candidate` and `hypothesis` edges as ideas to test. Treat `supported` as 
 revisable knowledge. Treat `verified` as protected organizational knowledge, not permission
 to ignore scope, time, or contradictory incident evidence.
 
+## Relation arity
+
+Version 1 accepts exactly one input and one output per relation. A list such as
+`from = ["high_demand", "low_capacity"]` describes a conjunction, not two independent
+causal edges, and is rejected until the model gains explicit mechanism/hyperedge semantics.
+
 ## Time and feedback
 
 Relation time modes may be synchronous, asynchronous, cumulative, or unknown. Respect
@@ -47,7 +56,9 @@ because its nodes occur at different times; never collapse it into a same-time c
 
 ## Proposals
 
-Proposals are untrusted source records. Query commands exclude them by default. Create a
-proposal when an investigation discovers a repeatable relationship worth human review,
-but preserve its evidence reference and never move or rewrite trusted model files as part
-of the proposal workflow.
+Proposals are untrusted source records. Query commands exclude them by default. The
+compiler validates each proposal against the trusted model independently; invalid proposals
+are reported and excluded from the index, while trusted queries continue to work. Create a
+proposal when an investigation discovers a repeatable relationship worth human review, but
+preserve its evidence reference and never move or rewrite trusted model files as part of
+the proposal workflow.

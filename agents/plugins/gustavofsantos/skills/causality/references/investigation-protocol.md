@@ -40,6 +40,10 @@ Use `--description "<falsifiable explanation>"` when no trusted path exists. Phr
 description so one observation can support or refute it. A candidate is working state, not
 trusted organizational knowledge.
 
+When `--path` is supplied, the CLI verifies every concept, each directed trusted causal
+edge, and that the last node is the investigation effect. It rejects an unmodeled or
+reversed path; use `--description` for that hypothesis instead.
+
 ## Attach evidence
 
 Run one narrow test through the available query adapter, save or reference its result in
@@ -69,6 +73,10 @@ causality investigate support <incident-id> <candidate-id> \
 Support means the branch remains a plausible explanation for this incident; it does not
 verify the global relation. Refute only when the observation genuinely discriminates
 against the candidate. Otherwise leave it unresolved or inconclusive.
+
+Attach at least one candidate-specific evidence record before either verdict. The only
+exception is an explicit `--allow-without-evidence` override with a reason explaining why
+the ledger must record a provisional decision.
 
 ## Expansion and stopping
 

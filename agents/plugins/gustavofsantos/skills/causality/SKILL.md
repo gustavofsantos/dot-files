@@ -29,10 +29,12 @@ PATH-visible `causality` binary exists.
 
 ## Retrieval rule
 
-Never load the complete model unless the user explicitly requires it. Start from the
-observed concept, retrieve a bounded local neighborhood, and expand only when evidence
-requires another reasoning step. JSON is the default CLI format; preserve IDs for
-follow-up calls.
+Never load the complete model unless the user explicitly requires it. Operational commands
+read the compiled SQLite index, not TOML source. Start from the observed concept, retrieve
+a bounded local neighborhood, and expand only when evidence requires another reasoning
+step. JSON is the default CLI format; preserve IDs for follow-up calls. If the index is
+missing, stop and run the verification/compile sequence below; never bypass it by parsing
+model files in an investigation.
 
 ## Investigation loop
 
@@ -43,8 +45,11 @@ follow-up calls.
 4. Start or resume an investigation. Record each plausible explanation as a candidate.
 5. Pick one unresolved branch. Before querying physical data, run
    `causality binding <concept>` or
-   `causality query-plan <concept> --from <start> --to <end>`.
-6. Check grain, population, temporal validity, time column, entity key, table scale,
+   `causality query-plan <concept> --from <start> --to <end>`. If it requires a
+   partition predicate, re-run with a declared `--partition-key` before querying.
+6. Proceed only when `query-plan` reports `safety.safe_to_query: true`. Treat every
+   returned blocker as a hard stop; split a `binding_resolution: SPLIT_REQUIRED` window.
+   Check grain, population, temporal validity, time column, entity key, table scale,
    partition requirements, null-rate hints, and the canonical query reference.
 7. Use the available query-running skill or adapter to test that branch. Never call a raw
    database client when an approved adapter exists.
@@ -82,9 +87,11 @@ selecting a historical representation.
 ## Trust boundary
 
 You may query the trusted model, maintain investigations, attach evidence, support or
-refute investigation candidates, and create proposals. Do not replace canonical bindings,
-rewrite trusted metric definitions, modify verified relations, edit generated SQLite, or
-promote a proposal into trusted model source. Agents propose; humans promote.
+refute investigation candidates, and create proposals. Proposals are independently
+validated and indexed only when valid; an invalid proposal is reported by `validate` or
+`compile` but never blocks trusted retrieval. Do not replace canonical bindings, rewrite
+trusted metric definitions, modify verified relations, edit generated SQLite, or promote a
+proposal into trusted model source. Agents propose; humans promote.
 
 After an explicitly human-reviewed trusted-model source change, run in order:
 

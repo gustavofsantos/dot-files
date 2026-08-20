@@ -4,7 +4,8 @@ Commands written as `causality ...` use the skill-bundled executable documented 
 `SKILL.md`: `python3 <skill-dir>/scripts/causality ...`.
 
 `causality query-plan` plans analysis; it does not execute SQL. Use its output as a hard
-preflight gate before handing a statement to the available query adapter.
+preflight gate before handing a statement to the available query adapter. Only proceed
+when `data.safety.safe_to_query` is `true`; its machine-readable `blockers` are hard stops.
 
 ## Preflight checklist
 
@@ -13,7 +14,8 @@ preflight gate before handing a statement to the available query adapter.
 2. **Time:** use the declared time column and an explicit bounded predicate. Do not replace
    event time with ingestion or update time without stating why.
 3. **Partitioning:** when `require_partition_filter` is true, constrain at least one listed
-   partition key. A predicate on a non-partition timestamp is not a substitute.
+   partition key. A predicate on a non-partition timestamp is not a substitute. Pass that
+   key to `query-plan --partition-key <key>`; the CLI otherwise returns a blocker.
 4. **Scale:** compare estimated rows and bytes with the requested window. Honor the
    recommended time window; widen it in measured increments only when necessary.
 5. **Grain:** state what one row represents. Aggregate or deduplicate before joining when
@@ -33,7 +35,8 @@ preflight gate before handing a statement to the available query adapter.
 
 Stop and report the missing metadata instead of drafting a plausible query when:
 
-- no binding covers the requested dates;
+- no binding covers the requested dates, or the result says `SPLIT_REQUIRED` (make one
+  bounded plan per validity interval);
 - a required partition predicate cannot be supplied;
 - the query would scan a large table without partition metadata;
 - grain or eligible population is unknown for a consequential join or comparison;
