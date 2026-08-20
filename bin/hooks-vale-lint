@@ -45,11 +45,11 @@ command -v vale >/dev/null 2>&1 || exit 0
 
 input=$(cat)
 
-cwd=$(printf '%s' "$input" | jq -r '.cwd // empty')
+cwd=$(printf '%s' "$input" | jq -r 'if (.cwd | type) == "string" and (.cwd | length) > 0 then .cwd else .workspace_roots[0] // empty end')
 [ -n "$cwd" ] || exit 0
 cd "$cwd" 2>/dev/null || exit 0
 
-file=$(printf '%s' "$input" | jq -r '.tool_input.file_path // empty')
+file=$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.path // empty')
 [ -n "$file" ] || exit 0
 
 case "$file" in
