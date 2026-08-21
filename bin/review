@@ -1,0 +1,992 @@
+#!/usr/bin/env python3
+"""
+review — a per-workspace queue of code review comments, written in an editor and
+pulled by a coding agent.
+
+You annotate code where you read it (the nvim `review` plugin, or `review add`
+straight from a shell); every comment lands in a durable queue keyed by the
+workspace it was written in. Whatever agent you are running later drains that
+queue with `review pull` — pulled comments leave the queue, so the same note is
+never worked twice.
+
+The queue is the single source of truth: the editor plugin keeps no copy of it,
+and every id printed here is stable until the comment is pulled or dropped.
+
+A comment carries who raised it and which lane it belongs to, and ends in a
+recorded decision — `resolve` (done) or `reject` (with a reason). `pull` says a
+comment was handed over; those two say what became of it.
+
+Workspace resolution, in order:
+  1. --workspace PATH
+  2. $REVIEW_WORKSPACE
+  3. the git toplevel of the current directory (worktrees are their own workspace)
+  4. the current directory
+
+Lanes divide one workspace. A single working tree can carry several branches at
+once (GitButler and friends), so a comment names its lane and a pinned session
+sees only that lane: --lane NAME, else $REVIEW_LANE, else every lane. Scoping is
+strict — a pull pinned to a lane never swallows another lane's comments, and says
+on stderr when comments are waiting elsewhere.
+
+Store: $REVIEW_HOME (default ~/.reviews)/<workspace-slug>/queue.json
+
+Examples:
+  review add --file src/api.py --lines 40-58 --comment "extract this branch"
+  review add --file src/api.py --lines 12 --comment "typo" --lane refactor-auth
+  review list                              # what is queued here, oldest first
+  review list --file src/api.py --format json
+  review list --status open                # raised, not yet decided
+  review pull                              # dequeue everything, as markdown
+  review pull --lane refactor-auth         # only that lane's comments
+  review pull --limit 1 --format json      # dequeue one, machine-readable
+  review pull --peek                       # look without dequeuing
+  review resolve r3 --note "renamed, test added"
+  review reject r4 --note "intentional: the caller validates"
+  review show r3
+  review edit r3 --comment "actually: split the function"
+  review drop r3 r4
+  review clear
+  review count                             # pending count, for a statusline
+  review workspaces                        # every workspace holding comments
+"""
+
+import argparse
+import fcntl
+import hashlib
+import json
+import os
+import re
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+PROG = "review"
+STORE_VERSION = 1
+ARCHIVE_LIMIT = 200
+
+LANE_ENV = "REVIEW_LANE"
+AUTHOR_ENV = "REVIEW_AUTHOR"
+
+# pending → pulled → done | rejected. A comment is "open" until someone says
+# what became of it, which is the whole point of the last two.
+OPEN_STATUSES = ("pending", "pulled")
+RESOLVED_STATUSES = ("done", "rejected")
+STATUS_CHOICES = ["pending", "pulled", "done", "rejected", "open", "all"]
+
+EXT_FILETYPE = {
+    ".bash": "bash",
+    ".c": "c",
+    ".clj": "clojure",
+    ".cljc": "clojure",
+    ".cljs": "clojure",
+    ".cpp": "cpp",
+    ".css": "css",
+    ".edn": "clojure",
+    ".ex": "elixir",
+    ".exs": "elixir",
+    ".go": "go",
+    ".h": "c",
+    ".hs": "haskell",
+    ".html": "html",
+    ".java": "java",
+    ".js": "javascript",
+    ".json": "json",
+    ".jsx": "javascript",
+    ".lua": "lua",
+    ".md": "markdown",
+    ".py": "python",
+    ".rb": "ruby",
+    ".rs": "rust",
+    ".scm": "scheme",
+    ".sh": "bash",
+    ".sql": "sql",
+    ".toml": "toml",
+    ".ts": "typescript",
+    ".tsx": "typescript",
+    ".vim": "vim",
+    ".yaml": "yaml",
+    ".yml": "yaml",
+    ".zsh": "bash",
+}
+
+
+def die(msg: str) -> "None":
+    """Every failure exits 1 with a single `review: ...` line on stderr."""
+    sys.exit(f"{PROG}: {msg}")
+
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+# ── workspace + store paths ───────────────────────────────────────────────────
+
+
+def store_root() -> Path:
+    return Path(os.environ.get("REVIEW_HOME") or (Path.home() / ".reviews"))
+
+
+def git_toplevel(start: Path) -> "Path | None":
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(start), "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return None
+    if out.returncode != 0:
+        return None
+    top = out.stdout.strip()
+    return Path(top) if top else None
+
+
+def resolve_workspace(explicit: "str | None") -> Path:
+    """The directory a comment belongs to: a git worktree root, else a plain dir."""
+    if explicit:
+        base = Path(explicit).expanduser()
+        if not base.is_dir():
+            die(f"--workspace {explicit!r} is not a directory")
+    elif os.environ.get("REVIEW_WORKSPACE"):
+        base = Path(os.environ["REVIEW_WORKSPACE"]).expanduser()
+        if not base.is_dir():
+            die(f"$REVIEW_WORKSPACE {str(base)!r} is not a directory")
+    else:
+        base = Path.cwd()
+    base = base.resolve()
+    return (git_toplevel(base) or base).resolve()
+
+
+def workspace_slug(workspace: Path) -> str:
+    text = str(workspace)
+    stem = re.sub(r"[^A-Za-z0-9]+", "-", text).strip("-").lower()[-48:].strip("-")
+    return f"{stem or 'root'}-{hashlib.sha1(text.encode()).hexdigest()[:8]}"
+
+
+def queue_path(workspace: Path) -> Path:
+    return store_root() / workspace_slug(workspace) / "queue.json"
+
+
+# ── store I/O ─────────────────────────────────────────────────────────────────
+
+
+def empty_store(workspace: Path) -> dict:
+    return {
+        "version": STORE_VERSION,
+        "workspace": str(workspace),
+        "next_seq": 1,
+        "reviews": [],
+    }
+
+
+def read_store(workspace: Path) -> dict:
+    path = queue_path(workspace)
+    if not path.exists():
+        return empty_store(workspace)
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        die(f"cannot read queue {path}: {exc}")
+    data.setdefault("version", STORE_VERSION)
+    data.setdefault("workspace", str(workspace))
+    data.setdefault("next_seq", 1)
+    data.setdefault("reviews", [])
+    return data
+
+
+def write_store(workspace: Path, data: dict) -> None:
+    path = queue_path(workspace)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+    os.replace(tmp, path)
+
+
+class locked:
+    """Serialize read-modify-write across concurrent editors and agents."""
+
+    def __init__(self, workspace: Path):
+        self.lock_path = queue_path(workspace).with_suffix(".lock")
+
+    def __enter__(self):
+        self.lock_path.parent.mkdir(parents=True, exist_ok=True)
+        self.fh = open(self.lock_path, "w")
+        fcntl.flock(self.fh, fcntl.LOCK_EX)
+        return self
+
+    def __exit__(self, *exc):
+        fcntl.flock(self.fh, fcntl.LOCK_UN)
+        self.fh.close()
+        return False
+
+
+# ── review records ────────────────────────────────────────────────────────────
+
+
+def pending(store: dict) -> list:
+    return [r for r in store["reviews"] if r.get("status") == "pending"]
+
+
+def by_status(store: dict, status: str) -> list:
+    if status == "all":
+        return list(store["reviews"])
+    if status == "open":  # raised but not yet accounted for
+        return [r for r in store["reviews"] if r.get("status") in OPEN_STATUSES]
+    return [r for r in store["reviews"] if r.get("status") == status]
+
+
+def resolve_lane(args) -> "str | None":
+    """Which lane this invocation is pinned to: --lane, else $REVIEW_LANE."""
+    lane = getattr(args, "lane", None) or os.environ.get(LANE_ENV) or None
+    return lane.strip() or None if lane else None
+
+
+def resolve_author(args) -> "str | None":
+    """Who is speaking: --author, else $REVIEW_AUTHOR (agents set it), else $USER."""
+    who = (
+        getattr(args, "author", None)
+        or os.environ.get(AUTHOR_ENV)
+        or os.environ.get("USER")
+        or None
+    )
+    return who.strip() or None if who else None
+
+
+def filter_lane(reviews: list, lane: "str | None", all_lanes: bool = False) -> list:
+    """Strict: a lane-pinned session never sees another lane's comments, and
+    never silently swallows an unlaned one either."""
+    if all_lanes or lane is None:
+        return reviews
+    return [r for r in reviews if r.get("lane") == lane]
+
+
+def find(store: dict, review_id: str) -> dict:
+    for r in store["reviews"]:
+        if r["id"] == review_id:
+            return r
+    die(f"no review {review_id!r} in this workspace (try `{PROG} list --status all`)")
+
+
+def range_label(r: dict) -> str:
+    if r["start_line"] == r["end_line"]:
+        return str(r["start_line"])
+    return f"{r['start_line']}-{r['end_line']}"
+
+
+def location(r: dict) -> str:
+    return f"{r['file']}:{range_label(r)}"
+
+
+def first_line(text: str) -> str:
+    return (text.strip().splitlines() or [""])[0]
+
+
+def attribution(r: dict) -> str:
+    """`@author #lane`, omitting whichever is absent."""
+    bits = []
+    if r.get("author"):
+        bits.append("@" + r["author"])
+    if r.get("lane"):
+        bits.append("#" + r["lane"])
+    return " ".join(bits)
+
+
+# ── rendering ─────────────────────────────────────────────────────────────────
+
+
+def render_text(reviews: list) -> str:
+    if not reviews:
+        return ""
+    width = max(len(r["id"]) for r in reviews)
+    lines = []
+    for r in reviews:
+        who = attribution(r)
+        lines.append(
+            f"{r['id']:<{width}}  {location(r)}  "
+            + (f"{who}  " if who else "")
+            + first_line(r["comment"])
+        )
+    return "\n".join(lines)
+
+
+def render_markdown(reviews: list, workspace: Path, drained: bool) -> str:
+    if not reviews:
+        return f"No pending review comments for {workspace}.\n"
+
+    out = [
+        f"# Review comments — {workspace}",
+        "",
+        "Address the following review comments, in the order listed. Each names a file",
+        "and line range, the code as it stood when the comment was written, and the",
+        "reviewer's note as a quote.",
+        "",
+    ]
+    if drained:
+        out += [
+            "These comments have been dequeued — they will not appear again. Record what",
+            "became of each one with `review resolve <id> --note ...`, or",
+            "`review reject <id> --note ...` when you are not making the change.",
+            "",
+        ]
+
+    for idx, r in enumerate(reviews, start=1):
+        who = attribution(r)
+        head = f"## {idx}. `{location(r)}` ({r['id']}"
+        out.append(head + (f" · {who})" if who else ")"))
+        out.append("")
+        out.append("```" + (r.get("filetype") or ""))
+        out.extend(r.get("code", "").split("\n"))
+        out.append("```")
+        out.append("")
+        for line in r["comment"].split("\n"):
+            out.append(f"> {line}" if line else ">")
+        out.append("")
+
+    return "\n".join(out).rstrip() + "\n"
+
+
+def emit(args, reviews: list, workspace: Path, drained: bool = False) -> None:
+    fmt = args.format
+    if fmt == "json":
+        payload = {
+            "workspace": str(workspace),
+            "count": len(reviews),
+            "reviews": reviews,
+        }
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    elif fmt == "ids":
+        for r in reviews:
+            print(r["id"])
+    elif fmt == "count":
+        print(len(reviews))
+    elif fmt == "markdown":
+        print(render_markdown(reviews, workspace, drained), end="")
+    else:
+        text = render_text(reviews)
+        if text:
+            print(text)
+        else:
+            lane = resolve_lane(args) if not getattr(args, "all_lanes", False) else None
+            scope = f" in lane {lane}" if lane else ""
+            print(f"{PROG}: no review comments for {workspace}{scope}", file=sys.stderr)
+
+
+# ── commands ──────────────────────────────────────────────────────────────────
+
+
+def parse_lines(spec: str) -> "tuple[int, int]":
+    m = re.fullmatch(r"\s*(\d+)(?:\s*[-:,]\s*(\d+))?\s*", spec)
+    if not m:
+        die(f"--lines {spec!r} is not N or N-M")
+    start = int(m.group(1))
+    end = int(m.group(2)) if m.group(2) else start
+    if start < 1 or end < 1:
+        die("--lines is 1-indexed; N must be >= 1")
+    return (start, end) if start <= end else (end, start)
+
+
+def split_lines(text: str) -> list:
+    lines = text.split("\n")
+    if lines and lines[-1] == "":  # a trailing newline is not a line
+        lines.pop()
+    return lines
+
+
+def read_source(path: Path, code_file: "str | None") -> list:
+    """The lines --lines slices: the editor's buffer when given, else disk."""
+    if code_file == "-":
+        return split_lines(sys.stdin.read())
+    if code_file:
+        src = Path(code_file).expanduser()
+        if not src.is_file():
+            die(f"--code-file {code_file!r} does not exist")
+        return split_lines(src.read_text(errors="replace"))
+    if not path.is_file():
+        die(f"{path} does not exist — pass --code-file to snapshot unsaved content")
+    return split_lines(path.read_text(errors="replace"))
+
+
+def cmd_add(args) -> int:
+    workspace = resolve_workspace(args.workspace)
+    path = Path(args.file).expanduser()
+    if not path.is_absolute():
+        path = (Path.cwd() / path).resolve()
+    else:
+        path = path.resolve()
+
+    start, end = parse_lines(args.lines)
+
+    comment = args.comment
+    if comment is None and args.comment_file:
+        if args.comment_file == "-":
+            if args.code_file == "-":
+                die("--comment-file - conflicts with --code-file - (one stdin)")
+            comment = sys.stdin.read()
+        else:
+            cf = Path(args.comment_file).expanduser()
+            if not cf.is_file():
+                die(f"--comment-file {args.comment_file!r} does not exist")
+            comment = cf.read_text()
+    if comment is None and args.code_file != "-" and not sys.stdin.isatty():
+        comment = sys.stdin.read()
+    if comment is None or not comment.strip():
+        die("a review comment needs text: pass --comment TEXT, --comment-file PATH, or pipe it in")
+    comment = comment.strip("\n")
+
+    source = read_source(path, args.code_file)
+    if start > len(source):
+        die(f"--lines {args.lines} is past the end of {path} ({len(source)} lines)")
+    code = "\n".join(source[start - 1 : end])
+
+    filetype = args.filetype or EXT_FILETYPE.get(path.suffix.lower(), "")
+
+    try:
+        rel = str(path.relative_to(workspace))
+    except ValueError:
+        rel = str(path)
+
+    with locked(workspace):
+        store = read_store(workspace)
+        seq = store["next_seq"]
+        store["next_seq"] = seq + 1
+        record = {
+            "id": f"r{seq}",
+            "status": "pending",
+            "workspace": str(workspace),
+            "lane": resolve_lane(args),
+            "author": resolve_author(args),
+            "file": rel,
+            "path": str(path),
+            "start_line": start,
+            "end_line": end,
+            "filetype": filetype,
+            "code": code,
+            "comment": comment,
+            "created_at": now_iso(),
+            "pulled_at": None,
+            "resolved_at": None,
+            "resolved_by": None,
+            "resolution_note": None,
+        }
+        store["reviews"].append(record)
+        write_store(workspace, store)
+
+    if args.format == "json":
+        print(json.dumps(record, indent=2, ensure_ascii=False))
+    elif args.format == "ids":
+        print(record["id"])
+    else:
+        print(f"{record['id']}  {location(record)}  {first_line(comment)}")
+    return 0
+
+
+def filter_file(reviews: list, file_arg: "str | None") -> list:
+    if not file_arg:
+        return reviews
+    wanted = Path(file_arg).expanduser()
+    wanted = (Path.cwd() / wanted) if not wanted.is_absolute() else wanted
+    target = str(wanted.resolve())
+    return [r for r in reviews if r.get("path") == target]
+
+
+def scoped(args, reviews: list) -> list:
+    """Everything a lane-pinned, file-scoped invocation is allowed to see."""
+    return filter_lane(filter_file(reviews, args.file), resolve_lane(args), args.all_lanes)
+
+
+def cmd_list(args) -> int:
+    workspace = resolve_workspace(args.workspace)
+    store = read_store(workspace)
+    emit(args, scoped(args, by_status(store, args.status)), workspace)
+    return 0
+
+
+def cmd_count(args) -> int:
+    workspace = resolve_workspace(args.workspace)
+    store = read_store(workspace)
+    print(len(scoped(args, by_status(store, args.status))))
+    return 0
+
+
+def elsewhere_note(store: dict, taken: list, lane: "str | None") -> str:
+    """A lane-pinned pull must never look like an empty queue when comments are
+    simply waiting in another lane — that is how a note gets forgotten."""
+    if taken or lane is None:
+        return ""
+    others = sorted({r.get("lane") or "(no lane)" for r in pending(store)})
+    if not others:
+        return ""
+    return f"{len(pending(store))} pending in other lanes: {', '.join(others)}"
+
+
+def cmd_pull(args) -> int:
+    workspace = resolve_workspace(args.workspace)
+    lane = resolve_lane(args)
+
+    with locked(workspace):
+        store = read_store(workspace)
+        queue = scoped(args, pending(store))
+
+        if args.id:
+            wanted = list(dict.fromkeys(args.id))
+            index = {r["id"]: r for r in queue}
+            missing = [i for i in wanted if i not in index]
+            if missing:
+                die(f"not pending in this workspace: {', '.join(missing)}")
+            queue = [index[i] for i in wanted]
+        if args.limit is not None:
+            if args.limit < 1:
+                die("--limit must be >= 1")
+            queue = queue[: args.limit]
+
+        if not args.peek and queue:
+            stamp = now_iso()
+            for r in queue:
+                r["status"] = "pulled"
+                r["pulled_at"] = stamp
+            # A bounded archive keeps the handed-over history useful without growing forever.
+            archived = [r["id"] for r in store["reviews"] if r.get("status") != "pending"]
+            expired = set(archived[: max(0, len(archived) - ARCHIVE_LIMIT)])
+            if expired:
+                store["reviews"] = [r for r in store["reviews"] if r["id"] not in expired]
+            write_store(workspace, store)
+        taken = [dict(r) for r in queue]
+        note = elsewhere_note(store, taken, lane)
+
+    emit(args, taken, workspace, drained=not args.peek)
+    if note:
+        print(f"{PROG}: {note}", file=sys.stderr)
+    return 0
+
+
+def cmd_resolve(args) -> int:
+    """Close the loop on a comment: what became of it, and who says so."""
+    workspace = resolve_workspace(args.workspace)
+    status = "rejected" if args.command == "reject" else "done"
+    note = args.note
+    if status == "rejected" and not (note or "").strip():
+        die("rejecting a comment needs a reason: pass --note TEXT")
+
+    with locked(workspace):
+        store = read_store(workspace)
+        record = find(store, args.id)
+        if record["status"] in RESOLVED_STATUSES:
+            die(f"{record['id']} is already {record['status']} — it cannot be re-decided")
+        record["status"] = status
+        record["resolved_at"] = now_iso()
+        record["resolved_by"] = resolve_author(args)
+        record["resolution_note"] = (note or "").strip("\n") or None
+        write_store(workspace, store)
+
+    who = record["resolved_by"]
+    print(
+        f"{record['id']}  {location(record)}  {status}"
+        + (f" by @{who}" if who else "")
+        + (f" — {first_line(record['resolution_note'])}" if record["resolution_note"] else "")
+    )
+    return 0
+
+
+def cmd_show(args) -> int:
+    workspace = resolve_workspace(args.workspace)
+    store = read_store(workspace)
+    record = find(store, args.id)
+    if args.format == "json":
+        print(json.dumps(record, indent=2, ensure_ascii=False))
+    elif args.format == "markdown":
+        print(render_markdown([record], workspace, drained=False), end="")
+    else:
+        who = attribution(record)
+        print(
+            f"{record['id']}  {location(record)}  [{record['status']}]"
+            + (f"  {who}" if who else "")
+        )
+        print()
+        print(record["comment"])
+        if record.get("resolved_at"):
+            decided = record.get("resolved_by")
+            print()
+            print(
+                f"--- {record['status']}"
+                + (f" by @{decided}" if decided else "")
+                + f" at {record['resolved_at']}"
+            )
+            if record.get("resolution_note"):
+                print(record["resolution_note"])
+    return 0
+
+
+def cmd_edit(args) -> int:
+    workspace = resolve_workspace(args.workspace)
+    comment = args.comment
+    if comment is None:
+        if sys.stdin.isatty():
+            die("pass the new text with --comment TEXT, or pipe it in")
+        comment = sys.stdin.read()
+    if not comment.strip():
+        die("refusing to replace a comment with empty text")
+    comment = comment.strip("\n")
+
+    with locked(workspace):
+        store = read_store(workspace)
+        record = find(store, args.id)
+        record["comment"] = comment
+        record["edited_at"] = now_iso()
+        write_store(workspace, store)
+
+    if args.format == "json":
+        print(json.dumps(record, indent=2, ensure_ascii=False))
+    else:
+        print(f"{record['id']}  {location(record)}  {first_line(comment)}")
+    return 0
+
+
+def cmd_drop(args) -> int:
+    workspace = resolve_workspace(args.workspace)
+    with locked(workspace):
+        store = read_store(workspace)
+        known = {r["id"] for r in store["reviews"]}
+        missing = [i for i in args.id if i not in known]
+        if missing:
+            die(f"no such review in this workspace: {', '.join(missing)}")
+        store["reviews"] = [r for r in store["reviews"] if r["id"] not in set(args.id)]
+        write_store(workspace, store)
+    print(f"dropped {len(args.id)} review comment(s)")
+    return 0
+
+
+def cmd_clear(args) -> int:
+    workspace = resolve_workspace(args.workspace)
+    with locked(workspace):
+        store = read_store(workspace)
+        doomed = by_status(store, args.status)
+        keep = {r["id"] for r in store["reviews"]} - {r["id"] for r in doomed}
+        store["reviews"] = [r for r in store["reviews"] if r["id"] in keep]
+        write_store(workspace, store)
+    print(f"cleared {len(doomed)} {args.status} review comment(s) for {workspace}")
+    return 0
+
+
+def cmd_workspaces(args) -> int:
+    rows = []
+    root = store_root()
+    for queue in sorted(root.glob("*/queue.json")):
+        try:
+            data = json.loads(queue.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        rows.append(
+            {
+                "workspace": data.get("workspace", str(queue.parent)),
+                "pending": len(pending(data)),
+                "pulled": len([r for r in data.get("reviews", []) if r.get("status") == "pulled"]),
+                "queue": str(queue),
+            }
+        )
+    rows = [r for r in rows if args.all or r["pending"]]
+
+    if args.format == "json":
+        print(json.dumps(rows, indent=2, ensure_ascii=False))
+    elif not rows:
+        print(f"{PROG}: no workspace has pending review comments", file=sys.stderr)
+    else:
+        width = max(len(str(r["pending"])) for r in rows)
+        for r in rows:
+            print(f"{r['pending']:>{width}} pending  {r['workspace']}")
+    return 0
+
+
+def cmd_path(args) -> int:
+    workspace = resolve_workspace(args.workspace)
+    if args.workspace_only:
+        print(workspace)
+    else:
+        print(queue_path(workspace))
+    return 0
+
+
+# ── CLI ───────────────────────────────────────────────────────────────────────
+
+
+def build_parser() -> argparse.ArgumentParser:
+    ap = argparse.ArgumentParser(
+        prog=PROG,
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    ap.add_argument(
+        "--workspace",
+        metavar="PATH",
+        help="queue to act on (default: git toplevel of $PWD, else $PWD)",
+    )
+    # The same flag on every subcommand, so it reads naturally in either
+    # position: `review --workspace X pull` and `review pull --workspace X`.
+    # SUPPRESS keeps an omitted subcommand flag from clobbering the global one.
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument(
+        "--workspace",
+        metavar="PATH",
+        default=argparse.SUPPRESS,
+        help="queue to act on (default: git toplevel of $PWD, else $PWD)",
+    )
+
+    # Lane scoping: one working tree can carry several branches at once
+    # (GitButler and friends), so a comment names the lane it belongs to and a
+    # pinned session never sees — or swallows — another lane's comments.
+    laned = argparse.ArgumentParser(add_help=False)
+    laned.add_argument(
+        "--lane",
+        metavar="NAME",
+        help=f"only this lane's comments (default: ${LANE_ENV}, else every lane)",
+    )
+    laned.add_argument(
+        "--all-lanes",
+        action="store_true",
+        help=f"every lane, ignoring ${LANE_ENV}",
+    )
+
+    sub = ap.add_subparsers(dest="command", metavar="COMMAND")
+
+    def add_format(p, choices, default):
+        p.add_argument(
+            "--format",
+            choices=choices,
+            default=default,
+            help=f"output shape (default: {default})",
+        )
+
+    p_add = sub.add_parser(
+        "add",
+        parents=[common],
+        help="enqueue a review comment on a file range",
+        description="Enqueue one review comment on a line range of one file.\n\n"
+        "The code shown to the agent is snapshotted at add time: by default it is\n"
+        "read from the file on disk, or from --code-file when the editor holds\n"
+        "unsaved changes (pass the WHOLE buffer; --lines slices it).",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="Examples:\n"
+        '  review add --file src/api.py --lines 40-58 --comment "extract this branch"\n'
+        '  review add --file src/api.py --lines 12 --comment "typo" --format json\n'
+        "  nvim-buffer | review add --file src/api.py --lines 40-58 \\\n"
+        '      --code-file - --comment "reads oddly"\n'
+        '  echo "long note" | review add --file a.py --lines 3-9\n',
+    )
+    p_add.add_argument("--file", required=True, metavar="PATH", help="file the comment is about")
+    p_add.add_argument(
+        "--lines", required=True, metavar="N|N-M", help="1-indexed, inclusive line range"
+    )
+    p_add.add_argument("--comment", metavar="TEXT", help="the comment text (may be multi-line)")
+    p_add.add_argument(
+        "--comment-file", metavar="PATH", help="read the comment from a file, or - for stdin"
+    )
+    p_add.add_argument(
+        "--code-file",
+        metavar="PATH",
+        help="snapshot the code from here instead of disk, or - for stdin (whole file)",
+    )
+    p_add.add_argument(
+        "--filetype", metavar="FT", help="fence language (default: guessed from the extension)"
+    )
+    p_add.add_argument(
+        "--lane",
+        metavar="NAME",
+        help=f"branch/lane this comment belongs to (default: ${LANE_ENV})",
+    )
+    p_add.add_argument(
+        "--author",
+        metavar="WHO",
+        help=f"who raised it (default: ${AUTHOR_ENV}, else $USER)",
+    )
+    add_format(p_add, ["text", "json", "ids"], "text")
+    p_add.set_defaults(func=cmd_add)
+
+    p_list = sub.add_parser(
+        "list",
+        parents=[common, laned],
+        help="show queued review comments without dequeuing them",
+        description="Show this workspace's review comments, oldest first. Nothing is dequeued.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="Examples:\n"
+        "  review list\n"
+        "  review list --file src/api.py --format json   # what an editor draws signs from\n"
+        "  review list --status pulled                   # what has already been handed over\n",
+    )
+    p_list.add_argument("--file", metavar="PATH", help="only comments on this file")
+    p_list.add_argument(
+        "--status",
+        choices=STATUS_CHOICES,
+        default="pending",
+        help="which comments to show (default: pending; `open` = pending + pulled)",
+    )
+    add_format(p_list, ["text", "json", "ids", "count", "markdown"], "text")
+    p_list.set_defaults(func=cmd_list)
+
+    p_pull = sub.add_parser(
+        "pull",
+        parents=[common, laned],
+        help="dequeue review comments for an agent to act on",
+        description="Dequeue this workspace's pending review comments and print them.\n\n"
+        "Pulled comments leave the queue, so a later pull never repeats them. Use\n"
+        "--peek to read the queue without draining it.\n\n"
+        "Lane scoping is strict: a pull pinned to a lane takes only that lane's\n"
+        "comments — never an unlaned one, never another lane's — and reports on\n"
+        "stderr when comments are waiting elsewhere, so nothing starves unseen.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="Examples:\n"
+        "  review pull                     # everything pending, as markdown\n"
+        "  review pull --format json       # same, machine-readable\n"
+        "  review pull --limit 1           # oldest comment only\n"
+        "  review pull --id r3 --id r7     # named comments only\n"
+        "  review pull --lane auth         # only that branch's comments\n"
+        "  review pull --peek              # read without dequeuing\n",
+    )
+    p_pull.add_argument("--file", metavar="PATH", help="only comments on this file")
+    p_pull.add_argument(
+        "--id", action="append", metavar="ID", help="pull only this id (repeatable)"
+    )
+    p_pull.add_argument("--limit", type=int, metavar="N", help="pull at most N comments")
+    p_pull.add_argument(
+        "--peek", action="store_true", help="print without dequeuing (leaves the queue intact)"
+    )
+    add_format(p_pull, ["markdown", "json", "text", "ids"], "markdown")
+    p_pull.set_defaults(func=cmd_pull)
+
+    p_show = sub.add_parser(
+        "show",
+        parents=[common],
+        help="print one review comment by id",
+        description="Print one review comment by id. Nothing is dequeued.",
+    )
+    p_show.add_argument("id", metavar="ID", help="review id, e.g. r3")
+    add_format(p_show, ["text", "json", "markdown"], "text")
+    p_show.set_defaults(func=cmd_show)
+
+    p_edit = sub.add_parser(
+        "edit",
+        parents=[common],
+        help="replace the text of a queued review comment",
+        description="Replace the text of one review comment. The file, range, and\n"
+        "code snapshot are unchanged — drop and re-add to move a comment.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='Examples:\n  review edit r3 --comment "split this function"\n'
+        "  pbpaste | review edit r3\n",
+    )
+    p_edit.add_argument("id", metavar="ID", help="review id, e.g. r3")
+    p_edit.add_argument("--comment", metavar="TEXT", help="new text (default: read stdin)")
+    add_format(p_edit, ["text", "json"], "text")
+    p_edit.set_defaults(func=cmd_edit)
+
+    p_resolve = sub.add_parser(
+        "resolve",
+        parents=[common],
+        help="record that a comment was acted on",
+        description="Record that a review comment was acted on, and by whom. This is the\n"
+        "accountability half of the queue: `pull` says a comment was handed over,\n"
+        "`resolve` says what became of it.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='Examples:\n  review resolve r3\n'
+        '  review resolve r3 --note "renamed to first(), added a test"\n',
+    )
+    p_resolve.add_argument("id", metavar="ID", help="review id, e.g. r3")
+    p_resolve.add_argument("--note", metavar="TEXT", help="what you did")
+    p_resolve.add_argument(
+        "--author", metavar="WHO", help=f"who decided (default: ${AUTHOR_ENV}, else $USER)"
+    )
+    p_resolve.set_defaults(func=cmd_resolve)
+
+    p_reject = sub.add_parser(
+        "reject",
+        parents=[common],
+        help="record that a comment will not be actioned, and why",
+        description="Record that a review comment will not be actioned. The reason is\n"
+        "required — a silent decline is exactly what this queue exists to prevent.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='Example:\n  review reject r3 --note "intentional: the caller already validates"\n',
+    )
+    p_reject.add_argument("id", metavar="ID", help="review id, e.g. r3")
+    p_reject.add_argument("--note", metavar="TEXT", required=True, help="why not (required)")
+    p_reject.add_argument(
+        "--author", metavar="WHO", help=f"who decided (default: ${AUTHOR_ENV}, else $USER)"
+    )
+    p_reject.set_defaults(func=cmd_resolve)
+
+    p_drop = sub.add_parser(
+        "drop",
+        parents=[common],
+        help="delete review comments by id",
+        description="Delete review comments by id, without handing them to anyone.",
+    )
+    p_drop.add_argument("id", nargs="+", metavar="ID", help="one or more review ids")
+    p_drop.set_defaults(func=cmd_drop)
+
+    p_clear = sub.add_parser(
+        "clear",
+        parents=[common],
+        help="delete every review comment in this workspace",
+        description="Delete this workspace's review comments in bulk. Pending by default.",
+    )
+    p_clear.add_argument(
+        "--status",
+        choices=STATUS_CHOICES,
+        default="pending",
+        help="which comments to delete (default: pending)",
+    )
+    p_clear.set_defaults(func=cmd_clear)
+
+    p_count = sub.add_parser(
+        "count",
+        parents=[common, laned],
+        help="print the pending count (statusline-friendly)",
+        description="Print how many review comments are pending here. Prints 0, never fails.",
+    )
+    p_count.add_argument("--file", metavar="PATH", help="only count comments on this file")
+    p_count.add_argument(
+        "--status",
+        choices=STATUS_CHOICES,
+        default="pending",
+        help="which comments to count (default: pending)",
+    )
+    p_count.set_defaults(func=cmd_count)
+
+    p_ws = sub.add_parser(
+        "workspaces",
+        parents=[common],
+        help="list workspaces holding review comments",
+        description="List every workspace in the store, with its pending count.",
+    )
+    p_ws.add_argument("--all", action="store_true", help="include workspaces with nothing pending")
+    add_format(p_ws, ["text", "json"], "text")
+    p_ws.set_defaults(func=cmd_workspaces)
+
+    p_path = sub.add_parser(
+        "path",
+        parents=[common],
+        help="print where this workspace's queue lives",
+        description="Print the queue file backing this workspace (or the workspace itself).",
+    )
+    p_path.add_argument(
+        "--workspace-only", action="store_true", help="print the resolved workspace directory"
+    )
+    p_path.set_defaults(func=cmd_path)
+
+    return ap
+
+
+def main() -> int:
+    ap = build_parser()
+    args = ap.parse_args()
+    if not getattr(args, "command", None):
+        ap.print_help()
+        return 0
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except BrokenPipeError:
+        os._exit(0)
+    except KeyboardInterrupt:
+        sys.exit(130)

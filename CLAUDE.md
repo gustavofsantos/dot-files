@@ -21,7 +21,7 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 | `init-engineering-repo.sh` | Idempotently `git init`s `~/engineering`, writes its `.gitignore`, seeds the first commit |
 | `link-bin-files.sh` | Symlinks every file in `bin/` into `~/.bin/` (hook scripts live there too, prefixed `hooks-*`) |
 | `link-xdg-config.sh` | Symlinks each subdir of `config/` into `~/.config/` |
-| `install-agents.sh` | Single source of truth for installing agent config: symlinks each `agents/plugins/<name>/` (skills, agents, hooks, themes) into `~/.claude/skills/` and `~/.cursor/plugins/local/`; merges `.claude/settings.json` (`permissions`/`env`/`statusLine`/`theme`) into `~/.claude/settings.json` |
+| `install-agents.sh` | Single source of truth for installing agent config: symlinks each `agents/plugins/<name>/` (skills, commands, agents, hooks, themes) into `~/.claude/skills/` and `~/.cursor/plugins/local/`; merges `.claude/settings.json` (`permissions`/`env`/`statusLine`/`theme`) into `~/.claude/settings.json` |
 | `set-caps-lock-ctrl.sh` | Sets the GNOME "Caps Lock as Ctrl" `xkb-options` key (`ctrl:nocaps`) via `gsettings`, no `gnome-tweaks` package needed. No-ops if `gsettings` is absent. |
 
 Re-running `setup.sh` is idempotent (`ln -sf`).
@@ -34,7 +34,7 @@ Re-running `setup.sh` is idempotent (`ln -sf`).
 ## Directory layout
 
 - `bin/` — personal scripts added to `$PATH` via `~/.bin/`, including hook scripts (`hooks-*`)
-- `agents/` — `agents/plugins/` only: one self-contained plugin directory per project, holding everything that reaches Claude Code and Cursor — skills, subagents, hooks, themes (see "Skills and plugins" below). This is the source of truth; nothing under `~/.claude/skills/` or `~/.cursor/plugins/local/` is hand-edited
+- `agents/` — `agents/plugins/` only: one self-contained plugin directory per project, holding everything that reaches Claude Code and Cursor — skills, slash commands, subagents, hooks, themes (see "Skills and plugins" below). This is the source of truth; nothing under `~/.claude/skills/` or `~/.cursor/plugins/local/` is hand-edited
 - `test_bin/` — bats tests for `bin/` scripts, one `<script>.bats` per script
 - `config/` — XDG config dirs: `nvim/`, `ghostty/`, `bat/`, `lazygit/`, `zed/`, `wezterm/`, `tmux/`, `sheldon/`, `starship.toml`, `vale/`
 - `.claude/` — hand-maintained Claude Code config, `settings.json` only: `permissions`/`env`/`statusLine`/`theme` selection, merged into the global `~/.claude/settings.json` on install
@@ -46,17 +46,25 @@ Every skill lives inside a plugin, under `agents/plugins/<name>/skills/<skill>/`
 `agents/skills/` anymore: a plugin is the only unit a skill installs through.
 
 A plugin directory is self-contained: its own `.claude-plugin/plugin.json` and
-`.cursor-plugin/plugin.json`, plus `skills/`, `agents/`, `hooks/`, and `themes/`
-subdirectories at the plugin root. `install-agents.sh` (run by `setup.sh`) is the only
-install step for it: it symlinks the whole plugin directory into `~/.claude/skills/<name>`
+`.cursor-plugin/plugin.json`, plus `skills/`, `commands/`, `agents/`, `hooks/`, and
+`themes/` subdirectories at the plugin root. `install-agents.sh` (run by `setup.sh`) is the
+only install step for it: it symlinks the whole plugin directory into `~/.claude/skills/<name>`
 (Claude Code's skills-directory plugin mechanism — auto-discovered next session as
 `<name>@skills-dir`, no marketplace, no copy) and into `~/.cursor/plugins/local/<name>`
 (Cursor's local-plugin path, read by both the desktop app and the `cursor-agent`/`agent`
 CLI). Both are loaded in place, not copied, so editing a file under `agents/plugins/<name>/`
 is the only step — `SKILL.md` edits apply live in Claude Code mid-session; edits to
-`agents/`, `hooks/`, `themes/`, or a manifest need `/reload-plugins` there. The CLI has no
-equivalent reload command, but needs none: every invocation is a fresh process, so it
-re-reads the plugin directory from scratch each time.
+`commands/`, `agents/`, `hooks/`, `themes/`, or a manifest need `/reload-plugins` there. The
+CLI has no equivalent reload command, but needs none: every invocation is a fresh process,
+so it re-reads the plugin directory from scratch each time.
+
+A plugin's `commands/` directory holds flat markdown files, one per slash command:
+`commands/<name>.md` becomes `/<name>` in both harnesses. Claude Code auto-discovers the
+directory; Cursor is declared the same way its hooks are, with `"commands": "./commands/"`
+in `.cursor-plugin/plugin.json`. A command is the explicit entry point a human types; a
+skill is what the model reaches for on its own. When both exist for one workflow (`/review`
+and the `review-queue` skill), the command stays short and the skill carries the rules —
+neither is the store, the underlying script is.
 
 There is no separate "rules" mechanism anymore — every rule (including the always-apply
 `way-of-work`/`way-of-planning`/`way-of-communication` trio) is now a skill like any other,
@@ -175,6 +183,63 @@ A single global registry, `~/.checks.yml`, enrolls the repositories that run che
 | `checks-status` | Show the latest result for a session/repo (`--json`, `--oneline`) |
 
 Session navigation is independent of checks and of hooks, and spans both Claude Code and Cursor Agent. `claude-sessions` (`bind a` in tmux) discovers live agent sessions by **scanning tmux pane processes** — it walks each pane's process subtree looking for an agent CLI (`claude`, `cursor-agent`, aider, codex, …; the matched set is the `AGENTS` list at the top of the script) and lists every match in one fzf picker (a `cc`/`cu` tag distinguishes them). There is no state file and no hook to keep in sync: a session exists exactly while its process is alive, so the list can never go stale and needs no configuration — a bare `claude` or `cursor-agent` in any pane just shows up. Enter jumps straight to that pane (switch session → select window → select pane); the preview (`claude-session-preview`) is a live `tmux capture-pane` of the agent plus its location and cwd. `claude-sessions` still knows how to sort a pane first when its window name carries the `⊡` waiting prefix, but nothing sets that prefix today — `hooks-notify`, which used to set it on `Stop`/`Notification`, isn't currently wired into any plugin's hooks (see "Hooks" above), so every session currently shows as `active`. The `hooks-session-track` hook that remains exists to record `track_name` for checks correlation and to restore a bare window name for the `claude-run` flow.
+
+## Review queue
+
+`bin/review` is a per-workspace queue of code review comments, written where you read the
+code and pulled by whatever agent you are running next door. It replaced the old
+`agent-comments.lua` "write comments, flush a prompt, paste it into the agent" loop: there
+is no flush and no clipboard hop anymore — a comment is queued the moment you write it, and
+the agent takes it from the queue.
+
+The queue is the single source of truth. `config/nvim/after/plugin/review.lua` keeps **no**
+copy of it: it shells out to `review` for every read and acts on comments by id, so a
+comment added from nvim, from a shell, or from another nvim instance shows up in all of
+them. Signs are redrawn from `review list --format json --file <path>` (async, on
+`BufEnter`/`BufWritePost`/`FocusGained`, or `:ReviewRefresh`).
+
+| Piece | What it does |
+|---|---|
+| `review add` | Enqueue a comment on a file range, stamped with its lane and author. Code is snapshotted at add time — from disk, or from `--code-file -` when the editor holds unsaved changes (pipe the whole buffer, `--lines` slices it) |
+| `review list` / `count` | Inspect the queue without dequeuing (`--file` scopes to one file — this is what draws the editor's signs; `--status pending\|pulled\|done\|rejected\|open\|all`; `--format text\|json\|ids\|count\|markdown`) |
+| `review pull` | **Dequeue** and print, markdown by default. Pulled comments leave the queue, so no note is ever worked twice; `--peek` reads without draining, `--limit`/`--id` take a subset |
+| `review resolve` / `reject` | Record what became of a comment and who decided. `reject` requires `--note` — a silent decline is the thing this prevents. A decided comment cannot be re-decided |
+| `review show` / `edit` / `drop` / `clear` | Act on queued comments by id, or drop them in bulk |
+| `review workspaces` / `path` | Where comments are waiting, and which file backs this workspace's queue |
+
+A comment's life is `pending` → `pulled` → `done` | `rejected`; `open` selects everything
+raised but not yet decided. `pull` says a comment was handed over, `resolve`/`reject` say
+what became of it — that pair is the accountability record, and it is why `clear`/`drop`
+(which delete with no decision) are forbidden to agents.
+
+Workspace resolution: `--workspace PATH` (accepted before or after the subcommand), then
+`$REVIEW_WORKSPACE`, then the git toplevel of `$PWD` (so each worktree is its own queue),
+then `$PWD`.
+
+**Lanes** divide a single workspace, because one working tree can carry several branches at
+once (GitButler). A comment records its lane (`--lane NAME`, else `$REVIEW_LANE`) and a
+pinned session sees only that lane. Scoping is deliberately **strict**: a pull pinned to a
+lane never takes an unlaned comment or another lane's, since `pull` dequeues and a comment
+swallowed by the wrong session is a comment lost. An empty pinned pull says on stderr how
+many are waiting elsewhere, so nothing starves quietly; `--all-lanes` widens it, and an
+unpinned session (the editor) sees everything. Authorship works the same way: `--author
+WHO`, else `$REVIEW_AUTHOR` (what an agent sets), else `$USER` — so a comment from nvim is
+attributed to you and one from a reviewing agent to it. The store is `$REVIEW_HOME` (default `~/.reviews`)`/<workspace-slug>/queue.json`,
+one JSON file per workspace, written atomically under an `flock` so concurrent editors and
+agents cannot lose a comment. Ids (`r1`, `r2`, …) are per-workspace and never reused. Pulled
+comments stay in the file as a bounded archive (`list --status pulled`), which is why they
+survive a `clear` of the pending queue.
+
+Editor commands: `:ReviewAdd` (range-aware, `<CR>` in Visual mode), `:ReviewList`
+(`<leader>co`), `:ReviewEdit` (`<leader>ce`), `:ReviewDelete` (`<leader>cd`), `:ReviewClear`
+(`<leader>cx`), `:ReviewRefresh` (`<leader>cr`). `$REVIEW_CMD` overrides which binary the
+plugin calls.
+
+On the agent side there are two entry points over the same CLI, both in
+`agents/plugins/gustavofsantos/`: the `/review` command (`commands/review.md`) when you want
+to say "go work my comments", and the `review-queue` skill (`skills/review-queue/`) which the
+model triggers on its own when you mention notes you left. Both drain the queue with
+`review pull` and report back by id. Tests: `bats test_bin/review.bats`.
 
 ## GitButler provenance hooks
 

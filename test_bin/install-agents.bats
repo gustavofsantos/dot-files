@@ -30,6 +30,7 @@ setup() {
   mkdir -p "$FIXTURE/agents/plugins/demo-plugin/.claude-plugin" \
     "$FIXTURE/agents/plugins/demo-plugin/skills/demo-skill" \
     "$FIXTURE/agents/plugins/demo-plugin/hooks" \
+    "$FIXTURE/agents/plugins/demo-plugin/commands" \
     "$FIXTURE/.claude"
 
   cat > "$FIXTURE/agents/plugins/demo-plugin/.claude-plugin/plugin.json" <<'EOF'
@@ -44,6 +45,12 @@ Demo skill body.
 EOF
   cat > "$FIXTURE/agents/plugins/demo-plugin/hooks/hooks.json" <<'EOF'
 { "hooks": { "Stop": [ { "type": "command", "command": "demo-hook --harness claude" } ] } }
+EOF
+  cat > "$FIXTURE/agents/plugins/demo-plugin/commands/demo-command.md" <<'EOF'
+---
+description: A demo command.
+---
+Demo command body.
 EOF
 
   echo '{"permissions": {"allow": ["Read"]}}' > "$FIXTURE/.claude/settings.json"
@@ -61,6 +68,13 @@ teardown() {
   [ -f "$HOME/.claude/skills/demo-plugin/hooks/hooks.json" ]
   [ -L "$HOME/.cursor/plugins/local/demo-plugin" ]
   [ -f "$HOME/.cursor/plugins/local/demo-plugin/skills/demo-skill/SKILL.md" ]
+}
+
+@test "a plugin's slash commands reach both harnesses" {
+  bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
+
+  [ -f "$HOME/.claude/skills/demo-plugin/commands/demo-command.md" ]
+  [ -f "$HOME/.cursor/plugins/local/demo-plugin/commands/demo-command.md" ]
 }
 
 @test "prunes a dangling plugin symlink when the source plugin is removed" {
