@@ -167,7 +167,6 @@ function M.refresh(bufnr)
   end
 
   -- Signs are replaced only once the queue has answered, so they never blink.
-
   run_async(list_args(path), M.workspace_cwd(bufnr), function(out)
     if not vim.api.nvim_buf_is_valid(bufnr) then
       return
