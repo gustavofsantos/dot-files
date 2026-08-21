@@ -25,6 +25,8 @@ local M = {}
 --- @field end_line integer
 --- @field comment string
 --- @field status string
+--- @field lane string?
+--- @field author string?
 
 M._ns = vim.api.nvim_create_namespace("review")
 
@@ -127,10 +129,15 @@ local function decode(out)
   return decoded.reviews or {}
 end
 
+--- Reads are deliberately `--all-lanes`: one tree can carry several branches at
+--- once, and the editor is your whole-tree view of them. Without this, launching
+--- nvim from a shell pinned to $REVIEW_LANE would silently hide every other
+--- lane's comments -- a file with a note on it would look unannotated. Writes
+--- still inherit the pin, so a comment you add lands in the lane you are on.
 --- @param file string? absolute path to scope the query to one file
 --- @return string[] args
 local function list_args(file)
-  local args = { "list", "--format", "json" }
+  local args = { "list", "--format", "json", "--all-lanes" }
   if file then
     vim.list_extend(args, { "--file", file })
   end
@@ -142,6 +149,18 @@ end
 --- @return ReviewItem[]
 local function query(file)
   return decode(run(list_args(file)))
+end
+
+--- vim.json.decode maps JSON null to vim.NIL -- a userdata, and so TRUTHY in Lua.
+--- Optional record fields (lane, author) must go through this or a nil check
+--- passes and the concatenation blows up.
+--- @param value any
+--- @return any? value  nil when the field was absent or JSON null
+local function present(value)
+  if value == nil or value == vim.NIL then
+    return nil
+  end
+  return value
 end
 
 --- @param item ReviewItem
@@ -390,11 +409,16 @@ function M.list()
   local loclist = {}
   for _, item in ipairs(items) do
     local first = vim.split(item.comment, "\n", { plain = true })[1] or ""
+    local tags = {}
+    local author, lane = present(item.author), present(item.lane)
+    if author then table.insert(tags, "@" .. author) end
+    if lane then table.insert(tags, "#" .. lane) end
+    local who = #tags > 0 and (table.concat(tags, " ") .. " ") or ""
     table.insert(loclist, {
       filename = item.path,
       lnum = item.start_line,
       col = 1,
-      text = string.format("%s. [%s] %s", item.id, format_range(item), first),
+      text = string.format("%s. [%s] %s%s", item.id, format_range(item), who, first),
     })
   end
 
