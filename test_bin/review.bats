@@ -7,6 +7,9 @@
 #   * a pulled comment LEAVES the queue — no agent works the same note twice
 #   * ids are stable and never reused, so the (stateless) editor can act by id
 #   * workspaces are isolated, and a git worktree/subdir resolves to its root
+#   * lane scoping is STRICT — one tree carries several branches at once
+#     (GitButler), so a pinned pull must never swallow another lane's comments
+#   * every comment ends in a recorded decision, attributed to whoever made it
 #   * every failure is one `review: ...` line on stderr, exit 1
 #
 # Isolation strategy:
@@ -18,6 +21,8 @@ REVIEW="$BATS_TEST_DIRNAME/../bin/review"
 setup() {
   TEST_ROOT=$(mktemp -d)
   export REVIEW_HOME="$TEST_ROOT/store"
+  unset REVIEW_LANE
+  export REVIEW_AUTHOR=tester
   WORKSPACE="$TEST_ROOT/proj"
   mkdir -p "$WORKSPACE"
   git -C "$WORKSPACE" init -q
@@ -167,7 +172,7 @@ queue() {
 @test "pull: markdown carries the location, code and comment an agent needs" {
   queue app.py 2-3 "tighten this"
   run "$REVIEW" pull
-  [[ "$output" == *'`app.py:2-3` (r1)'* ]]
+  [[ "$output" == *'`app.py:2-3` (r1'* ]]
   [[ "$output" == *'```python'* ]]
   [[ "$output" == *"two"* ]]
   [[ "$output" == *"> tighten this"* ]]
@@ -359,6 +364,173 @@ queue() {
   [ "$(jq -r '.[0].pulled' <<<"$output")" = "1" ]
 }
 
+# ── lanes: one tree, several branches at once ────────────────────────────────
+
+@test "lane: a comment records the lane it was raised on" {
+  "$REVIEW" add --file app.py --lines 1 --comment "on auth" --lane auth </dev/null
+  run "$REVIEW" list --format json
+  [ "$(jq -r '.reviews[0].lane' <<<"$output")" = "auth" ]
+}
+
+@test "lane: \$REVIEW_LANE stamps an add and scopes a read" {
+  REVIEW_LANE=auth "$REVIEW" add --file app.py --lines 1 --comment "on auth" </dev/null
+  "$REVIEW" add --file app.py --lines 2 --comment "on payments" --lane payments </dev/null
+
+  run env REVIEW_LANE=auth "$REVIEW" list --format ids
+  [ "$output" = "r1" ]
+  run env REVIEW_LANE=payments "$REVIEW" list --format ids
+  [ "$output" = "r2" ]
+}
+
+@test "lane: a pinned pull never swallows another lane's comments" {
+  "$REVIEW" add --file app.py --lines 1 --comment "on auth" --lane auth </dev/null
+  "$REVIEW" add --file app.py --lines 2 --comment "on payments" --lane payments </dev/null
+
+  run "$REVIEW" pull --lane auth --format ids
+  [ "$output" = "r1" ]
+
+  # the other lane is untouched and still pullable by its own session
+  run "$REVIEW" list --format ids
+  [ "$output" = "r2" ]
+  run "$REVIEW" pull --lane payments --format ids
+  [ "$output" = "r2" ]
+}
+
+@test "lane: an unlaned comment is not picked up by a pinned pull" {
+  "$REVIEW" add --file app.py --lines 1 --comment "belongs to nobody" </dev/null
+  run "$REVIEW" pull --lane auth --format ids
+  [[ "$output" != *"r1"* ]]
+
+  run "$REVIEW" count
+  [ "$output" = "1" ]
+}
+
+@test "lane: an empty pinned pull says comments are waiting elsewhere" {
+  "$REVIEW" add --file app.py --lines 1 --comment "on payments" --lane payments </dev/null
+  run "$REVIEW" pull --lane auth
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"1 pending in other lanes: payments"* ]]
+}
+
+@test "lane: --all-lanes overrides a pinned session" {
+  "$REVIEW" add --file app.py --lines 1 --comment "on auth" --lane auth </dev/null
+  "$REVIEW" add --file app.py --lines 2 --comment "on payments" --lane payments </dev/null
+
+  run env REVIEW_LANE=auth "$REVIEW" list --all-lanes --format ids
+  [ "$output" = "$(printf 'r1\nr2')" ]
+  run env REVIEW_LANE=auth "$REVIEW" count --all-lanes
+  [ "$output" = "2" ]
+}
+
+@test "lane: an unpinned session sees every lane, which is what the editor does" {
+  "$REVIEW" add --file app.py --lines 1 --comment "on auth" --lane auth </dev/null
+  "$REVIEW" add --file app.py --lines 2 --comment "on payments" --lane payments </dev/null
+
+  run "$REVIEW" list --format count
+  [ "$output" = "2" ]
+}
+
+# ── authorship and the recorded decision ─────────────────────────────────────
+
+@test "author: \$REVIEW_AUTHOR names who raised a comment" {
+  REVIEW_AUTHOR=reviewer-agent "$REVIEW" add --file app.py --lines 1 --comment "note" </dev/null
+  run "$REVIEW" list --format json
+  [ "$(jq -r '.reviews[0].author' <<<"$output")" = "reviewer-agent" ]
+
+  run "$REVIEW" list
+  [[ "$output" == *"@reviewer-agent"* ]]
+}
+
+@test "author: --author beats the environment" {
+  REVIEW_AUTHOR=env-name "$REVIEW" add --file app.py --lines 1 --comment "note" \
+    --author flag-name </dev/null
+  run "$REVIEW" list --format json
+  [ "$(jq -r '.reviews[0].author' <<<"$output")" = "flag-name" ]
+}
+
+@test "author: the markdown handed to an agent carries the attribution" {
+  "$REVIEW" add --file app.py --lines 1 --comment "note" --author gustavo --lane auth </dev/null
+  run "$REVIEW" pull
+  [[ "$output" == *"(r1 · @gustavo #auth)"* ]]
+}
+
+@test "resolve: records what became of a comment, and who decided" {
+  queue app.py 1 "rename this"
+  "$REVIEW" pull >/dev/null
+
+  run env REVIEW_AUTHOR=impl-agent "$REVIEW" resolve r1 --note "renamed, test added"
+  [ "$status" -eq 0 ]
+
+  run "$REVIEW" list --status done --format json
+  [ "$(jq -r '.reviews[0].status' <<<"$output")" = "done" ]
+  [ "$(jq -r '.reviews[0].resolved_by' <<<"$output")" = "impl-agent" ]
+  [ "$(jq -r '.reviews[0].resolution_note' <<<"$output")" = "renamed, test added" ]
+  [ "$(jq -r '.reviews[0].resolved_at' <<<"$output")" != "null" ]
+}
+
+@test "reject: demands a reason — a silent decline is the thing being prevented" {
+  queue app.py 1 "change this"
+  run "$REVIEW" reject r1
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"--note"* ]]
+
+  run "$REVIEW" reject r1 --note "intentional: the caller validates"
+  [ "$status" -eq 0 ]
+  run "$REVIEW" list --status rejected --format ids
+  [ "$output" = "r1" ]
+}
+
+@test "resolve: a decided comment cannot be quietly re-decided" {
+  queue app.py 1 "note"
+  "$REVIEW" resolve r1 --note "done it"
+
+  run "$REVIEW" resolve r1 --note "no, again"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"already done"* ]]
+
+  run "$REVIEW" reject r1 --note "changed my mind"
+  [ "$status" -eq 1 ]
+}
+
+@test "resolve: rejects an unknown id" {
+  run "$REVIEW" resolve r9
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"no review 'r9'"* ]]
+}
+
+@test "status: open is everything raised but not yet decided" {
+  queue app.py 1 "still queued"
+  queue app.py 2 "handed over"
+  queue app.py 3 "finished"
+  "$REVIEW" pull --id r2 --id r3 >/dev/null
+  "$REVIEW" resolve r3 --note "done"
+
+  run "$REVIEW" list --status open --format ids
+  [ "$output" = "$(printf 'r1\nr2')" ]
+  run "$REVIEW" count --status open
+  [ "$output" = "2" ]
+}
+
+@test "show: prints the decision alongside the comment" {
+  queue app.py 1 "rename this"
+  "$REVIEW" resolve r1 --note "renamed to first()" --author impl-agent
+
+  run "$REVIEW" show r1
+  [[ "$output" == *"[done]"* ]]
+  [[ "$output" == *"done by @impl-agent"* ]]
+  [[ "$output" == *"renamed to first()"* ]]
+}
+
+@test "a decided comment survives a clear of the pending queue" {
+  queue app.py 1 "decided"
+  "$REVIEW" resolve r1 --note "done"
+  queue app.py 2 "still pending"
+
+  "$REVIEW" clear
+  run "$REVIEW" list --status done --format ids
+  [ "$output" = "r1" ]
+}
+
 # ── shape of the tool itself ──────────────────────────────────────────────────
 
 @test "count: prints 0 for an untouched workspace instead of failing" {
@@ -379,7 +551,7 @@ queue() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"per-workspace queue of code review comments"* ]]
 
-  for sub in add list pull show edit drop clear count workspaces path; do
+  for sub in add list pull show edit resolve reject drop clear count workspaces path; do
     run "$REVIEW" "$sub" --help
     [ "$status" -eq 0 ]
     [[ "$output" == *"usage: review $sub"* ]]

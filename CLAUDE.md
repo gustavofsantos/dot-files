@@ -200,15 +200,31 @@ them. Signs are redrawn from `review list --format json --file <path>` (async, o
 
 | Piece | What it does |
 |---|---|
-| `review add` | Enqueue a comment on a file range. Code is snapshotted at add time — from disk, or from `--code-file -` when the editor holds unsaved changes (pipe the whole buffer, `--lines` slices it) |
-| `review list` / `count` | Inspect the queue without dequeuing (`--file` scopes to one file — this is what draws the editor's signs; `--format text\|json\|ids\|count\|markdown`) |
+| `review add` | Enqueue a comment on a file range, stamped with its lane and author. Code is snapshotted at add time — from disk, or from `--code-file -` when the editor holds unsaved changes (pipe the whole buffer, `--lines` slices it) |
+| `review list` / `count` | Inspect the queue without dequeuing (`--file` scopes to one file — this is what draws the editor's signs; `--status pending\|pulled\|done\|rejected\|open\|all`; `--format text\|json\|ids\|count\|markdown`) |
 | `review pull` | **Dequeue** and print, markdown by default. Pulled comments leave the queue, so no note is ever worked twice; `--peek` reads without draining, `--limit`/`--id` take a subset |
+| `review resolve` / `reject` | Record what became of a comment and who decided. `reject` requires `--note` — a silent decline is the thing this prevents. A decided comment cannot be re-decided |
 | `review show` / `edit` / `drop` / `clear` | Act on queued comments by id, or drop them in bulk |
 | `review workspaces` / `path` | Where comments are waiting, and which file backs this workspace's queue |
 
+A comment's life is `pending` → `pulled` → `done` | `rejected`; `open` selects everything
+raised but not yet decided. `pull` says a comment was handed over, `resolve`/`reject` say
+what became of it — that pair is the accountability record, and it is why `clear`/`drop`
+(which delete with no decision) are forbidden to agents.
+
 Workspace resolution: `--workspace PATH` (accepted before or after the subcommand), then
 `$REVIEW_WORKSPACE`, then the git toplevel of `$PWD` (so each worktree is its own queue),
-then `$PWD`. The store is `$REVIEW_HOME` (default `~/.reviews`)`/<workspace-slug>/queue.json`,
+then `$PWD`.
+
+**Lanes** divide a single workspace, because one working tree can carry several branches at
+once (GitButler). A comment records its lane (`--lane NAME`, else `$REVIEW_LANE`) and a
+pinned session sees only that lane. Scoping is deliberately **strict**: a pull pinned to a
+lane never takes an unlaned comment or another lane's, since `pull` dequeues and a comment
+swallowed by the wrong session is a comment lost. An empty pinned pull says on stderr how
+many are waiting elsewhere, so nothing starves quietly; `--all-lanes` widens it, and an
+unpinned session (the editor) sees everything. Authorship works the same way: `--author
+WHO`, else `$REVIEW_AUTHOR` (what an agent sets), else `$USER` — so a comment from nvim is
+attributed to you and one from a reviewing agent to it. The store is `$REVIEW_HOME` (default `~/.reviews`)`/<workspace-slug>/queue.json`,
 one JSON file per workspace, written atomically under an `flock` so concurrent editors and
 agents cannot lose a comment. Ids (`r1`, `r2`, …) are per-workspace and never reused. Pulled
 comments stay in the file as a bounded archive (`list --status pulled`), which is why they

@@ -12,21 +12,36 @@ never worked twice.
 The queue is the single source of truth: the editor plugin keeps no copy of it,
 and every id printed here is stable until the comment is pulled or dropped.
 
+A comment carries who raised it and which lane it belongs to, and ends in a
+recorded decision — `resolve` (done) or `reject` (with a reason). `pull` says a
+comment was handed over; those two say what became of it.
+
 Workspace resolution, in order:
   1. --workspace PATH
   2. $REVIEW_WORKSPACE
   3. the git toplevel of the current directory (worktrees are their own workspace)
   4. the current directory
 
+Lanes divide one workspace. A single working tree can carry several branches at
+once (GitButler and friends), so a comment names its lane and a pinned session
+sees only that lane: --lane NAME, else $REVIEW_LANE, else every lane. Scoping is
+strict — a pull pinned to a lane never swallows another lane's comments, and says
+on stderr when comments are waiting elsewhere.
+
 Store: $REVIEW_HOME (default ~/.reviews)/<workspace-slug>/queue.json
 
 Examples:
   review add --file src/api.py --lines 40-58 --comment "extract this branch"
+  review add --file src/api.py --lines 12 --comment "typo" --lane refactor-auth
   review list                              # what is queued here, oldest first
   review list --file src/api.py --format json
+  review list --status open                # raised, not yet decided
   review pull                              # dequeue everything, as markdown
+  review pull --lane refactor-auth         # only that lane's comments
   review pull --limit 1 --format json      # dequeue one, machine-readable
   review pull --peek                       # look without dequeuing
+  review resolve r3 --note "renamed, test added"
+  review reject r4 --note "intentional: the caller validates"
   review show r3
   review edit r3 --comment "actually: split the function"
   review drop r3 r4
@@ -49,6 +64,15 @@ from pathlib import Path
 PROG = "review"
 STORE_VERSION = 1
 ARCHIVE_LIMIT = 200
+
+LANE_ENV = "REVIEW_LANE"
+AUTHOR_ENV = "REVIEW_AUTHOR"
+
+# pending → pulled → done | rejected. A comment is "open" until someone says
+# what became of it, which is the whole point of the last two.
+OPEN_STATUSES = ("pending", "pulled")
+RESOLVED_STATUSES = ("done", "rejected")
+STATUS_CHOICES = ["pending", "pulled", "done", "rejected", "open", "all"]
 
 EXT_FILETYPE = {
     ".bash": "bash",
@@ -208,7 +232,34 @@ def pending(store: dict) -> list:
 def by_status(store: dict, status: str) -> list:
     if status == "all":
         return list(store["reviews"])
+    if status == "open":  # raised but not yet accounted for
+        return [r for r in store["reviews"] if r.get("status") in OPEN_STATUSES]
     return [r for r in store["reviews"] if r.get("status") == status]
+
+
+def resolve_lane(args) -> "str | None":
+    """Which lane this invocation is pinned to: --lane, else $REVIEW_LANE."""
+    lane = getattr(args, "lane", None) or os.environ.get(LANE_ENV) or None
+    return lane.strip() or None if lane else None
+
+
+def resolve_author(args) -> "str | None":
+    """Who is speaking: --author, else $REVIEW_AUTHOR (agents set it), else $USER."""
+    who = (
+        getattr(args, "author", None)
+        or os.environ.get(AUTHOR_ENV)
+        or os.environ.get("USER")
+        or None
+    )
+    return who.strip() or None if who else None
+
+
+def filter_lane(reviews: list, lane: "str | None", all_lanes: bool = False) -> list:
+    """Strict: a lane-pinned session never sees another lane's comments, and
+    never silently swallows an unlaned one either."""
+    if all_lanes or lane is None:
+        return reviews
+    return [r for r in reviews if r.get("lane") == lane]
 
 
 def find(store: dict, review_id: str) -> dict:
@@ -232,6 +283,16 @@ def first_line(text: str) -> str:
     return (text.strip().splitlines() or [""])[0]
 
 
+def attribution(r: dict) -> str:
+    """`@author #lane`, omitting whichever is absent."""
+    bits = []
+    if r.get("author"):
+        bits.append("@" + r["author"])
+    if r.get("lane"):
+        bits.append("#" + r["lane"])
+    return " ".join(bits)
+
+
 # ── rendering ─────────────────────────────────────────────────────────────────
 
 
@@ -239,14 +300,20 @@ def render_text(reviews: list) -> str:
     if not reviews:
         return ""
     width = max(len(r["id"]) for r in reviews)
-    return "\n".join(
-        f"{r['id']:<{width}}  {location(r)}  {first_line(r['comment'])}" for r in reviews
-    )
+    lines = []
+    for r in reviews:
+        who = attribution(r)
+        lines.append(
+            f"{r['id']:<{width}}  {location(r)}  "
+            + (f"{who}  " if who else "")
+            + first_line(r["comment"])
+        )
+    return "\n".join(lines)
 
 
 def render_markdown(reviews: list, workspace: Path, drained: bool) -> str:
     if not reviews:
-        return f"No pending review comments for {workspace}."
+        return f"No pending review comments for {workspace}.\n"
 
     out = [
         f"# Review comments — {workspace}",
@@ -257,10 +324,17 @@ def render_markdown(reviews: list, workspace: Path, drained: bool) -> str:
         "",
     ]
     if drained:
-        out += ["These comments have been dequeued — they will not appear again.", ""]
+        out += [
+            "These comments have been dequeued — they will not appear again. Record what",
+            "became of each one with `review resolve <id> --note ...`, or",
+            "`review reject <id> --note ...` when you are not making the change.",
+            "",
+        ]
 
     for idx, r in enumerate(reviews, start=1):
-        out.append(f"## {idx}. `{location(r)}` ({r['id']})")
+        who = attribution(r)
+        head = f"## {idx}. `{location(r)}` ({r['id']}"
+        out.append(head + (f" · {who})" if who else ")"))
         out.append("")
         out.append("```" + (r.get("filetype") or ""))
         out.extend(r.get("code", "").split("\n"))
@@ -294,7 +368,9 @@ def emit(args, reviews: list, workspace: Path, drained: bool = False) -> None:
         if text:
             print(text)
         else:
-            print(f"{PROG}: no review comments for {workspace}", file=sys.stderr)
+            lane = resolve_lane(args) if not getattr(args, "all_lanes", False) else None
+            scope = f" in lane {lane}" if lane else ""
+            print(f"{PROG}: no review comments for {workspace}{scope}", file=sys.stderr)
 
 
 # ── commands ──────────────────────────────────────────────────────────────────
@@ -379,6 +455,8 @@ def cmd_add(args) -> int:
             "id": f"r{seq}",
             "status": "pending",
             "workspace": str(workspace),
+            "lane": resolve_lane(args),
+            "author": resolve_author(args),
             "file": rel,
             "path": str(path),
             "start_line": start,
@@ -388,6 +466,9 @@ def cmd_add(args) -> int:
             "comment": comment,
             "created_at": now_iso(),
             "pulled_at": None,
+            "resolved_at": None,
+            "resolved_by": None,
+            "resolution_note": None,
         }
         store["reviews"].append(record)
         write_store(workspace, store)
@@ -410,26 +491,43 @@ def filter_file(reviews: list, file_arg: "str | None") -> list:
     return [r for r in reviews if r.get("path") == target]
 
 
+def scoped(args, reviews: list) -> list:
+    """Everything a lane-pinned, file-scoped invocation is allowed to see."""
+    return filter_lane(filter_file(reviews, args.file), resolve_lane(args), args.all_lanes)
+
+
 def cmd_list(args) -> int:
     workspace = resolve_workspace(args.workspace)
     store = read_store(workspace)
-    reviews = filter_file(by_status(store, args.status), args.file)
-    emit(args, reviews, workspace)
+    emit(args, scoped(args, by_status(store, args.status)), workspace)
     return 0
 
 
 def cmd_count(args) -> int:
     workspace = resolve_workspace(args.workspace)
-    print(len(filter_file(pending(read_store(workspace)), args.file)))
+    store = read_store(workspace)
+    print(len(scoped(args, by_status(store, args.status))))
     return 0
+
+
+def elsewhere_note(store: dict, taken: list, lane: "str | None") -> str:
+    """A lane-pinned pull must never look like an empty queue when comments are
+    simply waiting in another lane — that is how a note gets forgotten."""
+    if taken or lane is None:
+        return ""
+    others = sorted({r.get("lane") or "(no lane)" for r in pending(store)})
+    if not others:
+        return ""
+    return f"{len(pending(store))} pending in other lanes: {', '.join(others)}"
 
 
 def cmd_pull(args) -> int:
     workspace = resolve_workspace(args.workspace)
+    lane = resolve_lane(args)
 
     with locked(workspace):
         store = read_store(workspace)
-        queue = filter_file(pending(store), args.file)
+        queue = scoped(args, pending(store))
 
         if args.id:
             wanted = list(dict.fromkeys(args.id))
@@ -448,15 +546,46 @@ def cmd_pull(args) -> int:
             for r in queue:
                 r["status"] = "pulled"
                 r["pulled_at"] = stamp
-            # A bounded archive keeps `list --status pulled` useful without growing forever.
-            archived = [r["id"] for r in store["reviews"] if r.get("status") == "pulled"]
+            # A bounded archive keeps the handed-over history useful without growing forever.
+            archived = [r["id"] for r in store["reviews"] if r.get("status") != "pending"]
             expired = set(archived[: max(0, len(archived) - ARCHIVE_LIMIT)])
             if expired:
                 store["reviews"] = [r for r in store["reviews"] if r["id"] not in expired]
             write_store(workspace, store)
         taken = [dict(r) for r in queue]
+        note = elsewhere_note(store, taken, lane)
 
     emit(args, taken, workspace, drained=not args.peek)
+    if note:
+        print(f"{PROG}: {note}", file=sys.stderr)
+    return 0
+
+
+def cmd_resolve(args) -> int:
+    """Close the loop on a comment: what became of it, and who says so."""
+    workspace = resolve_workspace(args.workspace)
+    status = "rejected" if args.command == "reject" else "done"
+    note = args.note
+    if status == "rejected" and not (note or "").strip():
+        die("rejecting a comment needs a reason: pass --note TEXT")
+
+    with locked(workspace):
+        store = read_store(workspace)
+        record = find(store, args.id)
+        if record["status"] in RESOLVED_STATUSES:
+            die(f"{record['id']} is already {record['status']} — it cannot be re-decided")
+        record["status"] = status
+        record["resolved_at"] = now_iso()
+        record["resolved_by"] = resolve_author(args)
+        record["resolution_note"] = (note or "").strip("\n") or None
+        write_store(workspace, store)
+
+    who = record["resolved_by"]
+    print(
+        f"{record['id']}  {location(record)}  {status}"
+        + (f" by @{who}" if who else "")
+        + (f" — {first_line(record['resolution_note'])}" if record["resolution_note"] else "")
+    )
     return 0
 
 
@@ -469,9 +598,23 @@ def cmd_show(args) -> int:
     elif args.format == "markdown":
         print(render_markdown([record], workspace, drained=False), end="")
     else:
-        print(f"{record['id']}  {location(record)}  [{record['status']}]")
+        who = attribution(record)
+        print(
+            f"{record['id']}  {location(record)}  [{record['status']}]"
+            + (f"  {who}" if who else "")
+        )
         print()
         print(record["comment"])
+        if record.get("resolved_at"):
+            decided = record.get("resolved_by")
+            print()
+            print(
+                f"--- {record['status']}"
+                + (f" by @{decided}" if decided else "")
+                + f" at {record['resolved_at']}"
+            )
+            if record.get("resolution_note"):
+                print(record["resolution_note"])
     return 0
 
 
@@ -589,6 +732,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="queue to act on (default: git toplevel of $PWD, else $PWD)",
     )
 
+    # Lane scoping: one working tree can carry several branches at once
+    # (GitButler and friends), so a comment names the lane it belongs to and a
+    # pinned session never sees — or swallows — another lane's comments.
+    laned = argparse.ArgumentParser(add_help=False)
+    laned.add_argument(
+        "--lane",
+        metavar="NAME",
+        help=f"only this lane's comments (default: ${LANE_ENV}, else every lane)",
+    )
+    laned.add_argument(
+        "--all-lanes",
+        action="store_true",
+        help=f"every lane, ignoring ${LANE_ENV}",
+    )
+
     sub = ap.add_subparsers(dest="command", metavar="COMMAND")
 
     def add_format(p, choices, default):
@@ -631,12 +789,22 @@ def build_parser() -> argparse.ArgumentParser:
     p_add.add_argument(
         "--filetype", metavar="FT", help="fence language (default: guessed from the extension)"
     )
+    p_add.add_argument(
+        "--lane",
+        metavar="NAME",
+        help=f"branch/lane this comment belongs to (default: ${LANE_ENV})",
+    )
+    p_add.add_argument(
+        "--author",
+        metavar="WHO",
+        help=f"who raised it (default: ${AUTHOR_ENV}, else $USER)",
+    )
     add_format(p_add, ["text", "json", "ids"], "text")
     p_add.set_defaults(func=cmd_add)
 
     p_list = sub.add_parser(
         "list",
-        parents=[common],
+        parents=[common, laned],
         help="show queued review comments without dequeuing them",
         description="Show this workspace's review comments, oldest first. Nothing is dequeued.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -648,26 +816,30 @@ def build_parser() -> argparse.ArgumentParser:
     p_list.add_argument("--file", metavar="PATH", help="only comments on this file")
     p_list.add_argument(
         "--status",
-        choices=["pending", "pulled", "all"],
+        choices=STATUS_CHOICES,
         default="pending",
-        help="which comments to show (default: pending)",
+        help="which comments to show (default: pending; `open` = pending + pulled)",
     )
     add_format(p_list, ["text", "json", "ids", "count", "markdown"], "text")
     p_list.set_defaults(func=cmd_list)
 
     p_pull = sub.add_parser(
         "pull",
-        parents=[common],
+        parents=[common, laned],
         help="dequeue review comments for an agent to act on",
         description="Dequeue this workspace's pending review comments and print them.\n\n"
         "Pulled comments leave the queue, so a later pull never repeats them. Use\n"
-        "--peek to read the queue without draining it.",
+        "--peek to read the queue without draining it.\n\n"
+        "Lane scoping is strict: a pull pinned to a lane takes only that lane's\n"
+        "comments — never an unlaned one, never another lane's — and reports on\n"
+        "stderr when comments are waiting elsewhere, so nothing starves unseen.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="Examples:\n"
         "  review pull                     # everything pending, as markdown\n"
         "  review pull --format json       # same, machine-readable\n"
         "  review pull --limit 1           # oldest comment only\n"
         "  review pull --id r3 --id r7     # named comments only\n"
+        "  review pull --lane auth         # only that branch's comments\n"
         "  review pull --peek              # read without dequeuing\n",
     )
     p_pull.add_argument("--file", metavar="PATH", help="only comments on this file")
@@ -706,6 +878,40 @@ def build_parser() -> argparse.ArgumentParser:
     add_format(p_edit, ["text", "json"], "text")
     p_edit.set_defaults(func=cmd_edit)
 
+    p_resolve = sub.add_parser(
+        "resolve",
+        parents=[common],
+        help="record that a comment was acted on",
+        description="Record that a review comment was acted on, and by whom. This is the\n"
+        "accountability half of the queue: `pull` says a comment was handed over,\n"
+        "`resolve` says what became of it.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='Examples:\n  review resolve r3\n'
+        '  review resolve r3 --note "renamed to first(), added a test"\n',
+    )
+    p_resolve.add_argument("id", metavar="ID", help="review id, e.g. r3")
+    p_resolve.add_argument("--note", metavar="TEXT", help="what you did")
+    p_resolve.add_argument(
+        "--author", metavar="WHO", help=f"who decided (default: ${AUTHOR_ENV}, else $USER)"
+    )
+    p_resolve.set_defaults(func=cmd_resolve)
+
+    p_reject = sub.add_parser(
+        "reject",
+        parents=[common],
+        help="record that a comment will not be actioned, and why",
+        description="Record that a review comment will not be actioned. The reason is\n"
+        "required — a silent decline is exactly what this queue exists to prevent.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='Example:\n  review reject r3 --note "intentional: the caller already validates"\n',
+    )
+    p_reject.add_argument("id", metavar="ID", help="review id, e.g. r3")
+    p_reject.add_argument("--note", metavar="TEXT", required=True, help="why not (required)")
+    p_reject.add_argument(
+        "--author", metavar="WHO", help=f"who decided (default: ${AUTHOR_ENV}, else $USER)"
+    )
+    p_reject.set_defaults(func=cmd_resolve)
+
     p_drop = sub.add_parser(
         "drop",
         parents=[common],
@@ -723,7 +929,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_clear.add_argument(
         "--status",
-        choices=["pending", "pulled", "all"],
+        choices=STATUS_CHOICES,
         default="pending",
         help="which comments to delete (default: pending)",
     )
@@ -731,11 +937,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_count = sub.add_parser(
         "count",
-        parents=[common],
+        parents=[common, laned],
         help="print the pending count (statusline-friendly)",
         description="Print how many review comments are pending here. Prints 0, never fails.",
     )
     p_count.add_argument("--file", metavar="PATH", help="only count comments on this file")
+    p_count.add_argument(
+        "--status",
+        choices=STATUS_CHOICES,
+        default="pending",
+        help="which comments to count (default: pending)",
+    )
     p_count.set_defaults(func=cmd_count)
 
     p_ws = sub.add_parser(
