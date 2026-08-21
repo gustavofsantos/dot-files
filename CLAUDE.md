@@ -176,6 +176,44 @@ A single global registry, `~/.checks.yml`, enrolls the repositories that run che
 
 Session navigation is independent of checks and of hooks, and spans both Claude Code and Cursor Agent. `claude-sessions` (`bind a` in tmux) discovers live agent sessions by **scanning tmux pane processes** — it walks each pane's process subtree looking for an agent CLI (`claude`, `cursor-agent`, aider, codex, …; the matched set is the `AGENTS` list at the top of the script) and lists every match in one fzf picker (a `cc`/`cu` tag distinguishes them). There is no state file and no hook to keep in sync: a session exists exactly while its process is alive, so the list can never go stale and needs no configuration — a bare `claude` or `cursor-agent` in any pane just shows up. Enter jumps straight to that pane (switch session → select window → select pane); the preview (`claude-session-preview`) is a live `tmux capture-pane` of the agent plus its location and cwd. `claude-sessions` still knows how to sort a pane first when its window name carries the `⊡` waiting prefix, but nothing sets that prefix today — `hooks-notify`, which used to set it on `Stop`/`Notification`, isn't currently wired into any plugin's hooks (see "Hooks" above), so every session currently shows as `active`. The `hooks-session-track` hook that remains exists to record `track_name` for checks correlation and to restore a bare window name for the `claude-run` flow.
 
+## Review queue
+
+`bin/review` is a per-workspace queue of code review comments, written where you read the
+code and pulled by whatever agent you are running next door. It replaced the old
+`agent-comments.lua` "write comments, flush a prompt, paste it into the agent" loop: there
+is no flush and no clipboard hop anymore — a comment is queued the moment you write it, and
+the agent takes it from the queue.
+
+The queue is the single source of truth. `config/nvim/after/plugin/review.lua` keeps **no**
+copy of it: it shells out to `review` for every read and acts on comments by id, so a
+comment added from nvim, from a shell, or from another nvim instance shows up in all of
+them. Signs are redrawn from `review list --format json --file <path>` (async, on
+`BufEnter`/`BufWritePost`/`FocusGained`, or `:ReviewRefresh`).
+
+| Piece | What it does |
+|---|---|
+| `review add` | Enqueue a comment on a file range. Code is snapshotted at add time — from disk, or from `--code-file -` when the editor holds unsaved changes (pipe the whole buffer, `--lines` slices it) |
+| `review list` / `count` | Inspect the queue without dequeuing (`--file` scopes to one file — this is what draws the editor's signs; `--format text\|json\|ids\|count\|markdown`) |
+| `review pull` | **Dequeue** and print, markdown by default. Pulled comments leave the queue, so no note is ever worked twice; `--peek` reads without draining, `--limit`/`--id` take a subset |
+| `review show` / `edit` / `drop` / `clear` | Act on queued comments by id, or drop them in bulk |
+| `review workspaces` / `path` | Where comments are waiting, and which file backs this workspace's queue |
+
+Workspace resolution: `--workspace PATH` (accepted before or after the subcommand), then
+`$REVIEW_WORKSPACE`, then the git toplevel of `$PWD` (so each worktree is its own queue),
+then `$PWD`. The store is `$REVIEW_HOME` (default `~/.reviews`)`/<workspace-slug>/queue.json`,
+one JSON file per workspace, written atomically under an `flock` so concurrent editors and
+agents cannot lose a comment. Ids (`r1`, `r2`, …) are per-workspace and never reused. Pulled
+comments stay in the file as a bounded archive (`list --status pulled`), which is why they
+survive a `clear` of the pending queue.
+
+Editor commands: `:ReviewAdd` (range-aware, `<CR>` in Visual mode), `:ReviewList`
+(`<leader>co`), `:ReviewEdit` (`<leader>ce`), `:ReviewDelete` (`<leader>cd`), `:ReviewClear`
+(`<leader>cx`), `:ReviewRefresh` (`<leader>cr`). `$REVIEW_CMD` overrides which binary the
+plugin calls.
+
+On the agent side, the `review-queue` skill (in `agents/plugins/gustavofsantos/skills/`)
+teaches the harness to drain the queue and report back by id. Tests: `bats test_bin/review.bats`.
+
 ## GitButler provenance hooks
 
 `bin/hooks-gitbutler-stop` and `bin/hooks-gitbutler-git` enforce GitButler-provenance-style commits in repos with a `.git/gitbutler/` dir: `hooks-gitbutler-stop` (`Stop`) blocks a turn from ending while the tree is dirty; `hooks-gitbutler-git` (`PreToolUse` on Bash) denies raw git write commands, requiring the `but` CLI for mutations. Neither is currently wired into any plugin's hooks (see "Hooks" above) — both are dormant scripts today.

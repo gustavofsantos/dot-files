@@ -36,15 +36,15 @@ vim.keymap.set("n", ']e', function() vim.diagnostic.jump { count = 1, severity =
 
 vim.keymap.set("n", "<leader>u", "<cmd>UndotreeToggle<cr>", { desc = "Toggle undo tree", noremap = true, silent = true })
 
-vim.keymap.set("v", "<CR>", ":AgentCommentAdd<CR>",
-  { desc = "Add agent comment for selection", noremap = true, silent = true })
-vim.keymap.set("n", "<leader>cf", "<cmd>AgentCommentsFlush<CR>",
-  { desc = "Flush agent comments to prompt buffer", noremap = true, silent = true })
-vim.keymap.set("n", "<leader>cx", "<cmd>AgentCommentsClear<CR>",
-  { desc = "Discard pending agent comments", noremap = true, silent = true })
-vim.keymap.set("n", "<leader>cd", "<cmd>AgentCommentDelete<CR>",
-  { desc = "Delete agent comment near cursor", noremap = true, silent = true })
-vim.keymap.set("n", "<leader>ce", "<cmd>AgentCommentEdit<CR>",
-  { desc = "Edit agent comment near cursor", noremap = true, silent = true })
-vim.keymap.set("n", "<leader>co", "<cmd>AgentCommentsList<CR>",
-  { desc = "Open agent comments location list", noremap = true, silent = true })
+vim.keymap.set("v", "<CR>", ":ReviewAdd<CR>",
+  { desc = "Queue a review comment for selection", noremap = true, silent = true })
+vim.keymap.set("n", "<leader>cx", "<cmd>ReviewClear<CR>",
+  { desc = "Drop every pending review comment", noremap = true, silent = true })
+vim.keymap.set("n", "<leader>cd", "<cmd>ReviewDelete<CR>",
+  { desc = "Drop review comment near cursor", noremap = true, silent = true })
+vim.keymap.set("n", "<leader>ce", "<cmd>ReviewEdit<CR>",
+  { desc = "Edit review comment near cursor", noremap = true, silent = true })
+vim.keymap.set("n", "<leader>co", "<cmd>ReviewList<CR>",
+  { desc = "Open review queue location list", noremap = true, silent = true })
+vim.keymap.set("n", "<leader>cr", "<cmd>ReviewRefresh<CR>",
+  { desc = "Redraw review signs from the queue", noremap = true, silent = true })
