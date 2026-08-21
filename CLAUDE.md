@@ -21,7 +21,7 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 | `init-engineering-repo.sh` | Idempotently `git init`s `~/engineering`, writes its `.gitignore`, seeds the first commit |
 | `link-bin-files.sh` | Symlinks every file in `bin/` into `~/.bin/` (hook scripts live there too, prefixed `hooks-*`) |
 | `link-xdg-config.sh` | Symlinks each subdir of `config/` into `~/.config/` |
-| `install-agents.sh` | Single source of truth for installing agent config: symlinks each `agents/plugins/<name>/` (skills, agents, hooks, themes) into `~/.claude/skills/` and `~/.cursor/plugins/local/`; merges `.claude/settings.json` (`permissions`/`env`/`statusLine`/`theme`) into `~/.claude/settings.json` |
+| `install-agents.sh` | Single source of truth for installing agent config: symlinks each `agents/plugins/<name>/` (skills, commands, agents, hooks, themes) into `~/.claude/skills/` and `~/.cursor/plugins/local/`; merges `.claude/settings.json` (`permissions`/`env`/`statusLine`/`theme`) into `~/.claude/settings.json` |
 | `set-caps-lock-ctrl.sh` | Sets the GNOME "Caps Lock as Ctrl" `xkb-options` key (`ctrl:nocaps`) via `gsettings`, no `gnome-tweaks` package needed. No-ops if `gsettings` is absent. |
 
 Re-running `setup.sh` is idempotent (`ln -sf`).
@@ -34,7 +34,7 @@ Re-running `setup.sh` is idempotent (`ln -sf`).
 ## Directory layout
 
 - `bin/` — personal scripts added to `$PATH` via `~/.bin/`, including hook scripts (`hooks-*`)
-- `agents/` — `agents/plugins/` only: one self-contained plugin directory per project, holding everything that reaches Claude Code and Cursor — skills, subagents, hooks, themes (see "Skills and plugins" below). This is the source of truth; nothing under `~/.claude/skills/` or `~/.cursor/plugins/local/` is hand-edited
+- `agents/` — `agents/plugins/` only: one self-contained plugin directory per project, holding everything that reaches Claude Code and Cursor — skills, slash commands, subagents, hooks, themes (see "Skills and plugins" below). This is the source of truth; nothing under `~/.claude/skills/` or `~/.cursor/plugins/local/` is hand-edited
 - `test_bin/` — bats tests for `bin/` scripts, one `<script>.bats` per script
 - `config/` — XDG config dirs: `nvim/`, `ghostty/`, `bat/`, `lazygit/`, `zed/`, `wezterm/`, `tmux/`, `sheldon/`, `starship.toml`, `vale/`
 - `.claude/` — hand-maintained Claude Code config, `settings.json` only: `permissions`/`env`/`statusLine`/`theme` selection, merged into the global `~/.claude/settings.json` on install
@@ -46,17 +46,25 @@ Every skill lives inside a plugin, under `agents/plugins/<name>/skills/<skill>/`
 `agents/skills/` anymore: a plugin is the only unit a skill installs through.
 
 A plugin directory is self-contained: its own `.claude-plugin/plugin.json` and
-`.cursor-plugin/plugin.json`, plus `skills/`, `agents/`, `hooks/`, and `themes/`
-subdirectories at the plugin root. `install-agents.sh` (run by `setup.sh`) is the only
-install step for it: it symlinks the whole plugin directory into `~/.claude/skills/<name>`
+`.cursor-plugin/plugin.json`, plus `skills/`, `commands/`, `agents/`, `hooks/`, and
+`themes/` subdirectories at the plugin root. `install-agents.sh` (run by `setup.sh`) is the
+only install step for it: it symlinks the whole plugin directory into `~/.claude/skills/<name>`
 (Claude Code's skills-directory plugin mechanism — auto-discovered next session as
 `<name>@skills-dir`, no marketplace, no copy) and into `~/.cursor/plugins/local/<name>`
 (Cursor's local-plugin path, read by both the desktop app and the `cursor-agent`/`agent`
 CLI). Both are loaded in place, not copied, so editing a file under `agents/plugins/<name>/`
 is the only step — `SKILL.md` edits apply live in Claude Code mid-session; edits to
-`agents/`, `hooks/`, `themes/`, or a manifest need `/reload-plugins` there. The CLI has no
-equivalent reload command, but needs none: every invocation is a fresh process, so it
-re-reads the plugin directory from scratch each time.
+`commands/`, `agents/`, `hooks/`, `themes/`, or a manifest need `/reload-plugins` there. The
+CLI has no equivalent reload command, but needs none: every invocation is a fresh process,
+so it re-reads the plugin directory from scratch each time.
+
+A plugin's `commands/` directory holds flat markdown files, one per slash command:
+`commands/<name>.md` becomes `/<name>` in both harnesses. Claude Code auto-discovers the
+directory; Cursor is declared the same way its hooks are, with `"commands": "./commands/"`
+in `.cursor-plugin/plugin.json`. A command is the explicit entry point a human types; a
+skill is what the model reaches for on its own. When both exist for one workflow (`/review`
+and the `review-queue` skill), the command stays short and the skill carries the rules —
+neither is the store, the underlying script is.
 
 There is no separate "rules" mechanism anymore — every rule (including the always-apply
 `way-of-work`/`way-of-planning`/`way-of-communication` trio) is now a skill like any other,
@@ -211,8 +219,11 @@ Editor commands: `:ReviewAdd` (range-aware, `<CR>` in Visual mode), `:ReviewList
 (`<leader>cx`), `:ReviewRefresh` (`<leader>cr`). `$REVIEW_CMD` overrides which binary the
 plugin calls.
 
-On the agent side, the `review-queue` skill (in `agents/plugins/gustavofsantos/skills/`)
-teaches the harness to drain the queue and report back by id. Tests: `bats test_bin/review.bats`.
+On the agent side there are two entry points over the same CLI, both in
+`agents/plugins/gustavofsantos/`: the `/review` command (`commands/review.md`) when you want
+to say "go work my comments", and the `review-queue` skill (`skills/review-queue/`) which the
+model triggers on its own when you mention notes you left. Both drain the queue with
+`review pull` and report back by id. Tests: `bats test_bin/review.bats`.
 
 ## GitButler provenance hooks
 
