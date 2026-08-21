@@ -56,6 +56,10 @@ if command -v "but" &> /dev/null; then
   eval "$(but completions zsh)"
 fi
 
+if command -v "entire" &> /dev/null; then
+  autoload -Uz compinit && compinit && source <(entire completion zsh)
+fi
+
 if [ -e "$HOME/.local_envs" ]; then source "$HOME/.local_envs"; fi
 if [ -e "$HOME/.cargo/env" ]; then . "$HOME/.cargo/env";  fi
 if [ -e "$HOME/.deno/env" ]; then . "$HOME/.deno/env"; fi
@@ -79,8 +83,4 @@ esac
 # bun
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
-
 export PATH="$HOME/.git-ai/bin:$PATH"
-
-# Entire CLI shell completion
-autoload -Uz compinit && compinit && source <(entire completion zsh)

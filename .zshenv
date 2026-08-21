@@ -30,6 +30,10 @@ export PATH=$PATH:"$HOME"/.bin
 export PATH=$PATH:"$HOME"/bin
 export PATH=$PATH:"$HOME"/.gem/bin
 export PATH=$PATH:"$TURSO_HOME"
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+export PATH="$HOME/.git-ai/bin:$PATH"
 
 alias v="nvim"
 alias vim="nvim"
