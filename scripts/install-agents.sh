@@ -9,20 +9,6 @@ run_full_install() {
   # agents/plugins/<name>/ and are installed as whole-plugin symlinks for
   # Claude Code and Cursor. Standalone skills under .agents/skills/ are
   # installed separately below for Claude Code's user skill directory.
-  echo "Installing plugins..."
-  mkdir -p "$HOME/.claude/skills" "$HOME/.cursor/plugins/local"
-  for plugin in "$DOTFILES_DIR"/agents/plugins/*/; do
-    [ -f "$plugin/.claude-plugin/plugin.json" ] || continue
-    name=$(basename "${plugin%/}")
-    ln -sfn "${plugin%/}" "$HOME/.claude/skills/$name"
-    ln -sfn "${plugin%/}" "$HOME/.cursor/plugins/local/$name"
-  done
-  # prune dangling plugin symlinks (removed from dotfiles)
-  find "$HOME/.claude/skills" "$HOME/.cursor/plugins/local" -maxdepth 1 -type l | while read -r link; do
-    [ -e "$link" ] || rm "$link"
-  done
-  echo "Installing plugins... OK"
-
   echo "Installing standalone skills..."
   STANDALONE_SKILLS_SOURCE="$DOTFILES_DIR/.agents/skills"
   STANDALONE_SKILLS_DIR="$HOME/.agents/skills"
