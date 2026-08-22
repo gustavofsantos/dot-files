@@ -25,6 +25,43 @@ run_full_install() {
   done
   echo "Installing plugins... OK"
 
+  echo "Installing Codex hooks..."
+  DOTFILES_CODEX_HOOKS="$DOTFILES_DIR/.codex/hooks.json"
+  CODEX_CONFIG_DIR="${CODEX_HOME:-$HOME/.codex}"
+  GLOBAL_CODEX_HOOKS="$CODEX_CONFIG_DIR/hooks.json"
+  if [ ! -f "$DOTFILES_CODEX_HOOKS" ]; then
+    echo "Installing Codex hooks... skipped (no dotfiles hooks.json)"
+  else
+    mkdir -p "$CODEX_CONFIG_DIR"
+    if [ ! -f "$GLOBAL_CODEX_HOOKS" ]; then
+      cp "$DOTFILES_CODEX_HOOKS" "$GLOBAL_CODEX_HOOKS"
+      echo "Installing Codex hooks... OK (installed fresh)"
+    else
+      # Codex loads all hooks from the user-level file. Preserve unrelated
+      # user hooks while replacing this hook's prior entry, so setup remains
+      # idempotent. Write beside the destination and rename atomically.
+      tmp=$(mktemp "$GLOBAL_CODEX_HOOKS.XXXXXX")
+      if jq -s '
+        .[0] as $g |
+        .[1] as $d |
+        ($g * $d) |
+        .hooks = (($g.hooks // {}) * ($d.hooks // {})) |
+        .hooks.PostToolUse = (
+          (($g.hooks.PostToolUse // []) |
+            map(select(([.hooks[]?.command] | index("hooks-vale-lint --harness codex")) == null)))
+          + ($d.hooks.PostToolUse // [])
+        )
+      ' "$GLOBAL_CODEX_HOOKS" "$DOTFILES_CODEX_HOOKS" > "$tmp"; then
+        mv "$tmp" "$GLOBAL_CODEX_HOOKS"
+        echo "Installing Codex hooks... OK"
+      else
+        rm -f "$tmp"
+        echo "Installing Codex hooks... FAILED" >&2
+        exit 1
+      fi
+    fi
+  fi
+
   echo "Merging Claude settings..."
   DOTFILES_SETTINGS="$DOTFILES_DIR/.claude/settings.json"
   GLOBAL_SETTINGS="$HOME/.claude/settings.json"

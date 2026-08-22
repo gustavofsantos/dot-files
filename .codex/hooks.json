@@ -1,0 +1,18 @@
+{
+  "description": "Global Markdown Vale lint after Codex file edits",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "hooks-vale-lint --harness codex",
+            "timeout": 5,
+            "statusMessage": "Linting Markdown with Vale"
+          }
+        ]
+      }
+    ]
+  }
+}

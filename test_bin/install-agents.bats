@@ -5,10 +5,10 @@
 # Runs the real script against a from-scratch fixture repo (not the real
 # dotfiles checkout) so a test run never symlinks from the actual repo.
 # The script itself just symlinks agents/plugins/<name>/ into both harnesses'
-# plugin directories and merges .claude/settings.json into the global one --
-# every skill, agent, hook, and theme reaches Claude Code and Cursor purely
-# by being inside the symlinked plugin directory, so there's nothing else
-# for this script to compile.
+# plugin directories, merges .claude/settings.json into the global one, and
+# merges the global Codex hooks file. Every skill, agent, hook, and theme
+# reaches Claude Code and Cursor purely by being inside the symlinked plugin
+# directory; Codex's user hook is the one separate global config artifact.
 #
 # Isolation strategy:
 #   DOTFILES_DIR -> a constructed fixture repo (tmpdir)
@@ -31,7 +31,7 @@ setup() {
     "$FIXTURE/agents/plugins/demo-plugin/skills/demo-skill" \
     "$FIXTURE/agents/plugins/demo-plugin/hooks" \
     "$FIXTURE/agents/plugins/demo-plugin/commands" \
-    "$FIXTURE/.claude"
+    "$FIXTURE/.claude" "$FIXTURE/.codex"
 
   cat > "$FIXTURE/agents/plugins/demo-plugin/.claude-plugin/plugin.json" <<'EOF'
 { "name": "demo-plugin", "description": "A demo plugin." }
@@ -54,6 +54,7 @@ Demo command body.
 EOF
 
   echo '{"permissions": {"allow": ["Read"]}}' > "$FIXTURE/.claude/settings.json"
+  cp "$REAL_REPO/.codex/hooks.json" "$FIXTURE/.codex/hooks.json"
 }
 
 teardown() {
@@ -93,6 +94,37 @@ teardown() {
   bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
 
   [ "$(jq -r '.permissions.allow[0]' "$HOME/.claude/settings.json")" = "Read" ]
+}
+
+@test "installs the global Codex hooks file" {
+  bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
+
+  jq -e '
+    [.hooks.PostToolUse[] | .hooks[]?.command]
+    | any(. == "hooks-vale-lint --harness codex")
+  ' "$HOME/.codex/hooks.json" >/dev/null
+}
+
+@test "preserves unrelated Codex hooks and replaces its Vale entry idempotently" {
+  mkdir -p "$HOME/.codex"
+  cat > "$HOME/.codex/hooks.json" <<'EOF'
+{
+  "hooks": {
+    "SessionStart": [{"hooks": [{"type": "command", "command": "keep-me"}]}],
+    "PostToolUse": [{"hooks": [{"type": "command", "command": "hooks-vale-lint --harness codex"}]}]
+  }
+}
+EOF
+
+  bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
+  bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
+
+  jq -e '
+    (.hooks.SessionStart[0].hooks[0].command == "keep-me") and
+    ([.hooks.PostToolUse[] | .hooks[]?.command]
+      | map(select(. == "hooks-vale-lint --harness codex"))
+      | length == 1)
+  ' "$HOME/.codex/hooks.json" >/dev/null
 }
 
 @test "merges permissions into an existing ~/.claude/settings.json, unioning allow lists" {
