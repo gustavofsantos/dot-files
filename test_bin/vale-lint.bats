@@ -2,10 +2,11 @@
 
 # Tests for bin/hooks-vale-lint
 #
-# PostToolUse hook: after Edit/Write/MultiEdit on a *.md file, run vale and
+# PostToolUse hook: after a file edit on a *.md file, run vale and
 # feed warning+error severity issues back to the agent. Claude reads them
-# back via stderr (exit 2); Cursor's postToolUse can't block after the fact,
-# so it reads a {"additional_context": ...} JSON object on stdout (exit 0).
+# back via stderr (exit 2); Cursor's postToolUse reads a
+# {"additional_context": ...} JSON object; Codex's PostToolUse reads a
+# hookSpecificOutput.additionalContext response.
 # Suggestion-level alerts (Vocab, PassiveVoice, ...) are dropped — see
 # config/vale/README.md's "Dogfood results" for which STE checks are
 # error-level versus suggestion-level.
@@ -32,6 +33,12 @@ payload() {
     '{cwd: $cwd, tool_name: "Edit", tool_input: {file_path: $file}}'
 }
 
+codex_payload() {
+  local patch="$1"
+  jq -n --arg cwd "$TEST_DIR" --arg patch "$patch" \
+    '{cwd: $cwd, hook_event_name: "PostToolUse", tool_name: "apply_patch", tool_input: {command: $patch}}'
+}
+
 @test "--harness is required" {
   run bash "$SCRIPT" <<< "$(payload "$TEST_DIR/x.md")"
   [ "$status" -ne 0 ]
@@ -40,6 +47,23 @@ payload() {
 @test "an unrecognized --harness value is rejected" {
   run bash "$SCRIPT" --harness vscode <<< "$(payload "$TEST_DIR/x.md")"
   [ "$status" -ne 0 ]
+}
+
+@test "codex: extracts the changed markdown path from apply_patch and returns hook feedback" {
+  cat > "$TEST_DIR/bad.md" <<'EOF'
+# Test
+
+An extremely long sentence that goes on and on and on and on and on and on and on and on to trip the sentence length rule for sure.
+EOF
+  patch=$'*** Begin Patch\n*** Update File: bad.md\n@@\n-An old sentence.\n+An extremely long sentence.\n*** End Patch'
+  run bash "$SCRIPT" --harness codex <<< "$(codex_payload "$patch")"
+  [ "$status" -eq 0 ]
+  jq -e '
+    (.decision == "block") and
+    (.reason | contains("SentenceLength")) and
+    (.hookSpecificOutput.hookEventName == "PostToolUse") and
+    (.hookSpecificOutput.additionalContext | contains("bad.md"))
+  ' <<< "$output" >/dev/null
 }
 
 @test "exits 2 and reports the check name for an error-level violation" {
@@ -82,6 +106,18 @@ EOF
 Short and clean.
 EOF
   run bash "$SCRIPT" --harness cursor <<< "$(payload "$TEST_DIR/good.md")"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "codex: exits 0 with no output for a clean markdown patch" {
+  cat > "$TEST_DIR/good.md" <<'EOF'
+# Test
+
+Short and clean.
+EOF
+  patch=$'*** Begin Patch\n*** Update File: good.md\n@@\n-Old.\n+Short and clean.\n*** End Patch'
+  run bash "$SCRIPT" --harness codex <<< "$(codex_payload "$patch")"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }

@@ -121,12 +121,13 @@ a Claude-only tool.
 
 Hook scripts live under `bin/`, prefixed `hooks-*` (e.g. `hooks-vale-lint`) — the prefix
 is what marks a script as hook-wired rather than a general personal command; the harness
-is still passed as an argument, not baked into the name. Every hook accepts `--harness
-claude|cursor`, which selects how it reads stdin and, where applicable, what shape it
-writes to stdout — Claude and Cursor have different native hook payloads and response
-contracts, and a hook parses its harness's own shape directly, with no shared envelope or
-translation layer in between. A hook with no Cursor implementation yet rejects `--harness
-cursor` with a clear stderr message rather than silently no-op'ing. `bin/hooks-session-log`
+is still passed as an argument, not baked into the name. Each hook validates the harnesses
+it supports and parses that harness's native stdin and response contract directly, with no
+shared envelope or translation layer in between. `hooks-vale-lint` supports
+`--harness claude|cursor|codex`; Claude and Cursor use their existing plugin wiring, while
+Codex uses its native `PostToolUse` response shape. A hook with no Cursor implementation
+yet rejects `--harness cursor` with a clear stderr message rather than silently no-op'ing.
+`bin/hooks-session-log`
 additionally takes `--event <name>`, since a harness's payload doesn't self-identify its
 event the same way.
 
@@ -146,6 +147,12 @@ share the plugin's `hooks/` directory because that's the fixed Claude-side conve
 `permissions.allow/deny/ask` arrays are unioned) and leaves whatever `hooks` key is
 already in the global file untouched — Claude Code loads plugin hooks independently of
 `settings.json`, so this script has nothing to do with them.
+
+Codex's global user hook source is `.codex/hooks.json`, installed to
+`$CODEX_HOME/hooks.json` (normally `~/.codex/hooks.json`) by `install-agents.sh`. It wires
+`hooks-vale-lint --harness codex` to Codex `PostToolUse` for `apply_patch`/`Edit`/`Write`;
+the script extracts every Markdown path from Codex's apply-patch payload and returns Vale
+feedback through `hookSpecificOutput.additionalContext`.
 
 `link-bin-files.sh` (part of `setup.sh`) symlinks every file in `bin/` into `~/.bin/`,
 including the `hooks-*` scripts, so a hook is reachable by bare name from a plugin's

@@ -10,8 +10,8 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 
 That's the only step. It's idempotent — re-run it any time. `setup.sh` delegates to
 the scripts in `scripts/`: it links dotfiles into `$HOME`, seeds local-override files,
-links `bin/` and XDG config, and installs the agent config — plugins and settings — for
-Claude Code and Cursor (below).
+links `bin/` and XDG config, and installs the agent config — plugins, settings, and the
+global Codex hook — for Claude Code, Cursor, and Codex (below).
 
 ### Local overrides (never committed)
 
@@ -45,6 +45,9 @@ other.
    themes reach either harness.
 2. Merges `.claude/settings.json` into `~/.claude/settings.json` (global wins on
    conflicts; `permissions` arrays are unioned).
+3. Merges `.codex/hooks.json` into the user-level `$CODEX_HOME/hooks.json` (or
+   `~/.codex/hooks.json`), preserving unrelated Codex hooks and replacing this
+   hook's prior entry idempotently.
 
 ### Add a skill, subagent, hook, or theme
 

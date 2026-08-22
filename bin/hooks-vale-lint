@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# hooks-vale-lint — PostToolUse(Edit|Write|MultiEdit) hook: lint markdown files with
-# vale after every edit, feeding warning+error prose issues back to the agent
-# so it can fix them inline. Suggestion-level alerts (Vocab,
+# hooks-vale-lint — PostToolUse file-edit hook: lint markdown files with vale
+# after every edit, feeding warning+error prose issues back to the agent so it
+# can fix them inline. Suggestion-level alerts (Vocab,
 # PassiveVoice, ...) are dropped — see config/vale/README.md's "Dogfood
 # results" for which STE checks are error-level (unambiguous rules) versus
 # suggestion-level (heuristics with real false-positive rates). warning+
@@ -10,18 +10,18 @@
 # FleschReadingEase, ...) that vale's exit code alone would miss, since it
 # only goes non-zero on error-level alerts.
 #
-# Usage: hooks-vale-lint --harness claude|cursor
+# Usage: hooks-vale-lint --harness claude|cursor|codex
 #
 # Wire for Claude (plugin hooks/hooks.json), event: PostToolUse, matcher Edit|Write|MultiEdit
 # Wire for Cursor (plugin hooks/cursor.hooks.json), event: postToolUse, matcher Write
+# Wire for Codex (user ~/.codex/hooks.json), event: PostToolUse, matcher apply_patch|Edit|Write
 #
-# Both harnesses' post-tool-use payload uses the same field names for what
-# this hook needs (.cwd, .tool_input.file_path), so the parsing below is
-# shared. Only the feedback channel differs: Claude reads the warning back
-# from a non-zero exit + stderr; Cursor's postToolUse "cannot block tool
-# execution — the tool has already completed" (its docs), so instead it
-# reads a JSON {"additional_context": ...} object on stdout, printed with
-# exit 0.
+# Claude and Cursor send the edited path in .tool_input.file_path (or .path).
+# Codex's apply_patch sends the patch in .tool_input.command, so its changed
+# paths are extracted from the patch after the tool has completed. The
+# feedback channel also differs: Claude reads the warning back from a
+# non-zero exit + stderr; Cursor reads {"additional_context": ...}; Codex
+# reads a PostToolUse hookSpecificOutput.additionalContext response.
 set -euo pipefail
 
 HARNESS=""
@@ -33,9 +33,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 case "$HARNESS" in
-  claude|cursor) ;;
+  claude|cursor|codex) ;;
   *)
-    echo "hooks-vale-lint: --harness must be 'claude' or 'cursor' (got '${HARNESS}')" >&2
+    echo "hooks-vale-lint: --harness must be 'claude', 'cursor', or 'codex' (got '${HARNESS}')" >&2
     exit 1
     ;;
 esac
@@ -49,37 +49,82 @@ cwd=$(printf '%s' "$input" | jq -r 'if (.cwd | type) == "string" and (.cwd | len
 [ -n "$cwd" ] || exit 0
 cd "$cwd" 2>/dev/null || exit 0
 
-file=$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.path // empty')
-[ -n "$file" ] || exit 0
+declare -a files=()
+declare -A seen_files=()
 
-case "$file" in
-  *.md|*.markdown) ;;
-  *) exit 0 ;;
-esac
+add_file() {
+  local candidate="$1"
+  [ -n "$candidate" ] || return 0
+  if [[ -z "${seen_files["$candidate"]+present}" ]]; then
+    files+=("$candidate")
+    seen_files["$candidate"]=1
+  fi
+}
 
-[ -f "$file" ] || exit 0
+file=$(printf '%s' "$input" | jq -r '
+  (.tool_input.file_path // .tool_input.path // empty) |
+  if type == "string" then . else empty end
+')
+if [ -n "$file" ]; then
+  add_file "$file"
+else
+  # Codex's apply_patch representation is a command-shaped patch. Parse the
+  # file headers rather than relying on git diff so newly-added, untracked
+  # Markdown files are covered too.
+  patch=$(printf '%s' "$input" | jq -r '
+    (.tool_input.command // empty) |
+    if type == "string" then . else empty end
+  ')
+  while IFS= read -r patch_line; do
+    case "$patch_line" in
+      "*** Add File: "*) add_file "${patch_line#*** Add File: }" ;;
+      "*** Update File: "*) add_file "${patch_line#*** Update File: }" ;;
+      "*** Delete File: "*) add_file "${patch_line#*** Delete File: }" ;;
+      "*** Move to: "*) add_file "${patch_line#*** Move to: }" ;;
+    esac
+  done <<< "$patch"
+fi
 
-# `|| true`, not `|| exit 0`: vale now exits non-zero whenever it finds an
-# error-level alert (the whole point of promoting STE checks to error), so
-# treating a non-zero exit as "vale failed to run" would swallow exactly the
-# alerts this hook exists to surface. An empty report is the real "vale
-# didn't run" signal.
-report=$(vale --output=JSON "$file" 2>/dev/null || true)
-[ -n "$report" ] || exit 0
+[ "${#files[@]}" -gt 0 ] || exit 0
 
-alerts=$(printf '%s' "$report" | jq -c '[.[][] | select(.Severity == "warning" or .Severity == "error")]' 2>/dev/null) || exit 0
-count=$(printf '%s' "$alerts" | jq 'length')
-[ "$count" -gt 0 ] || exit 0
+messages=()
+for file in "${files[@]}"; do
+  case "${file,,}" in
+    *.md|*.markdown) ;;
+    *) continue ;;
+  esac
 
-message=$(
-  echo "vale flagged $count issue(s) in $file:"
-  printf '%s' "$alerts" | jq -r '.[] | "  \(.Line):\(.Span[0]) [\(.Severity)] \(.Check): \(.Message)"'
-)
+  [ -f "$file" ] || continue
+
+  # `|| true`, not `|| exit 0`: vale now exits non-zero whenever it finds an
+  # error-level alert (the whole point of promoting STE checks to error), so
+  # treating a non-zero exit as "vale failed to run" would swallow exactly the
+  # alerts this hook exists to surface. An empty report is the real "vale
+  # didn't run" signal.
+  report=$(vale --output=JSON "$file" 2>/dev/null || true)
+  [ -n "$report" ] || continue
+
+  alerts=$(printf '%s' "$report" | jq -c '[.[][] | select(.Severity == "warning" or .Severity == "error")]' 2>/dev/null) || continue
+  count=$(printf '%s' "$alerts" | jq 'length') || continue
+  [ "$count" -gt 0 ] || continue
+
+  messages+=("$(
+    echo "vale flagged $count issue(s) in $file:"
+    printf '%s' "$alerts" | jq -r '.[] | "  \(.Line):\(.Span[0]) [\(.Severity)] \(.Check): \(.Message)"'
+  )")
+done
+
+[ "${#messages[@]}" -gt 0 ] || exit 0
+message=$(printf '%s\n' "${messages[@]}")
 
 if [[ "$HARNESS" == "claude" ]]; then
   printf '%s\n' "$message" >&2
   exit 2
-else
+elif [[ "$HARNESS" == "cursor" ]]; then
   jq -n --arg ctx "$message" '{additional_context: $ctx}'
+  exit 0
+else
+  jq -n --arg reason "$message" --arg ctx "$message" \
+    '{decision: "block", reason: $reason, hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: $ctx}}'
   exit 0
 fi
