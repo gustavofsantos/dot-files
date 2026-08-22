@@ -5,12 +5,10 @@ DOTFILES_DIR="${DOTFILES_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
 export DOTFILES_DIR
 
 run_full_install() {
-  # Every skill, agent, hook, and theme lives inside a plugin under
-  # agents/plugins/<name>/ -- installing a plugin is the only way any of
-  # them reaches either harness. Symlinking the whole plugin directory
-  # (rather than compiling/transforming its contents) makes it a Claude
-  # Code skills-directory plugin (`<name>@skills-dir`, discovered in place)
-  # and a Cursor local plugin, both live-edited from the one source.
+  # Plugin skills, agents, hooks, commands, and themes live under
+  # agents/plugins/<name>/ and are installed as whole-plugin symlinks for
+  # Claude Code and Cursor. Standalone skills under .agents/skills/ are
+  # installed separately below for Claude Code's user skill directory.
   echo "Installing plugins..."
   mkdir -p "$HOME/.claude/skills" "$HOME/.cursor/plugins/local"
   for plugin in "$DOTFILES_DIR"/agents/plugins/*/; do
@@ -24,6 +22,39 @@ run_full_install() {
     [ -e "$link" ] || rm "$link"
   done
   echo "Installing plugins... OK"
+
+  echo "Installing standalone skills..."
+  STANDALONE_SKILLS_SOURCE="$DOTFILES_DIR/.agents/skills"
+  STANDALONE_SKILLS_DIR="$HOME/.agents/skills"
+  CLAUDE_SKILLS_DIR="$HOME/.claude/skills"
+  mkdir -p "$STANDALONE_SKILLS_DIR" "$CLAUDE_SKILLS_DIR"
+
+  if [ -d "$STANDALONE_SKILLS_SOURCE" ]; then
+    for skill in "$STANDALONE_SKILLS_SOURCE"/*/; do
+      [ -d "$skill" ] || continue
+      name=$(basename "${skill%/}")
+      ln -sfn "${skill%/}" "$STANDALONE_SKILLS_DIR/$name"
+      ln -sfn "$STANDALONE_SKILLS_DIR/$name" "$CLAUDE_SKILLS_DIR/$name"
+    done
+  fi
+
+  # Remove only stale links owned by this source tree. Other user-installed
+  # skills under ~/.agents/skills remain untouched.
+  if [ -d "$STANDALONE_SKILLS_SOURCE" ]; then
+    find "$STANDALONE_SKILLS_DIR" -maxdepth 1 -type l | while read -r link; do
+      target=$(readlink "$link")
+      case "$target" in
+        "$STANDALONE_SKILLS_SOURCE/"*) [ -e "$link" ] || rm "$link" ;;
+      esac
+    done
+  fi
+  find "$CLAUDE_SKILLS_DIR" -maxdepth 1 -type l | while read -r link; do
+    target=$(readlink "$link")
+    case "$target" in
+      "$STANDALONE_SKILLS_DIR/"*) [ -e "$link" ] || rm "$link" ;;
+    esac
+  done
+  echo "Installing standalone skills... OK"
 
   echo "Installing Codex hooks..."
   DOTFILES_CODEX_HOOKS="$DOTFILES_DIR/.codex/hooks.json"

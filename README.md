@@ -26,12 +26,12 @@ Both are created empty by `setup.sh` if missing.
 
 ## Agent config
 
-Skills, subagents, hooks, and themes all live inside a single plugin per project at
-`agents/plugins/<name>/`, hand-authored directly in each harness's native plugin shape —
-there is no separate source format or compile step. This is the source of truth; nothing
-under `.claude/skills/` or `.cursor/plugins/local/` is hand-edited. `.claude/settings.json`
-holds the one thing that isn't plugin-scoped: `permissions`/`env`/`statusLine`/`theme`,
-hand-maintained and merged into the global settings file on install. There is no separate
+Standalone Claude Code skills live under `.agents/skills/<name>/`; plugin-scoped skills,
+subagents, hooks, and themes live inside `agents/plugins/<name>/`. Both are hand-authored
+source trees with no compile step. Nothing under `~/.agents/skills/`, `~/.claude/skills/`,
+or `~/.cursor/plugins/local/` is hand-edited. `.claude/settings.json` holds the one thing
+that is not plugin-scoped: `permissions`/`env`/`statusLine`/`theme`, hand-maintained and
+merged into the global settings file on install. There is no separate
 "rules" mechanism — a rule is just a skill with an eager trigger description, like any
 other.
 
@@ -39,19 +39,22 @@ other.
 
 `./setup.sh` runs `scripts/install-agents.sh`, which:
 
-1. Symlinks each `agents/plugins/<name>/` into `~/.claude/skills/` (a Claude Code
+1. Symlinks each `.agents/skills/<name>/` into `~/.agents/skills/` and then into
+   `~/.claude/skills/` for Claude Code.
+2. Symlinks each `agents/plugins/<name>/` into `~/.claude/skills/` (a Claude Code
    skills-directory plugin) and `~/.cursor/plugins/local/` (a Cursor local plugin, read by
    both the desktop app and the CLI) — the only way a plugin's skills, agents, hooks, and
    themes reach either harness.
-2. Merges `.claude/settings.json` into `~/.claude/settings.json` (global wins on
+3. Merges `.claude/settings.json` into `~/.claude/settings.json` (global wins on
    conflicts; `permissions` arrays are unioned).
-3. Merges `.codex/hooks.json` into the user-level `$CODEX_HOME/hooks.json` (or
+4. Merges `.codex/hooks.json` into the user-level `$CODEX_HOME/hooks.json` (or
    `~/.codex/hooks.json`), preserving unrelated Codex hooks and replacing this
    hook's prior entry idempotently.
 
 ### Add a skill, subagent, hook, or theme
 
-Everything drops directly under a plugin's matching subdirectory —
+Standalone Claude Code skills go under `.agents/skills/<skill>/`. Plugin-scoped skills,
+subagents, hooks, and themes go under the plugin's matching subdirectory —
 `agents/plugins/<name>/skills/<skill>/`, `agents/plugins/<name>/hooks/`,
 `agents/plugins/<name>/themes/`. Commit and re-run `./setup.sh`. See
 [`CLAUDE.md`](CLAUDE.md) for each type's exact frontmatter shape and per-harness quirks.

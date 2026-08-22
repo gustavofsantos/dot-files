@@ -21,7 +21,7 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 | `init-engineering-repo.sh` | Idempotently `git init`s `~/engineering`, writes its `.gitignore`, seeds the first commit |
 | `link-bin-files.sh` | Symlinks every file in `bin/` into `~/.bin/` (hook scripts live there too, prefixed `hooks-*`) |
 | `link-xdg-config.sh` | Symlinks each subdir of `config/` into `~/.config/` |
-| `install-agents.sh` | Single source of truth for installing agent config: symlinks each `agents/plugins/<name>/` (skills, commands, agents, hooks, themes) into `~/.claude/skills/` and `~/.cursor/plugins/local/`; merges `.claude/settings.json` (`permissions`/`env`/`statusLine`/`theme`) into `~/.claude/settings.json` |
+| `install-agents.sh` | Single source of truth for installing agent config: symlinks standalone `.agents/skills/<name>/` into `~/.agents/skills/` and `~/.claude/skills/`, symlinks each `agents/plugins/<name>/` into `~/.claude/skills/` and `~/.cursor/plugins/local/`, and merges agent settings/hooks |
 | `set-caps-lock-ctrl.sh` | Sets the GNOME "Caps Lock as Ctrl" `xkb-options` key (`ctrl:nocaps`) via `gsettings`, no `gnome-tweaks` package needed. No-ops if `gsettings` is absent. |
 
 Re-running `setup.sh` is idempotent (`ln -sf`).
@@ -34,16 +34,19 @@ Re-running `setup.sh` is idempotent (`ln -sf`).
 ## Directory layout
 
 - `bin/` — personal scripts added to `$PATH` via `~/.bin/`, including hook scripts (`hooks-*`)
-- `agents/` — `agents/plugins/` only: one self-contained plugin directory per project, holding everything that reaches Claude Code and Cursor — skills, slash commands, subagents, hooks, themes (see "Skills and plugins" below). This is the source of truth; nothing under `~/.claude/skills/` or `~/.cursor/plugins/local/` is hand-edited
+- `.agents/skills/` — standalone Claude Code skills, installed into `~/.agents/skills/` and linked from `~/.claude/skills/`
+- `agents/` — `agents/plugins/` only: one self-contained plugin directory per project, holding everything that reaches Claude Code and Cursor — skills, slash commands, subagents, hooks, themes (see "Skills and plugins" below). This is the source of truth; nothing under `~/.agents/skills/`, `~/.claude/skills/`, or `~/.cursor/plugins/local/` is hand-edited
 - `test_bin/` — bats tests for `bin/` scripts, one `<script>.bats` per script
 - `config/` — XDG config dirs: `nvim/`, `ghostty/`, `bat/`, `lazygit/`, `zed/`, `wezterm/`, `tmux/`, `sheldon/`, `starship.toml`, `vale/`
 - `.claude/` — hand-maintained Claude Code config, `settings.json` only: `permissions`/`env`/`statusLine`/`theme` selection, merged into the global `~/.claude/settings.json` on install
 
 ## Skills and plugins
 
-Every skill lives inside a plugin, under `agents/plugins/<name>/skills/<skill>/` — a
-`SKILL.md` plus optional `references/`, `scripts/`, and `assets/`. There is no loose
-`agents/skills/` anymore: a plugin is the only unit a skill installs through.
+Standalone Claude Code skills live under `.agents/skills/<skill>/` — a `SKILL.md` plus
+optional supporting files — and install as individual live symlinks into
+`~/.agents/skills/` and `~/.claude/skills/`. Plugin skills live inside a plugin, under
+`agents/plugins/<name>/skills/<skill>/` — a `SKILL.md` plus optional `references/`,
+`scripts/`, and `assets/` — and install with the whole plugin for Claude Code and Cursor.
 
 A plugin directory is self-contained: its own `.claude-plugin/plugin.json` and
 `.cursor-plugin/plugin.json`, plus `skills/`, `commands/`, `agents/`, `hooks/`, and

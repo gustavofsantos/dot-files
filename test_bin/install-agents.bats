@@ -4,11 +4,10 @@
 #
 # Runs the real script against a from-scratch fixture repo (not the real
 # dotfiles checkout) so a test run never symlinks from the actual repo.
-# The script itself just symlinks agents/plugins/<name>/ into both harnesses'
+# The script symlinks standalone .agents/skills/<name>/ into ~/.agents/skills/
+# and ~/.claude/skills/, symlinks agents/plugins/<name>/ into both harnesses'
 # plugin directories, merges .claude/settings.json into the global one, and
-# merges the global Codex hooks file. Every skill, agent, hook, and theme
-# reaches Claude Code and Cursor purely by being inside the symlinked plugin
-# directory; Codex's user hook is the one separate global config artifact.
+# merges the global Codex hooks file.
 #
 # Isolation strategy:
 #   DOTFILES_DIR -> a constructed fixture repo (tmpdir)
@@ -31,7 +30,8 @@ setup() {
     "$FIXTURE/agents/plugins/demo-plugin/skills/demo-skill" \
     "$FIXTURE/agents/plugins/demo-plugin/hooks" \
     "$FIXTURE/agents/plugins/demo-plugin/commands" \
-    "$FIXTURE/.claude" "$FIXTURE/.codex"
+    "$FIXTURE/.claude" "$FIXTURE/.codex" \
+    "$FIXTURE/.agents/skills/standalone-skill"
 
   cat > "$FIXTURE/agents/plugins/demo-plugin/.claude-plugin/plugin.json" <<'EOF'
 { "name": "demo-plugin", "description": "A demo plugin." }
@@ -55,6 +55,13 @@ EOF
 
   echo '{"permissions": {"allow": ["Read"]}}' > "$FIXTURE/.claude/settings.json"
   cp "$REAL_REPO/.codex/hooks.json" "$FIXTURE/.codex/hooks.json"
+  cat > "$FIXTURE/.agents/skills/standalone-skill/SKILL.md" <<'EOF'
+---
+name: standalone-skill
+description: A standalone skill.
+---
+Standalone skill body.
+EOF
 }
 
 teardown() {
@@ -76,6 +83,34 @@ teardown() {
 
   [ -f "$HOME/.claude/skills/demo-plugin/commands/demo-command.md" ]
   [ -f "$HOME/.cursor/plugins/local/demo-plugin/commands/demo-command.md" ]
+}
+
+@test "installs standalone skills into ~/.agents and links them for Claude Code" {
+  bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
+
+  [ -L "$HOME/.agents/skills/standalone-skill" ]
+  [ "$(readlink "$HOME/.agents/skills/standalone-skill")" = "$FIXTURE/.agents/skills/standalone-skill" ]
+  [ -f "$HOME/.agents/skills/standalone-skill/SKILL.md" ]
+  [ -L "$HOME/.claude/skills/standalone-skill" ]
+  [ "$(readlink "$HOME/.claude/skills/standalone-skill")" = "$HOME/.agents/skills/standalone-skill" ]
+}
+
+@test "prunes stale standalone skill links" {
+  bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
+  rm -rf "$FIXTURE/.agents/skills/standalone-skill"
+  bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
+
+  [ ! -L "$HOME/.agents/skills/standalone-skill" ]
+  [ ! -L "$HOME/.claude/skills/standalone-skill" ]
+}
+
+@test "preserves unrelated installed skills" {
+  mkdir -p "$HOME/external/skills/keep-me" "$HOME/.agents/skills"
+  ln -s "$HOME/external/skills/keep-me" "$HOME/.agents/skills/keep-me"
+
+  bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
+
+  [ -L "$HOME/.agents/skills/keep-me" ]
 }
 
 @test "prunes a dangling plugin symlink when the source plugin is removed" {
