@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-review — a per-workspace queue of code review comments, written in an editor and
-pulled by a coding agent.
+review — a per-workspace queue of code review feedback, written in an editor or
+by a reviewing agent and pulled by a coding agent.
 
 You annotate code where you read it (the nvim `review` plugin, or `review add`
 straight from a shell); every comment lands in a durable queue keyed by the
@@ -9,12 +9,17 @@ workspace it was written in. Whatever agent you are running later drains that
 queue with `review pull` — pulled comments leave the queue, so the same note is
 never worked twice.
 
+Comments stay standalone by default. `review submit` can group zero or more
+pending comments under one review with a decision and summary. Pulling any linked
+comment hands over the complete review as one unit. Standalone comments keep the
+original workflow.
+
 The queue is the single source of truth: the editor plugin keeps no copy of it,
 and every id printed here is stable until the comment is pulled or dropped.
 
-A comment carries who raised it and which lane it belongs to, and ends in a
-recorded decision — `resolve` (done) or `reject` (with a reason). `pull` says a
-comment was handed over; those two say what became of it.
+A comment carries who raised it and which lane it belongs to. It ends in a
+recorded resolution: `resolve` (done) or `reject` (with a reason). `pull` says a
+comment was handed over. The resolution says what became of it.
 
 Workspace resolution, in order:
   1. --workspace PATH
@@ -33,6 +38,8 @@ Store: $REVIEW_HOME (default ~/.reviews)/<workspace-slug>/queue.json
 Examples:
   review add --file src/api.py --lines 40-58 --comment "extract this branch"
   review add --file src/api.py --lines 12 --comment "typo" --lane refactor-auth
+  review submit --id r1 --id r2 --decision request-changes --summary "Fix both"
+  review submit --no-comments --decision comment --summary "No findings"
   review list                              # what is queued here, oldest first
   review list --file src/api.py --format json
   review list --status open                # raised, not yet decided
@@ -46,7 +53,7 @@ Examples:
   review edit r3 --comment "actually: split the function"
   review drop r3 r4
   review clear
-  review count                             # pending count, for a statusline
+  review count                             # pending handoff count, for a statusline
   review workspaces                        # every workspace holding comments
 """
 
@@ -1056,10 +1063,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_pull = sub.add_parser(
         "pull",
         parents=[common, laned],
-        help="dequeue review comments for an agent to act on",
-        description="Dequeue this workspace's pending review comments and print them.\n\n"
-        "Pulled comments leave the queue, so a later pull never repeats them. Use\n"
-        "--peek to read the queue without draining it.\n\n"
+        help="dequeue review handoffs for an agent to act on",
+        description="Dequeue this workspace's submitted reviews and standalone comments.\n\n"
+        "A submitted review and its linked comments move as one handoff. Pulled\n"
+        "handoffs do not appear again. Use --peek to read without draining.\n\n"
         "Lane scoping is strict: a pull pinned to a lane takes only that lane's\n"
         "comments — never an unlaned one, never another lane's — and reports on\n"
         "stderr when comments are waiting elsewhere, so nothing starves unseen.",
@@ -1168,8 +1175,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_count = sub.add_parser(
         "count",
         parents=[common, laned],
-        help="print the pending count (statusline-friendly)",
-        description="Print how many review comments are pending here. Prints 0, never fails.",
+        help="print the pending handoff count (statusline-friendly)",
+        description="Print how many review handoffs are pending here. Prints 0, never fails.",
     )
     p_count.add_argument("--file", metavar="PATH", help="only count comments on this file")
     p_count.add_argument(
@@ -1183,8 +1190,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_ws = sub.add_parser(
         "workspaces",
         parents=[common],
-        help="list workspaces holding review comments",
-        description="List every workspace in the store, with its pending count.",
+        help="list workspaces holding review handoffs",
+        description="List every workspace in the store, with its pending handoff count.",
     )
     p_ws.add_argument("--all", action="store_true", help="include workspaces with nothing pending")
     add_format(p_ws, ["text", "json"], "text")

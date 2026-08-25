@@ -746,9 +746,9 @@ queue() {
 @test "--help works for the tool and every subcommand" {
   run "$REVIEW" --help
   [ "$status" -eq 0 ]
-  [[ "$output" == *"per-workspace queue of code review comments"* ]]
+  [[ "$output" == *"per-workspace queue of code review feedback"* ]]
 
-  for sub in add list pull show edit resolve reject drop clear count workspaces path; do
+  for sub in add submit list pull show edit resolve reject drop clear count workspaces path; do
     run "$REVIEW" "$sub" --help
     [ "$status" -eq 0 ]
     [[ "$output" == *"usage: review $sub"* ]]
