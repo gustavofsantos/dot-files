@@ -234,6 +234,10 @@ def pending(store: dict) -> list:
     return [r for r in store["reviews"] if r.get("status") == "pending"]
 
 
+def pending_submitted(store: dict) -> list:
+    return [r for r in store["submitted_reviews"] if r.get("status") == "pending"]
+
+
 def by_status(store: dict, status: str) -> list:
     if status == "all":
         return list(store["reviews"])
@@ -625,11 +629,7 @@ def cmd_count(args) -> int:
         print(len(comments))
         return 0
 
-    reviews = filter_lane(
-        [r for r in store["submitted_reviews"] if r.get("status") == "pending"],
-        resolve_lane(args),
-        args.all_lanes,
-    )
+    reviews = filter_lane(pending_submitted(store), resolve_lane(args), args.all_lanes)
     if args.file:
         matching = {r["id"] for r in comments}
         reviews = [r for r in reviews if matching.intersection(r.get("comment_ids", []))]
@@ -643,7 +643,7 @@ def elsewhere_note(store: dict, taken: list, lane: "str | None") -> str:
     simply waiting in another lane — that is how a note gets forgotten."""
     if taken or lane is None:
         return ""
-    reviews = [r for r in store["submitted_reviews"] if r.get("status") == "pending"]
+    reviews = pending_submitted(store)
     grouped = {comment_id for review in reviews for comment_id in review.get("comment_ids", [])}
     units = reviews + [r for r in pending(store) if r["id"] not in grouped]
     elsewhere = [r for r in units if r.get("lane") != lane]
@@ -659,11 +659,7 @@ def cmd_pull(args) -> int:
 
     with locked(workspace):
         store = read_store(workspace)
-        review_queue = filter_lane(
-            [r for r in store["submitted_reviews"] if r.get("status") == "pending"],
-            lane,
-            args.all_lanes,
-        )
+        review_queue = filter_lane(pending_submitted(store), lane, args.all_lanes)
 
         if args.file and review_queue:
             matching = {r["id"] for r in filter_file(pending(store), args.file)}
@@ -871,9 +867,8 @@ def cmd_workspaces(args) -> int:
             data = json.loads(queue.read_text())
         except (OSError, json.JSONDecodeError):
             continue
-        pending_reviews = [
-            r for r in data.get("submitted_reviews", []) if r.get("status") == "pending"
-        ]
+        data.setdefault("submitted_reviews", [])
+        pending_reviews = pending_submitted(data)
         grouped = {
             comment_id for review in pending_reviews for comment_id in review.get("comment_ids", [])
         }
