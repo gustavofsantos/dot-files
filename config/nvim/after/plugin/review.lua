@@ -34,6 +34,7 @@ M._ns = vim.api.nvim_create_namespace("review")
 M.cmd = vim.env.REVIEW_CMD or "review"
 
 local SIGN_TEXT = "💬"
+local REVIEW_DECISIONS = { "comment", "approve", "request-changes" }
 
 vim.api.nvim_set_hl(0, "ReviewSign", { link = "DiagnosticSignInfo", default = true })
 
@@ -436,11 +437,51 @@ function M.clear()
   vim.notify("Review: " .. vim.trim(out), vim.log.levels.INFO)
 end
 
+--- Submit an optional review over this author's pending comments in the exact
+--- current lane. The CLI owns selection; the editor supplies only the overall
+--- decision and summary, so this plugin stays stateless.
+--- @param decision string comment | approve | request-changes
+function M.submit(decision)
+  if not vim.tbl_contains(REVIEW_DECISIONS, decision) then
+    vim.notify(
+      "Review: decision must be comment, approve, or request-changes",
+      vim.log.levels.ERROR
+    )
+    return
+  end
+
+  open_input(function(summary)
+    if vim.trim(summary) == "" then
+      return
+    end
+    local out = run({
+      "submit",
+      "--decision", decision,
+      "--summary", summary,
+      "--format", "ids",
+    })
+    if not out then
+      return
+    end
+    vim.notify("Review submitted " .. vim.trim(out), vim.log.levels.INFO)
+  end, nil, " Review summary  (<C-s> submit · <C-c> cancel) ")
+end
+
 vim.api.nvim_create_user_command("ReviewAdd", function(opts)
   M.add(opts.line1, opts.line2)
 end, {
   range = true,
   desc = "Queue a review comment for the current line or visual selection",
+})
+
+vim.api.nvim_create_user_command("ReviewSubmit", function(opts)
+  M.submit(opts.args)
+end, {
+  nargs = 1,
+  complete = function()
+    return REVIEW_DECISIONS
+  end,
+  desc = "Submit an optional review over your pending comments in the current lane",
 })
 
 vim.api.nvim_create_user_command("ReviewList", function()
