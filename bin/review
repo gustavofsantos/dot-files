@@ -73,6 +73,7 @@ AUTHOR_ENV = "REVIEW_AUTHOR"
 OPEN_STATUSES = ("pending", "pulled")
 RESOLVED_STATUSES = ("done", "rejected")
 STATUS_CHOICES = ["pending", "pulled", "done", "rejected", "open", "all"]
+DECISION_CHOICES = ["comment", "approve", "request-changes"]
 
 EXT_FILETYPE = {
     ".bash": "bash",
@@ -177,7 +178,9 @@ def empty_store(workspace: Path) -> dict:
         "version": STORE_VERSION,
         "workspace": str(workspace),
         "next_seq": 1,
+        "next_review_seq": 1,
         "reviews": [],
+        "submitted_reviews": [],
     }
 
 
@@ -192,7 +195,9 @@ def read_store(workspace: Path) -> dict:
     data.setdefault("version", STORE_VERSION)
     data.setdefault("workspace", str(workspace))
     data.setdefault("next_seq", 1)
+    data.setdefault("next_review_seq", 1)
     data.setdefault("reviews", [])
+    data.setdefault("submitted_reviews", [])
     return data
 
 
@@ -311,18 +316,47 @@ def render_text(reviews: list) -> str:
     return "\n".join(lines)
 
 
-def render_markdown(reviews: list, workspace: Path, drained: bool) -> str:
-    if not reviews:
+def render_markdown(
+    reviews: list, workspace: Path, drained: bool, submitted_reviews: "list | None" = None
+) -> str:
+    submitted_reviews = submitted_reviews or []
+    if not reviews and not submitted_reviews:
         return f"No pending review comments for {workspace}.\n"
 
-    out = [
-        f"# Review comments — {workspace}",
-        "",
-        "Address the following review comments, in the order listed. Each names a file",
-        "and line range, the code as it stood when the comment was written, and the",
-        "reviewer's note as a quote.",
-        "",
-    ]
+    out = []
+    for submitted in submitted_reviews:
+        out += [
+            f"# Review {submitted['id']} — {workspace}",
+            "",
+            f"**Decision:** {submitted['decision'].replace('-', ' ').capitalize()}",
+            "",
+            submitted["summary"],
+            "",
+            "## Review comments",
+            "",
+        ]
+        for idx, r in enumerate(submitted["comments"], start=1):
+            who = attribution(r)
+            head = f"### {idx}. `{location(r)}` ({r['id']}"
+            out.append(head + (f" · {who})" if who else ")"))
+            out.append("")
+            out.append("```" + (r.get("filetype") or ""))
+            out.extend(r.get("code", "").split("\n"))
+            out.append("```")
+            out.append("")
+            for line in r["comment"].split("\n"):
+                out.append(f"> {line}" if line else ">")
+            out.append("")
+
+    if reviews:
+        out += [
+            f"# Review comments — {workspace}",
+            "",
+            "Address the following review comments, in the order listed. Each names a file",
+            "and line range, the code as it stood when the comment was written, and the",
+            "reviewer's note as a quote.",
+            "",
+        ]
     if drained:
         out += [
             "These comments have been dequeued — they will not appear again. Record what",
@@ -347,27 +381,43 @@ def render_markdown(reviews: list, workspace: Path, drained: bool) -> str:
     return "\n".join(out).rstrip() + "\n"
 
 
-def emit(args, reviews: list, workspace: Path, drained: bool = False) -> None:
+def emit(
+    args,
+    reviews: list,
+    workspace: Path,
+    drained: bool = False,
+    submitted_reviews: "list | None" = None,
+) -> None:
+    submitted_reviews = submitted_reviews or []
     fmt = args.format
     if fmt == "json":
         payload = {
             "workspace": str(workspace),
-            "count": len(reviews),
+            "count": len(reviews) + len(submitted_reviews),
             "reviews": reviews,
         }
+        if submitted_reviews:
+            payload["submitted_reviews"] = submitted_reviews
         print(json.dumps(payload, indent=2, ensure_ascii=False))
     elif fmt == "ids":
+        for review in submitted_reviews:
+            print(review["id"])
         for r in reviews:
             print(r["id"])
     elif fmt == "count":
-        print(len(reviews))
+        print(len(reviews) + len(submitted_reviews))
     elif fmt == "markdown":
-        print(render_markdown(reviews, workspace, drained), end="")
+        print(render_markdown(reviews, workspace, drained, submitted_reviews), end="")
     else:
+        for review in submitted_reviews:
+            print(
+                f"{review['id']}  {review['decision']}  "
+                f"{len(review['comment_ids'])} review comment(s)  {first_line(review['summary'])}"
+            )
         text = render_text(reviews)
         if text:
             print(text)
-        else:
+        elif not submitted_reviews:
             lane = resolve_lane(args) if not getattr(args, "all_lanes", False) else None
             scope = f" in lane {lane}" if lane else ""
             print(f"{PROG}: no review comments for {workspace}{scope}", file=sys.stderr)
@@ -482,6 +532,61 @@ def cmd_add(args) -> int:
     return 0
 
 
+def cmd_submit(args) -> int:
+    """Submit one review over an explicit set of pending review comments."""
+    workspace = resolve_workspace(args.workspace)
+    summary = args.summary.strip()
+    if not summary:
+        die("a submitted review needs a summary")
+
+    comment_ids = list(dict.fromkeys(args.id))
+    lane = resolve_lane(args)
+    author = resolve_author(args)
+
+    with locked(workspace):
+        store = read_store(workspace)
+        records = [find(store, review_id) for review_id in comment_ids]
+        for record in records:
+            if record.get("status") != "pending":
+                die(f"{record['id']} is not pending")
+            if record.get("review_id"):
+                die(f"{record['id']} already belongs to {record['review_id']}")
+            if record.get("lane") != lane:
+                die(f"{record['id']} belongs to a different lane")
+            if record.get("author") != author:
+                die(f"{record['id']} belongs to a different author")
+
+        seq = store["next_review_seq"]
+        store["next_review_seq"] = seq + 1
+        review = {
+            "id": f"rv{seq}",
+            "status": "pending",
+            "workspace": str(workspace),
+            "lane": lane,
+            "author": author,
+            "decision": args.decision,
+            "summary": summary,
+            "comment_ids": comment_ids,
+            "created_at": now_iso(),
+            "pulled_at": None,
+        }
+        for record in records:
+            record["review_id"] = review["id"]
+        store["submitted_reviews"].append(review)
+        write_store(workspace, store)
+
+    if args.format == "json":
+        print(json.dumps(review, indent=2, ensure_ascii=False))
+    elif args.format == "ids":
+        print(review["id"])
+    else:
+        print(
+            f"{review['id']}  {review['decision']}  "
+            f"{len(review['comment_ids'])} review comment(s)"
+        )
+    return 0
+
+
 def filter_file(reviews: list, file_arg: "str | None") -> list:
     if not file_arg:
         return reviews
@@ -527,22 +632,97 @@ def cmd_pull(args) -> int:
 
     with locked(workspace):
         store = read_store(workspace)
-        queue = scoped(args, pending(store))
+        review_queue = filter_lane(
+            [r for r in store["submitted_reviews"] if r.get("status") == "pending"],
+            lane,
+            args.all_lanes,
+        )
+
+        if args.file and review_queue:
+            matching = {r["id"] for r in filter_file(pending(store), args.file)}
+            review_queue = [
+                r for r in review_queue if matching.intersection(r.get("comment_ids", []))
+            ]
+
+        if not review_queue:
+            queue = scoped(args, pending(store))
+
+            if args.id:
+                wanted = list(dict.fromkeys(args.id))
+                index = {r["id"]: r for r in queue}
+                missing = [i for i in wanted if i not in index]
+                if missing:
+                    die(f"not pending in this workspace: {', '.join(missing)}")
+                queue = [index[i] for i in wanted]
+            if args.limit is not None:
+                if args.limit < 1:
+                    die("--limit must be >= 1")
+                queue = queue[: args.limit]
+
+            if not args.peek and queue:
+                stamp = now_iso()
+                for r in queue:
+                    r["status"] = "pulled"
+                    r["pulled_at"] = stamp
+                # A bounded archive keeps the handed-over history useful without growing forever.
+                archived = [r["id"] for r in store["reviews"] if r.get("status") != "pending"]
+                expired = set(archived[: max(0, len(archived) - ARCHIVE_LIMIT)])
+                if expired:
+                    store["reviews"] = [r for r in store["reviews"] if r["id"] not in expired]
+                write_store(workspace, store)
+            taken = [dict(r) for r in queue]
+            note = elsewhere_note(store, taken, lane)
+
+            emit(args, taken, workspace, drained=not args.peek)
+            if note:
+                print(f"{PROG}: {note}", file=sys.stderr)
+            return 0
+
+        comment_index = {r["id"]: r for r in store["reviews"]}
+        grouped_ids = {
+            comment_id for review in review_queue for comment_id in review.get("comment_ids", [])
+        }
+        queue = [r for r in scoped(args, pending(store)) if r["id"] not in grouped_ids]
 
         if args.id:
             wanted = list(dict.fromkeys(args.id))
-            index = {r["id"]: r for r in queue}
-            missing = [i for i in wanted if i not in index]
+            review_index = {r["id"]: r for r in review_queue}
+            linked_index = {
+                comment_id: review
+                for review in review_queue
+                for comment_id in review.get("comment_ids", [])
+            }
+            comment_queue = {r["id"]: r for r in queue}
+            missing = [
+                i for i in wanted if i not in review_index and i not in linked_index and i not in comment_queue
+            ]
             if missing:
                 die(f"not pending in this workspace: {', '.join(missing)}")
-            queue = [index[i] for i in wanted]
+            selected_review_ids = {
+                (review_index.get(i) or linked_index.get(i))["id"]
+                for i in wanted
+                if i in review_index or i in linked_index
+            }
+            review_queue = [r for r in review_queue if r["id"] in selected_review_ids]
+            queue = [comment_queue[i] for i in wanted if i in comment_queue]
         if args.limit is not None:
             if args.limit < 1:
                 die("--limit must be >= 1")
-            queue = queue[: args.limit]
+            units = [("review", r) for r in review_queue] + [("comment", r) for r in queue]
+            units.sort(key=lambda item: item[1].get("created_at", ""))
+            units = units[: args.limit]
+            review_queue = [item for kind, item in units if kind == "review"]
+            queue = [item for kind, item in units if kind == "comment"]
 
-        if not args.peek and queue:
+        if not args.peek and (review_queue or queue):
             stamp = now_iso()
+            for review in review_queue:
+                review["status"] = "pulled"
+                review["pulled_at"] = stamp
+                for comment_id in review.get("comment_ids", []):
+                    comment = comment_index[comment_id]
+                    comment["status"] = "pulled"
+                    comment["pulled_at"] = stamp
             for r in queue:
                 r["status"] = "pulled"
                 r["pulled_at"] = stamp
@@ -553,9 +733,14 @@ def cmd_pull(args) -> int:
                 store["reviews"] = [r for r in store["reviews"] if r["id"] not in expired]
             write_store(workspace, store)
         taken = [dict(r) for r in queue]
-        note = elsewhere_note(store, taken, lane)
+        taken_reviews = []
+        for review in review_queue:
+            copied = dict(review)
+            copied["comments"] = [dict(comment_index[i]) for i in review.get("comment_ids", [])]
+            taken_reviews.append(copied)
+        note = elsewhere_note(store, taken + taken_reviews, lane)
 
-    emit(args, taken, workspace, drained=not args.peek)
+    emit(args, taken, workspace, drained=not args.peek, submitted_reviews=taken_reviews)
     if note:
         print(f"{PROG}: {note}", file=sys.stderr)
     return 0
@@ -801,6 +986,29 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_format(p_add, ["text", "json", "ids"], "text")
     p_add.set_defaults(func=cmd_add)
+
+    p_submit = sub.add_parser(
+        "submit",
+        parents=[common],
+        help="submit a review over pending review comments",
+        description="Submit one review with an overall decision and summary over explicitly\n"
+        "selected pending review comments.",
+    )
+    p_submit.add_argument(
+        "--id", action="append", required=True, metavar="ID", help="comment id (repeatable)"
+    )
+    p_submit.add_argument("--summary", required=True, metavar="TEXT", help="overall assessment")
+    p_submit.add_argument(
+        "--decision", required=True, choices=DECISION_CHOICES, help="overall review decision"
+    )
+    p_submit.add_argument(
+        "--lane", metavar="NAME", help=f"review lane (default: ${LANE_ENV})"
+    )
+    p_submit.add_argument(
+        "--author", metavar="WHO", help=f"reviewer (default: ${AUTHOR_ENV}, else $USER)"
+    )
+    add_format(p_submit, ["text", "json", "ids"], "text")
+    p_submit.set_defaults(func=cmd_submit)
 
     p_list = sub.add_parser(
         "list",

@@ -107,6 +107,21 @@ queue() {
 
 # ── the core guarantee: pulling drains the queue ──────────────────────────────
 
+@test "submit: records one review over the selected comments" {
+  queue app.py 1 "first finding"
+  queue app.py 2 "second finding"
+
+  run "$REVIEW" submit --id r1 --id r2 \
+    --decision request-changes \
+    --summary "Fix both findings before merging." \
+    --format json
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.id' <<<"$output")" = "rv1" ]
+  [ "$(jq -r '.decision' <<<"$output")" = "request-changes" ]
+  [ "$(jq -r '.summary' <<<"$output")" = "Fix both findings before merging." ]
+  [ "$(jq -r '.comment_ids | join(",")' <<<"$output")" = "r1,r2" ]
+}
+
 @test "pull: hands over every pending comment and empties the queue" {
   queue app.py 1 "first"
   queue app.py 2 "second"
@@ -118,6 +133,31 @@ queue() {
 
   run "$REVIEW" count
   [ "$output" = "0" ]
+}
+
+@test "a submitted review hands its decision, summary, and comments over together" {
+  queue app.py 1 "first finding"
+  queue app.py 2 "second finding"
+
+  run "$REVIEW" submit --id r1 --id r2 \
+    --decision request-changes \
+    --summary "The error path must be fixed before merging." \
+    --format ids
+  [ "$status" -eq 0 ]
+  [ "$output" = "rv1" ]
+
+  run "$REVIEW" pull
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Request changes"* ]]
+  [[ "$output" == *"The error path must be fixed before merging."* ]]
+  [[ "$output" == *'`app.py:1` (r1'* ]]
+  [[ "$output" == *'`app.py:2` (r2'* ]]
+
+  run "$REVIEW" pull
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"The error path must be fixed before merging."* ]]
+  [[ "$output" != *"first finding"* ]]
+  [[ "$output" != *"second finding"* ]]
 }
 
 @test "pull: a second pull returns nothing — a comment is never handed over twice" {
