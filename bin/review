@@ -548,7 +548,9 @@ def cmd_submit(args) -> int:
 
     with locked(workspace):
         store = read_store(workspace)
-        if args.id:
+        if args.no_comments:
+            comment_ids = []
+        elif args.id:
             comment_ids = list(dict.fromkeys(args.id))
         else:
             comment_ids = [
@@ -1002,18 +1004,24 @@ def build_parser() -> argparse.ArgumentParser:
         "submit",
         parents=[common],
         help="submit a review over pending review comments",
-        description="Submit one review with an overall decision and summary over explicitly\n"
+        description="Submit one review with a decision and summary over explicitly\n"
         "selected pending review comments.",
     )
-    p_submit.add_argument(
+    selection = p_submit.add_mutually_exclusive_group()
+    selection.add_argument(
         "--id",
         action="append",
         metavar="ID",
         help="comment id (repeatable; default: this author and exact lane)",
     )
-    p_submit.add_argument("--summary", required=True, metavar="TEXT", help="overall assessment")
+    selection.add_argument(
+        "--no-comments",
+        action="store_true",
+        help="submit a summary-only review without selecting pending comments",
+    )
+    p_submit.add_argument("--summary", required=True, metavar="TEXT", help="review assessment")
     p_submit.add_argument(
-        "--decision", required=True, choices=DECISION_CHOICES, help="overall review decision"
+        "--decision", required=True, choices=DECISION_CHOICES, help="review decision"
     )
     p_submit.add_argument(
         "--lane", metavar="NAME", help=f"review lane (default: ${LANE_ENV})"

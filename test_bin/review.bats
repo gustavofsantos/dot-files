@@ -161,6 +161,18 @@ queue() {
   [[ "$output" == *"No actionable findings."* ]]
 }
 
+@test "an explicit summary-only review does not absorb older pending comments" {
+  queue app.py 1 "older standalone finding"
+
+  run "$REVIEW" submit --no-comments --decision comment \
+    --summary "This review pass found no actionable issue." --format json
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.comment_ids | length' <<<"$output")" = "0" ]
+
+  run "$REVIEW" list --format ids
+  [ "$output" = "r1" ]
+}
+
 @test "an invalid selection leaves every comment available for a later review" {
   REVIEW_AUTHOR=alice "$REVIEW" add --file app.py --lines 1 \
     --comment "alice finding" </dev/null >/dev/null
