@@ -539,12 +539,21 @@ def cmd_submit(args) -> int:
     if not summary:
         die("a submitted review needs a summary")
 
-    comment_ids = list(dict.fromkeys(args.id))
     lane = resolve_lane(args)
     author = resolve_author(args)
 
     with locked(workspace):
         store = read_store(workspace)
+        if args.id:
+            comment_ids = list(dict.fromkeys(args.id))
+        else:
+            comment_ids = [
+                record["id"]
+                for record in pending(store)
+                if record.get("lane") == lane
+                and record.get("author") == author
+                and not record.get("review_id")
+            ]
         records = [find(store, review_id) for review_id in comment_ids]
         for record in records:
             if record.get("status") != "pending":
@@ -611,7 +620,21 @@ def cmd_list(args) -> int:
 def cmd_count(args) -> int:
     workspace = resolve_workspace(args.workspace)
     store = read_store(workspace)
-    print(len(scoped(args, by_status(store, args.status))))
+    comments = scoped(args, by_status(store, args.status))
+    if args.status != "pending":
+        print(len(comments))
+        return 0
+
+    reviews = filter_lane(
+        [r for r in store["submitted_reviews"] if r.get("status") == "pending"],
+        resolve_lane(args),
+        args.all_lanes,
+    )
+    if args.file:
+        matching = {r["id"] for r in comments}
+        reviews = [r for r in reviews if matching.intersection(r.get("comment_ids", []))]
+    grouped = {comment_id for review in reviews for comment_id in review.get("comment_ids", [])}
+    print(len([r for r in comments if r["id"] not in grouped]) + len(reviews))
     return 0
 
 
@@ -620,10 +643,14 @@ def elsewhere_note(store: dict, taken: list, lane: "str | None") -> str:
     simply waiting in another lane — that is how a note gets forgotten."""
     if taken or lane is None:
         return ""
-    others = sorted({r.get("lane") or "(no lane)" for r in pending(store)})
-    if not others:
+    reviews = [r for r in store["submitted_reviews"] if r.get("status") == "pending"]
+    grouped = {comment_id for review in reviews for comment_id in review.get("comment_ids", [])}
+    units = reviews + [r for r in pending(store) if r["id"] not in grouped]
+    elsewhere = [r for r in units if r.get("lane") != lane]
+    if not elsewhere:
         return ""
-    return f"{len(pending(store))} pending in other lanes: {', '.join(others)}"
+    lanes = sorted({r.get("lane") or "(no lane)" for r in elsewhere})
+    return f"{len(elsewhere)} pending in other lanes: {', '.join(lanes)}"
 
 
 def cmd_pull(args) -> int:
@@ -725,6 +752,13 @@ def cmd_resolve(args) -> int:
     with locked(workspace):
         store = read_store(workspace)
         record = find(store, args.id)
+        if record.get("review_id"):
+            review = next(
+                (r for r in store["submitted_reviews"] if r["id"] == record["review_id"]),
+                None,
+            )
+            if review and review.get("status") == "pending":
+                die(f"{record['id']} belongs to {review['id']} — pull {review['id']} first")
         if record["status"] in RESOLVED_STATUSES:
             die(f"{record['id']} is already {record['status']} — it cannot be re-decided")
         record["status"] = status
@@ -804,7 +838,10 @@ def cmd_drop(args) -> int:
         missing = [i for i in args.id if i not in known]
         if missing:
             die(f"no such review in this workspace: {', '.join(missing)}")
-        store["reviews"] = [r for r in store["reviews"] if r["id"] not in set(args.id)]
+        dropped = set(args.id)
+        for review in store["submitted_reviews"]:
+            review["comment_ids"] = [i for i in review.get("comment_ids", []) if i not in dropped]
+        store["reviews"] = [r for r in store["reviews"] if r["id"] not in dropped]
         write_store(workspace, store)
     print(f"dropped {len(args.id)} review comment(s)")
     return 0
@@ -816,7 +853,11 @@ def cmd_clear(args) -> int:
         store = read_store(workspace)
         doomed = by_status(store, args.status)
         keep = {r["id"] for r in store["reviews"]} - {r["id"] for r in doomed}
+        for review in store["submitted_reviews"]:
+            review["comment_ids"] = [i for i in review.get("comment_ids", []) if i in keep]
         store["reviews"] = [r for r in store["reviews"] if r["id"] in keep]
+        if args.status == "all":
+            store["submitted_reviews"] = []
         write_store(workspace, store)
     print(f"cleared {len(doomed)} {args.status} review comment(s) for {workspace}")
     return 0
@@ -830,10 +871,17 @@ def cmd_workspaces(args) -> int:
             data = json.loads(queue.read_text())
         except (OSError, json.JSONDecodeError):
             continue
+        pending_reviews = [
+            r for r in data.get("submitted_reviews", []) if r.get("status") == "pending"
+        ]
+        grouped = {
+            comment_id for review in pending_reviews for comment_id in review.get("comment_ids", [])
+        }
+        pending_comments = [r for r in pending(data) if r["id"] not in grouped]
         rows.append(
             {
                 "workspace": data.get("workspace", str(queue.parent)),
-                "pending": len(pending(data)),
+                "pending": len(pending_comments) + len(pending_reviews),
                 "pulled": len([r for r in data.get("reviews", []) if r.get("status") == "pulled"]),
                 "queue": str(queue),
             }
@@ -963,7 +1011,10 @@ def build_parser() -> argparse.ArgumentParser:
         "selected pending review comments.",
     )
     p_submit.add_argument(
-        "--id", action="append", required=True, metavar="ID", help="comment id (repeatable)"
+        "--id",
+        action="append",
+        metavar="ID",
+        help="comment id (repeatable; default: this author and exact lane)",
     )
     p_submit.add_argument("--summary", required=True, metavar="TEXT", help="overall assessment")
     p_submit.add_argument(

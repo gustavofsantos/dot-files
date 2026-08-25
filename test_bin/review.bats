@@ -122,6 +122,151 @@ queue() {
   [ "$(jq -r '.comment_ids | join(",")' <<<"$output")" = "r1,r2" ]
 }
 
+@test "submitting without ids groups only the reviewer's comments in the exact lane" {
+  REVIEW_AUTHOR=alice "$REVIEW" add --file app.py --lines 1 \
+    --comment "alice on auth" --lane auth </dev/null >/dev/null
+  REVIEW_AUTHOR=bob "$REVIEW" add --file app.py --lines 2 \
+    --comment "bob on auth" --lane auth </dev/null >/dev/null
+  REVIEW_AUTHOR=alice "$REVIEW" add --file app.py --lines 3 \
+    --comment "alice on payments" --lane payments </dev/null >/dev/null
+
+  run env REVIEW_AUTHOR=alice REVIEW_LANE=auth "$REVIEW" submit \
+    --decision request-changes \
+    --summary "Alice's auth review." \
+    --format json
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.comment_ids | join(",")' <<<"$output")" = "r1" ]
+
+  run env REVIEW_LANE=auth "$REVIEW" pull
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Alice's auth review."* ]]
+  [[ "$output" == *"alice on auth"* ]]
+  [[ "$output" == *"bob on auth"* ]]
+  [[ "$output" != *"alice on payments"* ]]
+
+  run env REVIEW_LANE=payments "$REVIEW" list --format ids
+  [ "$output" = "r3" ]
+}
+
+@test "a summary-only review remains visible and pullable" {
+  run "$REVIEW" submit --decision comment --summary "No actionable findings." --format ids
+  [ "$status" -eq 0 ]
+  [ "$output" = "rv1" ]
+
+  run "$REVIEW" count
+  [ "$output" = "1" ]
+
+  run "$REVIEW" pull
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"No actionable findings."* ]]
+}
+
+@test "an invalid selection leaves every comment available for a later review" {
+  REVIEW_AUTHOR=alice "$REVIEW" add --file app.py --lines 1 \
+    --comment "alice finding" </dev/null >/dev/null
+  REVIEW_AUTHOR=bob "$REVIEW" add --file app.py --lines 2 \
+    --comment "bob finding" </dev/null >/dev/null
+
+  run env REVIEW_AUTHOR=alice "$REVIEW" submit --id r1 --id r2 \
+    --decision request-changes --summary "Must not be partially recorded."
+  [ "$status" -eq 1 ]
+
+  run env REVIEW_AUTHOR=alice "$REVIEW" submit --id r1 \
+    --decision request-changes --summary "Alice review." --format ids
+  [ "$status" -eq 0 ]
+  [ "$output" = "rv1" ]
+
+  run env REVIEW_AUTHOR=bob "$REVIEW" submit --id r2 \
+    --decision request-changes --summary "Bob review." --format ids
+  [ "$status" -eq 0 ]
+  [ "$output" = "rv2" ]
+}
+
+@test "dropping a linked comment keeps the submitted review valid" {
+  queue app.py 1 "remove me"
+  queue app.py 2 "keep me"
+  "$REVIEW" submit --id r1 --id r2 --decision request-changes \
+    --summary "One finding remains." >/dev/null
+
+  "$REVIEW" drop r1 >/dev/null
+  run "$REVIEW" pull
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"One finding remains."* ]]
+  [[ "$output" != *"remove me"* ]]
+  [[ "$output" == *"keep me"* ]]
+}
+
+@test "clearing linked comments leaves a summary-only review" {
+  queue app.py 1 "clear me"
+  "$REVIEW" submit --id r1 --decision comment --summary "Keep the overall assessment." >/dev/null
+
+  "$REVIEW" clear >/dev/null
+  run "$REVIEW" count
+  [ "$output" = "1" ]
+
+  run "$REVIEW" pull
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Keep the overall assessment."* ]]
+  [[ "$output" != *"clear me"* ]]
+}
+
+@test "a linked comment cannot be resolved before its review is pulled" {
+  queue app.py 1 "work me"
+  "$REVIEW" submit --id r1 --decision request-changes --summary "Needs work." >/dev/null
+
+  run "$REVIEW" resolve r1 --note "too early"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"pull rv1 first"* ]]
+
+  "$REVIEW" pull >/dev/null
+  run "$REVIEW" resolve r1 --note "done after handoff"
+  [ "$status" -eq 0 ]
+}
+
+@test "stores written before submitted reviews remain usable" {
+  queue app.py 1 "legacy finding"
+  path=$("$REVIEW" path)
+  jq 'del(.next_review_seq, .submitted_reviews)' "$path" >"$path.tmp"
+  mv "$path.tmp" "$path"
+
+  run "$REVIEW" submit --id r1 --decision request-changes \
+    --summary "Loaded from the old store." --format ids
+  [ "$status" -eq 0 ]
+  [ "$output" = "rv1" ]
+}
+
+@test "pulling one linked comment hands over its whole review" {
+  queue app.py 1 "first linked finding"
+  queue app.py 2 "second linked finding"
+  "$REVIEW" submit --id r1 --id r2 --decision request-changes \
+    --summary "Treat these as one handoff." >/dev/null
+
+  run "$REVIEW" pull --id r1 --format ids
+  [ "$status" -eq 0 ]
+  [ "$output" = "rv1" ]
+
+  run "$REVIEW" count
+  [ "$output" = "0" ]
+}
+
+@test "a review comment cannot belong to two reviews" {
+  queue app.py 1 "one owner"
+  "$REVIEW" submit --id r1 --decision comment --summary "First review." >/dev/null
+
+  run "$REVIEW" submit --id r1 --decision comment --summary "Second review."
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"r1 already belongs to rv1"* ]]
+}
+
+@test "a pinned pull reports a summary-only review waiting in another lane" {
+  "$REVIEW" submit --lane payments --decision comment \
+    --summary "Payments has no actionable findings." >/dev/null
+
+  run "$REVIEW" pull --lane auth
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"1 pending in other lanes: payments"* ]]
+}
+
 @test "pull: hands over every pending comment and empties the queue" {
   queue app.py 1 "first"
   queue app.py 2 "second"
