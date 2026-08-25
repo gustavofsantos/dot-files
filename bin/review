@@ -644,40 +644,6 @@ def cmd_pull(args) -> int:
                 r for r in review_queue if matching.intersection(r.get("comment_ids", []))
             ]
 
-        if not review_queue:
-            queue = scoped(args, pending(store))
-
-            if args.id:
-                wanted = list(dict.fromkeys(args.id))
-                index = {r["id"]: r for r in queue}
-                missing = [i for i in wanted if i not in index]
-                if missing:
-                    die(f"not pending in this workspace: {', '.join(missing)}")
-                queue = [index[i] for i in wanted]
-            if args.limit is not None:
-                if args.limit < 1:
-                    die("--limit must be >= 1")
-                queue = queue[: args.limit]
-
-            if not args.peek and queue:
-                stamp = now_iso()
-                for r in queue:
-                    r["status"] = "pulled"
-                    r["pulled_at"] = stamp
-                # A bounded archive keeps the handed-over history useful without growing forever.
-                archived = [r["id"] for r in store["reviews"] if r.get("status") != "pending"]
-                expired = set(archived[: max(0, len(archived) - ARCHIVE_LIMIT)])
-                if expired:
-                    store["reviews"] = [r for r in store["reviews"] if r["id"] not in expired]
-                write_store(workspace, store)
-            taken = [dict(r) for r in queue]
-            note = elsewhere_note(store, taken, lane)
-
-            emit(args, taken, workspace, drained=not args.peek)
-            if note:
-                print(f"{PROG}: {note}", file=sys.stderr)
-            return 0
-
         comment_index = {r["id"]: r for r in store["reviews"]}
         grouped_ids = {
             comment_id for review in review_queue for comment_id in review.get("comment_ids", [])
@@ -694,7 +660,9 @@ def cmd_pull(args) -> int:
             }
             comment_queue = {r["id"]: r for r in queue}
             missing = [
-                i for i in wanted if i not in review_index and i not in linked_index and i not in comment_queue
+                i
+                for i in wanted
+                if i not in review_index and i not in linked_index and i not in comment_queue
             ]
             if missing:
                 die(f"not pending in this workspace: {', '.join(missing)}")
