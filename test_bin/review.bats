@@ -91,10 +91,16 @@ queue() {
 }
 
 @test "add: --code-file - snapshots the editor buffer, not what is on disk" {
+  git add app.py
   printf 'UNSAVED-1\nUNSAVED-2\nUNSAVED-3\n' |
     "$REVIEW" add --file app.py --lines 2-3 --code-file - --comment "from the buffer"
   run "$REVIEW" list --format json
   [ "$(jq -r '.reviews[0].code' <<<"$output")" = "$(printf 'UNSAVED-2\nUNSAVED-3')" ]
+
+  file_version=$(jq -r '.reviews[0].file_version' <<<"$output")
+  run git cat-file blob "$file_version"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$(printf 'UNSAVED-1\nUNSAVED-2\nUNSAVED-3')" ]
 }
 
 @test "add: reads the comment from stdin when --comment is absent" {
