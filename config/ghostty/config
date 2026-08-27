@@ -7,9 +7,9 @@
 #font-feature = +liga,-dlig,+calt,zero,+ss01,+ss14
 
 # font-family = OperatorMono Nerd Font
-# font-family = BerkeleyMono Nerd Font
-font-family = CommitMono
-adjust-cell-height = 2
+#font-family = CommitMono
+font-family = BerkeleyMono Nerd Font
+adjust-cell-height = 6
 font-size = 14
 cursor-style = block
 cursor-invert-fg-bg = true

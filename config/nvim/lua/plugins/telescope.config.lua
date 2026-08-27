@@ -91,11 +91,11 @@ return {
       pickers = {
         find_files = {
           theme = theme,
-          previewer = true,
+          previewer = false,
           hidden = true,
         },
         oldfiles = {
-          previewer = true,
+          previewer = false,
           hidden = true,
           theme = theme,
         },

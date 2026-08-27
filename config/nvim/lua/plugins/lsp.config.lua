@@ -35,6 +35,14 @@ return {
       },
     })
 
+    vim.lsp.enable('kotlin_lsp')
+    vim.lsp.config('kotlin_lsp', {
+      cmd = { "kotlin-lsp", "--stdio" },
+      single_file_support = true,
+      filetypes = { "kotlin" },
+      root_markers = { "build.gradle", "build.gradle.kts", "pom.xml" },
+    })
+
     vim.api.nvim_create_autocmd("LspAttach", {
       group = vim.api.nvim_create_augroup("UserLspConfig", { clear = true }),
       callback = function(ev)
