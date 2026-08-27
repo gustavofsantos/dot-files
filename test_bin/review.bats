@@ -61,6 +61,29 @@ queue() {
   [ "$(jq -r '.reviews[0].file' <<<"$output")" = "app.py" ]
 }
 
+@test "add: a tracked file keeps the exact reviewed version as a Git blob" {
+  git add app.py
+  printf 'working\ntree\nversion\n' >app.py
+
+  run "$REVIEW" add --file app.py --lines 2 --comment "look here" --format json </dev/null
+  [ "$status" -eq 0 ]
+  file_version=$(jq -r '.file_version' <<<"$output")
+
+  run git cat-file -t "$file_version"
+  [ "$status" -eq 0 ]
+  [ "$output" = "blob" ]
+
+  run git cat-file blob "$file_version"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$(printf 'working\ntree\nversion')" ]
+}
+
+@test "add: an untracked file has no file version" {
+  run "$REVIEW" add --file app.py --lines 1 --comment "look here" --format json </dev/null
+  [ "$status" -eq 0 ]
+  [ "$(jq 'has("file_version")' <<<"$output")" = "false" ]
+}
+
 @test "add: a single line is stored as a one-line range" {
   queue app.py 3 "typo"
   run "$REVIEW" list

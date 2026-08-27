@@ -455,18 +455,18 @@ def split_lines(text: str) -> list:
     return lines
 
 
-def read_source(path: Path, code_file: "str | None") -> list:
-    """The lines --lines slices: the editor's buffer when given, else disk."""
+def read_source(path: Path, code_file: "str | None") -> str:
+    """The source being reviewed: the editor's buffer when given, else disk."""
     if code_file == "-":
-        return split_lines(sys.stdin.read())
+        return sys.stdin.read()
     if code_file:
         src = Path(code_file).expanduser()
         if not src.is_file():
             die(f"--code-file {code_file!r} does not exist")
-        return split_lines(src.read_text(errors="replace"))
+        return src.read_text(errors="replace")
     if not path.is_file():
         die(f"{path} does not exist — pass --code-file to snapshot unsaved content")
-    return split_lines(path.read_text(errors="replace"))
+    return path.read_text(errors="replace")
 
 
 def cmd_add(args) -> int:
@@ -496,7 +496,8 @@ def cmd_add(args) -> int:
         die("a review comment needs text: pass --comment TEXT, --comment-file PATH, or pipe it in")
     comment = comment.strip("\n")
 
-    source = read_source(path, args.code_file)
+    source_text = read_source(path, args.code_file)
+    source = split_lines(source_text)
     if start > len(source):
         die(f"--lines {args.lines} is past the end of {path} ({len(source)} lines)")
     code = "\n".join(source[start - 1 : end])
@@ -507,6 +508,25 @@ def cmd_add(args) -> int:
         rel = str(path.relative_to(workspace))
     except ValueError:
         rel = str(path)
+
+    tracked = subprocess.run(
+        ["git", "-C", str(workspace), "ls-files", "--error-unmatch", "--", rel],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    file_version = None
+    if tracked.returncode == 0:
+        blob = subprocess.run(
+            ["git", "-C", str(workspace), "hash-object", "-w", "--stdin"],
+            input=source_text,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if blob.returncode != 0 or not blob.stdout.strip():
+            die(f"cannot store the reviewed version of {rel}: {blob.stderr.strip()}")
+        file_version = blob.stdout.strip()
 
     with locked(workspace):
         store = read_store(workspace)
@@ -531,6 +551,8 @@ def cmd_add(args) -> int:
             "resolved_by": None,
             "resolution_note": None,
         }
+        if file_version:
+            record["file_version"] = file_version
         store["reviews"].append(record)
         write_store(workspace, store)
 
