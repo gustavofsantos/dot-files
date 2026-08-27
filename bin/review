@@ -509,14 +509,18 @@ def cmd_add(args) -> int:
     except ValueError:
         rel = str(path)
 
-    tracked = subprocess.run(
-        ["git", "-C", str(workspace), "ls-files", "--error-unmatch", "--", rel],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
     file_version = None
-    if tracked.returncode == 0:
+    git_workspace = git_toplevel(workspace)
+    if git_workspace:
+        tracked = subprocess.run(
+            ["git", "-C", str(workspace), "ls-files", "--error-unmatch", "--", rel],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if tracked.returncode not in (0, 1):
+            die(f"cannot inspect Git metadata for {rel}: {tracked.stderr.strip()}")
+    if git_workspace and tracked.returncode == 0:
         blob = subprocess.run(
             ["git", "-C", str(workspace), "hash-object", "-w", "--stdin"],
             input=source_text,

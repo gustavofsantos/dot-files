@@ -84,6 +84,52 @@ queue() {
   [ "$(jq 'has("file_version")' <<<"$output")" = "false" ]
 }
 
+@test "add: a Git inspection failure cannot enqueue a versionless tracked review" {
+  git add app.py
+  mkdir -p "$TEST_ROOT/bin"
+  ln -s "$(command -v git)" "$TEST_ROOT/bin/real-git"
+  cat >"$TEST_ROOT/bin/git" <<'SH'
+#!/bin/sh
+if [ "$3" = "ls-files" ]; then
+  echo "inspection unavailable" >&2
+  exit 128
+fi
+exec "$(dirname "$0")/real-git" "$@"
+SH
+  chmod +x "$TEST_ROOT/bin/git"
+
+  run env PATH="$TEST_ROOT/bin:$PATH" \
+    "$REVIEW" add --file app.py --lines 1 --comment "look here" </dev/null
+  [ "$status" -eq 1 ]
+  [[ "$output" == "review: cannot inspect Git metadata for app.py:"* ]]
+
+  run "$REVIEW" count
+  [ "$output" = "0" ]
+}
+
+@test "add: a Git storage failure cannot enqueue a versionless tracked review" {
+  git add app.py
+  mkdir -p "$TEST_ROOT/bin"
+  ln -s "$(command -v git)" "$TEST_ROOT/bin/real-git"
+  cat >"$TEST_ROOT/bin/git" <<'SH'
+#!/bin/sh
+if [ "$3" = "hash-object" ]; then
+  echo "storage unavailable" >&2
+  exit 1
+fi
+exec "$(dirname "$0")/real-git" "$@"
+SH
+  chmod +x "$TEST_ROOT/bin/git"
+
+  run env PATH="$TEST_ROOT/bin:$PATH" \
+    "$REVIEW" add --file app.py --lines 1 --comment "look here" </dev/null
+  [ "$status" -eq 1 ]
+  [[ "$output" == "review: cannot store the reviewed version of app.py:"* ]]
+
+  run "$REVIEW" count
+  [ "$output" = "0" ]
+}
+
 @test "add: a single line is stored as a one-line range" {
   queue app.py 3 "typo"
   run "$REVIEW" list
