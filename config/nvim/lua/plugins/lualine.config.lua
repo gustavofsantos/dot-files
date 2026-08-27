@@ -1,6 +1,6 @@
 return {
   'nvim-lualine/lualine.nvim',
-  enabled = false,
+  enabled = true,
   dependencies = { 'nvim-tree/nvim-web-devicons' },
   opts = {
     sections = {
@@ -8,7 +8,7 @@ return {
       lualine_b = { 'diagnostics' },
       lualine_c = { { 'filename', path = 1 } },
       lualine_x = { 'overseer' },
-      lualine_y = { 'location' },
+      lualine_y = { 'lsp_status', 'location' },
       lualine_z = {}
     },
     inactive_sections = {

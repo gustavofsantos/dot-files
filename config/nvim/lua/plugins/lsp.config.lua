@@ -13,20 +13,11 @@ return {
         }
       }
     },
-    {
-      "j-hui/fidget.nvim",
-      opts = {
-        -- options
-      },
-    },
-    "hrsh7th/nvim-cmp",
-    "b0o/schemastore.nvim",
     "nvim-telescope/telescope.nvim",
   },
   config = function()
     local mason = require("mason")
     local mason_lspconfig = require("mason-lspconfig")
-    local capabilities = require("cmp_nvim_lsp").default_capabilities()
 
     mason.setup()
     mason_lspconfig.setup({
@@ -43,8 +34,6 @@ return {
         "bashls",
       },
     })
-
-    vim.lsp.config("*", { capabilities = capabilities })
 
     vim.api.nvim_create_autocmd("LspAttach", {
       group = vim.api.nvim_create_augroup("UserLspConfig", { clear = true }),

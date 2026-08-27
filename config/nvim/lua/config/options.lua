@@ -1,8 +1,8 @@
 vim.g.mapleader = " "
 vim.g.maplocalleader = ","
 
-vim.opt.background = "dark"
-vim.cmd.colorscheme("nord")
+vim.opt.background = "light"
+vim.cmd.colorscheme("default")
 
 vim.opt.inccommand = "split"
 -- vim.opt.winwidth = 100
