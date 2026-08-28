@@ -970,6 +970,45 @@ SH
   [ "$output" = "r1" ]
 }
 
+@test "display: a completed review line shows every changed hunk between snapshots" {
+  git add app.py
+  queue app.py 2 "change this"
+  "$REVIEW" pull >/dev/null
+  printf 'one\nchanged-two\nthree-modified\nfour\n' > app.py
+  "$REVIEW" resolve r1 --note "updated implementation" >/dev/null
+
+  run "$REVIEW" display r1
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"REVIEW LINE r1"* ]]
+  [[ "$output" == *"[DONE]"* ]]
+  [[ "$output" == *"DIFF"* ]]
+  [[ "$output" == *"-two"* ]]
+  [[ "$output" == *"+changed-two"* ]]
+  [[ "$output" == *"-three"* ]]
+  [[ "$output" == *"+three-modified"* ]]
+  [[ "$output" == *"RESOLUTION"* ]]
+  [[ "$output" == *"updated implementation"* ]]
+
+  while IFS= read -r line; do
+    [ "${#line}" -le 80 ]
+  done <<< "$output"
+}
+
+@test "display: a rejected review line shows its source and reason without a diff" {
+  queue app.py 2 "change this"
+  "$REVIEW" pull >/dev/null
+  "$REVIEW" reject r1 --note "keep the existing implementation" >/dev/null
+
+  run "$REVIEW" display r1
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"REVIEW LINE r1"* ]]
+  [[ "$output" == *"[REJECTED]"* ]]
+  [[ "$output" == *"> 2 | two"* ]]
+  [[ "$output" == *"RESOLUTION"* ]]
+  [[ "$output" == *"keep the existing implementation"* ]]
+  [[ "$output" != *"DIFF"* ]]
+}
+
 @test "a decided comment survives a clear of the pending queue" {
   queue app.py 1 "decided"
   "$REVIEW" resolve r1 --note "done"

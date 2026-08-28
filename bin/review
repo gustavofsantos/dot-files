@@ -58,6 +58,7 @@ Examples:
 """
 
 import argparse
+import difflib
 import fcntl
 import hashlib
 import json
@@ -328,6 +329,39 @@ def render_text(reviews: list) -> str:
     return "\n".join(lines)
 
 
+def read_snapshot(record: dict, field: str) -> "str | None":
+    workspace = record.get("workspace")
+    version = record.get(field)
+    if not workspace or not version:
+        return None
+    snapshot = subprocess.run(
+        ["git", "-C", workspace, "cat-file", "blob", version],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if snapshot.returncode != 0:
+        return None
+    return snapshot.stdout
+
+
+def snapshot_diff(record: dict) -> "list | None":
+    before = read_snapshot(record, "file_version")
+    after = read_snapshot(record, "resolved_file_version")
+    if before is None or after is None:
+        return None
+    return list(
+        difflib.unified_diff(
+            before.splitlines(),
+            after.splitlines(),
+            fromfile=f"a/{record['file']}",
+            tofile=f"b/{record['file']}",
+            n=3,
+            lineterm="",
+        )
+    )
+
+
 def render_display(record: dict) -> str:
     width = 80
     state = record.get("status", "unknown").upper()
@@ -353,16 +387,44 @@ def render_display(record: dict) -> str:
     who = attribution(record)
     if who:
         append_wrapped(f"REVIEWER {who}")
-    lines.extend(["─" * width, "SOURCE"])
+    lines.append("─" * width)
 
-    for offset, code_line in enumerate(record.get("code", "").split("\n")):
-        number = record["start_line"] + offset
-        marker = ">" if number <= record["end_line"] else " "
-        append_wrapped(code_line, f"{marker} {number:>{digits}} | ")
+    if state.lower() == "done":
+        lines.append("DIFF")
+        changes = snapshot_diff(record)
+        if changes is None:
+            append_wrapped("snapshot evidence unavailable", "  ")
+        elif not changes:
+            append_wrapped("no changes recorded", "  ")
+        else:
+            for change in changes:
+                append_wrapped(change, "  ")
+    else:
+        lines.append("SOURCE")
+        for offset, code_line in enumerate(record.get("code", "").split("\n")):
+            number = record["start_line"] + offset
+            marker = ">" if number <= record["end_line"] else " "
+            append_wrapped(code_line, f"{marker} {number:>{digits}} | ")
 
-    lines.extend(["", "NOTE"])
-    for comment_line in record["comment"].split("\n"):
-        append_wrapped(comment_line, "  ")
+    if state.lower() in RESOLVED_STATUSES:
+        lines.extend(["", "RESOLUTION"])
+        resolved_by = record.get("resolved_by")
+        resolved_at = record.get("resolved_at")
+        decision = state.lower()
+        if resolved_by or resolved_at:
+            details = f"{decision}"
+            if resolved_by:
+                details += f" by @{resolved_by}"
+            if resolved_at:
+                details += f" at {resolved_at}"
+            append_wrapped(details, "  ")
+        if record.get("resolution_note"):
+            for resolution_line in record["resolution_note"].split("\n"):
+                append_wrapped(resolution_line, "  ")
+    else:
+        lines.extend(["", "NOTE"])
+        for comment_line in record["comment"].split("\n"):
+            append_wrapped(comment_line, "  ")
     return "\n".join(lines).rstrip() + "\n"
 
 

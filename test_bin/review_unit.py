@@ -1,4 +1,6 @@
 import importlib.util
+import subprocess
+import tempfile
 import unittest
 from importlib.machinery import SourceFileLoader
 from pathlib import Path
@@ -12,6 +14,52 @@ loader.exec_module(review)
 
 
 class DisplayRenderingTests(unittest.TestCase):
+    def test_completed_comment_shows_the_snapshot_diff_and_resolution(self):
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            subprocess.run(["git", "-C", directory, "init", "-q"], check=True)
+            before = subprocess.run(
+                ["git", "-C", directory, "hash-object", "-w", "--stdin"],
+                input="one\ntwo\nthree\n",
+                text=True,
+                capture_output=True,
+                check=True,
+            ).stdout.strip()
+            after = subprocess.run(
+                ["git", "-C", directory, "hash-object", "-w", "--stdin"],
+                input="one\nchanged-two\nthree-modified\n",
+                text=True,
+                capture_output=True,
+                check=True,
+            ).stdout.strip()
+            record = {
+                "id": "r1",
+                "status": "done",
+                "workspace": str(workspace),
+                "file": "app.py",
+                "start_line": 2,
+                "end_line": 2,
+                "code": "two",
+                "comment": "change this",
+                "author": "tester",
+                "lane": "auth",
+                "file_version": before,
+                "resolved_file_version": after,
+                "resolved_by": "impl-agent",
+                "resolution_note": "updated implementation",
+            }
+
+            output = review.render_display(record)
+
+        self.assertIn("[DONE]", output)
+        self.assertIn("DIFF", output)
+        self.assertIn("-two", output)
+        self.assertIn("+changed-two", output)
+        self.assertIn("-three", output)
+        self.assertIn("+three-modified", output)
+        self.assertIn("RESOLUTION", output)
+        self.assertIn("updated implementation", output)
+
     def test_open_comment_shows_marked_source_and_note(self):
         record = {
             "id": "r1",
