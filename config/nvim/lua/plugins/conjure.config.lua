@@ -77,16 +77,6 @@ return {
     "guns/vim-sexp",
     "tpope/vim-sexp-mappings-for-regular-people",
     {
-      "PaterJason/cmp-conjure",
-      lazy = true,
-      config = function()
-        local cmp = require("cmp")
-        local config = cmp.get_config()
-        table.insert(config.sources, { name = "conjure" })
-        return cmp.setup(config)
-      end,
-    },
-    {
       "julienvincent/nvim-paredit",
       config = function()
         require("nvim-paredit").setup()

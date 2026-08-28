@@ -39,16 +39,6 @@ vim.api.nvim_create_user_command("WA", function()
 end, { desc = "Write all" })
 
 
-vim.api.nvim_create_user_command(
-  "Journal",
-  function ()
-    local journals_dir = os.getenv("WORKLOG_DIR")
-    local file = journals_dir .. "/" .. os.date("%Y-%m-%d") .. ".md"
-    vim.cmd("edit " .. file)
-  end,
-  { desc = "Open daily journal file", bang = true, nargs = 0 }
-)
-
 vim.api.nvim_create_user_command("TaskNotes", function()
   local notes_dir = os.getenv("WORKLOG_DIR")
   -- Get the current git branch name
@@ -102,14 +92,6 @@ vim.api.nvim_create_user_command(
     range = true,
   }
 )
-
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = { "sql", "mysql", "plsql" },
-  callback = function()
-    local cmp = require("cmp")
-    cmp.setup.buffer({ sources = { { name = "vim-dadbod-completion" }, { name = "buffer" } } })
-  end,
-})
 
 vim.api.nvim_create_autocmd('FileType', {
     pattern = { 'javascript', 'json', 'lua', 'clojure', 'kotlin', 'java', 'yaml' },

@@ -38,13 +38,13 @@ vim.keymap.set("n", "<leader>u", "<cmd>UndotreeToggle<cr>", { desc = "Toggle und
 
 vim.keymap.set("v", "<CR>", ":ReviewAdd<CR>",
   { desc = "Queue a review comment for selection", noremap = true, silent = true })
-vim.keymap.set("n", "<leader>cx", "<cmd>ReviewClear<CR>",
+vim.keymap.set("n", "<leader>rx", "<cmd>ReviewClear<CR>",
   { desc = "Drop every pending review comment", noremap = true, silent = true })
-vim.keymap.set("n", "<leader>cd", "<cmd>ReviewDelete<CR>",
+vim.keymap.set("n", "<leader>rd", "<cmd>ReviewDelete<CR>",
   { desc = "Drop review comment near cursor", noremap = true, silent = true })
-vim.keymap.set("n", "<leader>ce", "<cmd>ReviewEdit<CR>",
+vim.keymap.set("n", "<leader>re", "<cmd>ReviewEdit<CR>",
   { desc = "Edit review comment near cursor", noremap = true, silent = true })
-vim.keymap.set("n", "<leader>co", "<cmd>ReviewList<CR>",
+vim.keymap.set("n", "<leader>ro", "<cmd>ReviewList<CR>",
   { desc = "Open review queue location list", noremap = true, silent = true })
-vim.keymap.set("n", "<leader>cr", "<cmd>ReviewRefresh<CR>",
+vim.keymap.set("n", "<leader>rr", "<cmd>ReviewRefresh<CR>",
   { desc = "Redraw review signs from the queue", noremap = true, silent = true })
