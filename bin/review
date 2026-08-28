@@ -772,6 +772,71 @@ def cmd_pull(args) -> int:
     return 0
 
 
+def snapshot_resolved_file_version(workspace: Path, record: dict) -> "str | None":
+    """Snapshot the current tracked file, when the recorded path still exists."""
+    if not git_toplevel(workspace):
+        return None
+
+    recorded_path = record.get("path") or record.get("file")
+    if not recorded_path:
+        return None
+    path = Path(recorded_path).expanduser()
+    if not path.is_absolute():
+        path = workspace / path
+    try:
+        path = path.resolve()
+        relative_path = path.relative_to(workspace)
+    except (OSError, RuntimeError, ValueError):
+        return None
+    if not path.is_file():
+        return None
+
+    tracked = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(workspace),
+            "ls-files",
+            "--error-unmatch",
+            "--",
+            str(relative_path),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if tracked.returncode == 1:
+        return None
+    if tracked.returncode != 0:
+        die(
+            f"cannot inspect Git metadata for {record.get('file', relative_path)}: "
+            f"{tracked.stderr.strip()}"
+        )
+
+    blob = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(workspace),
+            "hash-object",
+            "-w",
+            "--",
+            str(relative_path),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if blob.returncode != 0 or not blob.stdout.strip():
+        if not path.is_file():
+            return None
+        die(
+            f"cannot store the resolved version of {record.get('file', relative_path)}: "
+            f"{blob.stderr.strip()}"
+        )
+    return blob.stdout.strip()
+
+
 def cmd_resolve(args) -> int:
     """Close the loop on a comment: what became of it, and who says so."""
     workspace = resolve_workspace(args.workspace)
@@ -792,10 +857,15 @@ def cmd_resolve(args) -> int:
                 die(f"{record['id']} belongs to {review['id']} — pull {review['id']} first")
         if record["status"] in RESOLVED_STATUSES:
             die(f"{record['id']} is already {record['status']} — it cannot be re-decided")
+        after_version = (
+            snapshot_resolved_file_version(workspace, record) if status == "done" else None
+        )
         record["status"] = status
         record["resolved_at"] = now_iso()
         record["resolved_by"] = resolve_author(args)
         record["resolution_note"] = (note or "").strip("\n") or None
+        if after_version:
+            record["resolved_file_version"] = after_version
         write_store(workspace, store)
 
     who = record["resolved_by"]
@@ -1145,8 +1215,9 @@ def build_parser() -> argparse.ArgumentParser:
         "resolve",
         parents=[common],
         help="record that a comment was acted on",
-        description="Record that a review comment was acted on, and by whom. This is the\n"
-        "accountability half of the queue: `pull` says a comment was handed over,\n"
+        description="Record that a review comment was acted on, and by whom. For a tracked\n"
+        "file that still exists, `resolve` also saves its current contents as a Git blob.\n"
+        "This is the accountability half of the queue: `pull` says a comment was handed over,\n"
         "`resolve` says what became of it.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='Examples:\n  review resolve r3\n'

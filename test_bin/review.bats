@@ -738,9 +738,41 @@ SH
   [ "$(jq -r '.reviews[0].resolved_by' <<<"$output")" = "impl-agent" ]
   [ "$(jq -r '.reviews[0].resolution_note' <<<"$output")" = "renamed, test added" ]
   [ "$(jq -r '.reviews[0].resolved_at' <<<"$output")" != "null" ]
+  [ "$(jq 'has("resolved_file_version")' <<<"$output")" = "false" ]
+}
+
+@test "resolve: records the resulting tracked file as an exact Git blob" {
+  git add app.py
+  queue app.py 1 "rename this"
+  run "$REVIEW" list --format json
+  file_version=$(jq -r '.reviews[0].file_version' <<<"$output")
+
+  printf 'changed\nworking\ntree\n' >app.py
+  "$REVIEW" pull >/dev/null
+
+  run "$REVIEW" resolve r1 --note "renamed, test added"
+  [ "$status" -eq 0 ]
+
+  run "$REVIEW" list --status done --format json
+  [ "$status" -eq 0 ]
+  resolved_file_version=$(jq -r '.reviews[0].resolved_file_version' <<<"$output")
+  [ "$resolved_file_version" != "$file_version" ]
+
+  run git cat-file blob "$file_version"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$(printf 'one\ntwo\nthree\nfour')" ]
+
+  run git cat-file -t "$resolved_file_version"
+  [ "$status" -eq 0 ]
+  [ "$output" = "blob" ]
+
+  run git cat-file blob "$resolved_file_version"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$(printf 'changed\nworking\ntree')" ]
 }
 
 @test "reject: demands a reason — a silent decline is the thing being prevented" {
+  git add app.py
   queue app.py 1 "change this"
   run "$REVIEW" reject r1
   [ "$status" -ne 0 ]
@@ -748,8 +780,126 @@ SH
 
   run "$REVIEW" reject r1 --note "intentional: the caller validates"
   [ "$status" -eq 0 ]
-  run "$REVIEW" list --status rejected --format ids
-  [ "$output" = "r1" ]
+  run "$REVIEW" list --status rejected --format json
+  [ "$(jq -r '.reviews[0].id' <<<"$output")" = "r1" ]
+  [ "$(jq 'has("resolved_file_version")' <<<"$output")" = "false" ]
+}
+
+@test "resolve: a missing tracked path closes without an after version" {
+  git add app.py
+  queue app.py 1 "rename this"
+  rm app.py
+  "$REVIEW" pull >/dev/null
+
+  run "$REVIEW" resolve r1 --note "handled after deletion"
+  [ "$status" -eq 0 ]
+
+  run "$REVIEW" list --status done --format json
+  [ "$(jq 'has("resolved_file_version")' <<<"$output")" = "false" ]
+}
+
+@test "resolve: a renamed tracked path closes without an after version" {
+  git add app.py
+  queue app.py 1 "rename this"
+  mv app.py renamed.py
+  "$REVIEW" pull >/dev/null
+
+  run "$REVIEW" resolve r1 --note "renamed elsewhere"
+  [ "$status" -eq 0 ]
+
+  run "$REVIEW" list --status done --format json
+  [ "$(jq 'has("resolved_file_version")' <<<"$output")" = "false" ]
+}
+
+@test "resolve: an out-of-workspace path closes without an after version" {
+  printf 'outside\nworkspace\n' >"$TEST_ROOT/outside.py"
+  queue app.py 1 "look here"
+  queue_path=$("$REVIEW" path)
+  jq --arg outside "$TEST_ROOT/outside.py" \
+    '.reviews[0].path = $outside | .reviews[0].file = $outside' \
+    "$queue_path" >"$queue_path.tmp"
+  mv "$queue_path.tmp" "$queue_path"
+  "$REVIEW" pull >/dev/null
+
+  run "$REVIEW" resolve r1 --note "handled outside the workspace"
+  [ "$status" -eq 0 ]
+
+  run "$REVIEW" list --status done --format json
+  [ "$(jq 'has("resolved_file_version")' <<<"$output")" = "false" ]
+}
+
+@test "resolve: Git inspection failure leaves the review unresolved and unchanged" {
+  git add app.py
+  queue app.py 1 "rename this"
+  "$REVIEW" pull >/dev/null
+  mkdir -p "$TEST_ROOT/bin"
+  ln -s "$(command -v git)" "$TEST_ROOT/bin/real-git"
+  cat >"$TEST_ROOT/bin/git" <<'SH'
+#!/bin/sh
+if [ "$3" = "ls-files" ]; then
+  echo "inspection unavailable" >&2
+  exit 128
+fi
+exec "$(dirname "$0")/real-git" "$@"
+SH
+  chmod +x "$TEST_ROOT/bin/git"
+
+  run env PATH="$TEST_ROOT/bin:$PATH" \
+    "$REVIEW" resolve r1 --note "should not be recorded"
+  [ "$status" -eq 1 ]
+  [[ "$output" == "review: cannot inspect Git metadata for app.py:"* ]]
+
+  run "$REVIEW" list --status all --format json
+  [ "$(jq -r '.reviews[0].status' <<<"$output")" = "pulled" ]
+  [ "$(jq -r '.reviews[0].resolved_at' <<<"$output")" = "null" ]
+  [ "$(jq 'has("resolved_file_version")' <<<"$output")" = "false" ]
+}
+
+@test "resolve: Git storage failure leaves the review unresolved and unchanged" {
+  git add app.py
+  queue app.py 1 "rename this"
+  printf 'changed\nworking\ntree\n' >app.py
+  "$REVIEW" pull >/dev/null
+  mkdir -p "$TEST_ROOT/bin"
+  ln -s "$(command -v git)" "$TEST_ROOT/bin/real-git"
+  cat >"$TEST_ROOT/bin/git" <<'SH'
+#!/bin/sh
+if [ "$3" = "hash-object" ]; then
+  echo "storage unavailable" >&2
+  exit 1
+fi
+exec "$(dirname "$0")/real-git" "$@"
+SH
+  chmod +x "$TEST_ROOT/bin/git"
+
+  run env PATH="$TEST_ROOT/bin:$PATH" \
+    "$REVIEW" resolve r1 --note "should not be recorded"
+  [ "$status" -eq 1 ]
+  [[ "$output" == "review: cannot store the resolved version of app.py:"* ]]
+
+  run "$REVIEW" list --status all --format json
+  [ "$(jq -r '.reviews[0].status' <<<"$output")" = "pulled" ]
+  [ "$(jq -r '.reviews[0].resolved_at' <<<"$output")" = "null" ]
+  [ "$(jq 'has("resolved_file_version")' <<<"$output")" = "false" ]
+}
+
+@test "resolve: an older comment without a before version can still record the after version" {
+  git add app.py
+  queue app.py 1 "rename this"
+  queue_path=$("$REVIEW" path)
+  jq 'del(.reviews[0].file_version)' "$queue_path" >"$queue_path.tmp"
+  mv "$queue_path.tmp" "$queue_path"
+  printf 'changed\nworking\ntree\n' >app.py
+  "$REVIEW" pull >/dev/null
+
+  run "$REVIEW" resolve r1 --note "renamed, test added"
+  [ "$status" -eq 0 ]
+
+  run "$REVIEW" list --status done --format json
+  resolved_file_version=$(jq -r '.reviews[0].resolved_file_version' <<<"$output")
+  run git cat-file blob "$resolved_file_version"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$(printf 'changed\nworking\ntree')" ]
 }
 
 @test "resolve: a decided comment cannot be quietly re-decided" {
