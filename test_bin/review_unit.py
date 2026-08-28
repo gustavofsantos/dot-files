@@ -14,6 +14,56 @@ loader.exec_module(review)
 
 
 class DisplayRenderingTests(unittest.TestCase):
+    def test_submitted_review_sheet_keeps_ordered_evidence_blocks(self):
+        submitted = {
+            "id": "rv1",
+            "status": "pending",
+            "author": "tester",
+            "lane": "auth",
+            "decision": "request-changes",
+            "summary": "The error path must be fixed before merging.",
+            "comment_ids": ["r1", "r2"],
+        }
+        comments = [
+            {
+                "id": "r1",
+                "status": "pending",
+                "file": "app.py",
+                "start_line": 1,
+                "end_line": 1,
+                "code": "one",
+                "comment": "first finding",
+            },
+            {
+                "id": "r2",
+                "status": "pending",
+                "file": "app.py",
+                "start_line": 2,
+                "end_line": 2,
+                "code": "two",
+                "comment": "second finding",
+            },
+        ]
+
+        output = review.render_review_display(submitted, comments)
+
+        self.assertIn("REVIEW SHEET rv1", output)
+        self.assertIn("[PENDING]", output)
+        self.assertIn("REQUEST CHANGES", output)
+        self.assertIn("SUMMARY", output)
+        self.assertIn("LEDGER", output)
+        self.assertIn("EVIDENCE 1", output)
+        self.assertIn("EVIDENCE 2", output)
+        self.assertLess(output.index("1. r1"), output.index("2. r2"))
+        self.assertLess(output.index("EVIDENCE 1"), output.index("EVIDENCE 2"))
+        self.assertIn("> 1 | one", output)
+        self.assertIn("> 2 | two", output)
+        self.assertIn("first finding", output)
+        self.assertIn("second finding", output)
+
+        for line in output.splitlines():
+            self.assertLessEqual(len(line), 80, line)
+
     def test_completed_comment_shows_the_snapshot_diff_and_resolution(self):
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory)

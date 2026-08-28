@@ -1009,6 +1009,40 @@ SH
   [[ "$output" != *"DIFF"* ]]
 }
 
+@test "display: a submitted review sheet preserves summary order and evidence" {
+  queue app.py 1 "first finding"
+  queue app.py 2 "second finding"
+  "$REVIEW" submit --id r1 --id r2 \
+    --decision request-changes \
+    --summary "The error path must be fixed before merging." \
+    --format ids >/dev/null
+
+  run "$REVIEW" display rv1
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"REVIEW SHEET rv1"* ]]
+  [[ "$output" == *"[PENDING]"* ]]
+  [[ "$output" == *"REQUEST CHANGES"* ]]
+  [[ "$output" == *"SUMMARY"* ]]
+  [[ "$output" == *"The error path must be fixed before merging."* ]]
+  [[ "$output" == *"LEDGER"* ]]
+  [[ "$output" == *"1. r1"* ]]
+  [[ "$output" == *"2. r2"* ]]
+  [[ "$output" == *"EVIDENCE 1"* ]]
+  [[ "$output" == *"EVIDENCE 2"* ]]
+  [[ "$output" == *"> 1 | one"* ]]
+  [[ "$output" == *"> 2 | two"* ]]
+  [[ "$output" == *"first finding"* ]]
+  [[ "$output" == *"second finding"* ]]
+
+  first_ledger=$(grep -n "1. r1" <<< "$output" | head -1 | cut -d: -f1)
+  second_ledger=$(grep -n "2. r2" <<< "$output" | head -1 | cut -d: -f1)
+  [ "$first_ledger" -lt "$second_ledger" ]
+
+  while IFS= read -r line; do
+    [ "${#line}" -le 80 ]
+  done <<< "$output"
+}
+
 @test "a decided comment survives a clear of the pending queue" {
   queue app.py 1 "decided"
   "$REVIEW" resolve r1 --note "done"
