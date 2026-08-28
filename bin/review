@@ -384,13 +384,26 @@ def append_display_wrapped(lines: list, text: str, prefix: str = "", width: int 
     lines.extend(continuation + chunk for chunk in chunks[1:])
 
 
+def append_source_display(lines: list, record: dict) -> None:
+    lines.append("SOURCE")
+    digits = len(str(record["end_line"]))
+    for offset, code_line in enumerate(record.get("code", "").split("\n")):
+        number = record["start_line"] + offset
+        marker = ">" if number <= record["end_line"] else " "
+        append_display_wrapped(lines, code_line, f"{marker} {number:>{digits}} | ")
+
+
+def append_note_display(lines: list, note: str) -> None:
+    lines.extend(["", "NOTE"])
+    for note_line in note.split("\n"):
+        append_display_wrapped(lines, note_line, "  ")
+
+
 def render_display(record: dict) -> str:
     width = 80
     state = record.get("status", "unknown").upper()
     status = state.lower()
     lines = []
-
-    digits = len(str(record["end_line"]))
 
     append_display_wrapped(lines, f"REVIEW LINE {record['id']}  [{state}]  {location(record)}")
     who = attribution(record)
@@ -409,11 +422,7 @@ def render_display(record: dict) -> str:
             for change in changes:
                 append_display_wrapped(lines, change, "  ")
     else:
-        lines.append("SOURCE")
-        for offset, code_line in enumerate(record.get("code", "").split("\n")):
-            number = record["start_line"] + offset
-            marker = ">" if number <= record["end_line"] else " "
-            append_display_wrapped(lines, code_line, f"{marker} {number:>{digits}} | ")
+        append_source_display(lines, record)
 
     if status in RESOLVED_STATUSES:
         lines.extend(["", "RESOLUTION"])
@@ -431,9 +440,7 @@ def render_display(record: dict) -> str:
             for resolution_line in record["resolution_note"].split("\n"):
                 append_display_wrapped(lines, resolution_line, "  ")
     else:
-        lines.extend(["", "NOTE"])
-        for comment_line in record["comment"].split("\n"):
-            append_display_wrapped(lines, comment_line, "  ")
+        append_note_display(lines, record["comment"])
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -474,15 +481,8 @@ def render_review_display(submitted: dict, comments: list) -> str:
             lines,
             f"EVIDENCE {position}  {comment['id']}  {location(comment)}",
         )
-        lines.append("SOURCE")
-        digits = len(str(comment["end_line"]))
-        for offset, code_line in enumerate(comment.get("code", "").split("\n")):
-            number = comment["start_line"] + offset
-            marker = ">" if number <= comment["end_line"] else " "
-            append_display_wrapped(lines, code_line, f"{marker} {number:>{digits}} | ")
-        lines.extend(["", "NOTE"])
-        for note_line in comment["comment"].split("\n"):
-            append_display_wrapped(lines, note_line, "  ")
+        append_source_display(lines, comment)
+        append_note_display(lines, comment["comment"])
 
     return "\n".join(lines).rstrip() + "\n"
 
