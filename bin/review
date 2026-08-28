@@ -65,6 +65,7 @@ import os
 import re
 import subprocess
 import sys
+import textwrap
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -325,6 +326,44 @@ def render_text(reviews: list) -> str:
             + first_line(r["comment"])
         )
     return "\n".join(lines)
+
+
+def render_display(record: dict) -> str:
+    width = 80
+    state = record.get("status", "unknown").upper()
+    lines = []
+
+    digits = len(str(record["end_line"]))
+
+    def append_wrapped(text: str, prefix: str = "") -> None:
+        available = max(1, width - len(prefix))
+        chunks = textwrap.wrap(
+            text,
+            width=available,
+            replace_whitespace=False,
+            drop_whitespace=False,
+            break_long_words=True,
+            break_on_hyphens=False,
+        ) or [""]
+        lines.append(prefix + chunks[0])
+        continuation = " " * len(prefix)
+        lines.extend(continuation + chunk for chunk in chunks[1:])
+
+    append_wrapped(f"REVIEW LINE {record['id']}  [{state}]  {location(record)}")
+    who = attribution(record)
+    if who:
+        append_wrapped(f"REVIEWER {who}")
+    lines.extend(["─" * width, "SOURCE"])
+
+    for offset, code_line in enumerate(record.get("code", "").split("\n")):
+        number = record["start_line"] + offset
+        marker = ">" if number <= record["end_line"] else " "
+        append_wrapped(code_line, f"{marker} {number:>{digits}} | ")
+
+    lines.extend(["", "NOTE"])
+    for comment_line in record["comment"].split("\n"):
+        append_wrapped(comment_line, "  ")
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def render_markdown(
@@ -881,6 +920,9 @@ def cmd_show(args) -> int:
     workspace = resolve_workspace(args.workspace)
     store = read_store(workspace)
     record = find(store, args.id)
+    if getattr(args, "display", False):
+        print(render_display(record), end="")
+        return 0
     if args.format == "json":
         print(json.dumps(record, indent=2, ensure_ascii=False))
     elif args.format == "markdown":
@@ -1195,6 +1237,15 @@ def build_parser() -> argparse.ArgumentParser:
     p_show.add_argument("id", metavar="ID", help="review id, e.g. r3")
     add_format(p_show, ["text", "json", "markdown"], "text")
     p_show.set_defaults(func=cmd_show)
+
+    p_display = sub.add_parser(
+        "display",
+        parents=[common],
+        help="display one review line with its source evidence",
+        description="Display one review comment as a fixed-width review line. Nothing is dequeued.",
+    )
+    p_display.add_argument("id", metavar="ID", help="review id, e.g. r3")
+    p_display.set_defaults(func=cmd_show, display=True)
 
     p_edit = sub.add_parser(
         "edit",

@@ -943,6 +943,33 @@ SH
   [[ "$output" == *"renamed to first()"* ]]
 }
 
+@test "display: an open review line shows saved source before and after handoff" {
+  queue app.py 2-3 "tighten this"
+
+  run "$REVIEW" display r1
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"REVIEW LINE r1"* ]]
+  [[ "$output" == *"[PENDING]"* ]]
+  [[ "$output" == *"app.py:2-3"* ]]
+  [[ "$output" == *"> 2 | two"* ]]
+  [[ "$output" == *"> 3 | three"* ]]
+  [[ "$output" == *"tighten this"* ]]
+
+  run "$REVIEW" list --status pending --format ids
+  [ "$output" = "r1" ]
+
+  "$REVIEW" pull >/dev/null
+
+  run "$REVIEW" display r1
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[PULLED]"* ]]
+  [[ "$output" == *"> 2 | two"* ]]
+  [[ "$output" == *"tighten this"* ]]
+
+  run "$REVIEW" list --status pulled --format ids
+  [ "$output" = "r1" ]
+}
+
 @test "a decided comment survives a clear of the pending queue" {
   queue app.py 1 "decided"
   "$REVIEW" resolve r1 --note "done"
