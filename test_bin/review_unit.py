@@ -64,6 +64,54 @@ class DisplayRenderingTests(unittest.TestCase):
         for line in output.splitlines():
             self.assertLessEqual(len(line), 80, line)
 
+    def test_submitted_review_is_complete_when_all_comments_are_terminal(self):
+        submitted = {
+            "id": "rv1",
+            "status": "pulled",
+            "decision": "request-changes",
+            "summary": "Resolve every finding.",
+            "comment_ids": ["r1", "r2"],
+        }
+        comments = [
+            {
+                "id": "r1",
+                "status": "done",
+                "file": "app.py",
+                "start_line": 1,
+                "end_line": 1,
+                "code": "one",
+                "comment": "first finding",
+            },
+            {
+                "id": "r2",
+                "status": "rejected",
+                "file": "app.py",
+                "start_line": 2,
+                "end_line": 2,
+                "code": "two",
+                "comment": "second finding",
+            },
+        ]
+
+        output = review.render_review_display(submitted, comments)
+
+        self.assertIn("[COMPLETE]", output)
+
+    def test_missing_submitted_comment_keeps_the_review_incomplete(self):
+        submitted = {
+            "id": "rv1",
+            "status": "pulled",
+            "decision": "request-changes",
+            "summary": "The linked finding must remain accountable.",
+            "comment_ids": ["r1"],
+        }
+
+        output = review.render_review_display(submitted, [])
+
+        self.assertIn("[PULLED]", output)
+        self.assertIn("MISSING r1", output)
+        self.assertNotIn("[COMPLETE]", output)
+
     def test_completed_comment_shows_the_snapshot_diff_and_resolution(self):
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory)

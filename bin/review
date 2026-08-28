@@ -399,6 +399,24 @@ def append_note_display(lines: list, note: str) -> None:
         append_display_wrapped(lines, note_line, "  ")
 
 
+def submitted_display_status(submitted: dict, comments: list) -> str:
+    stored_status = submitted.get("status", "unknown")
+    if stored_status != "pulled":
+        return stored_status.upper()
+
+    linked_ids = submitted.get("comment_ids", [])
+    comment_index = {comment["id"]: comment for comment in comments}
+    all_links_are_present = all(comment_id in comment_index for comment_id in linked_ids)
+    if not all_links_are_present:
+        return "PULLED"
+    all_comments_are_terminal = all(
+        comment_index[comment_id].get("status") in RESOLVED_STATUSES for comment_id in linked_ids
+    )
+    if all_comments_are_terminal:
+        return "COMPLETE"
+    return "PULLED"
+
+
 def render_display(record: dict) -> str:
     width = 80
     state = record.get("status", "unknown").upper()
@@ -446,8 +464,10 @@ def render_display(record: dict) -> str:
 
 def render_review_display(submitted: dict, comments: list) -> str:
     width = 80
-    state = submitted.get("status", "unknown").upper()
+    state = submitted_display_status(submitted, comments)
     lines = []
+    linked_ids = submitted.get("comment_ids", [])
+    comment_index = {comment["id"]: comment for comment in comments}
 
     append_display_wrapped(lines, f"REVIEW SHEET {submitted['id']}  [{state}]")
     who = attribution(submitted)
@@ -462,8 +482,12 @@ def render_review_display(submitted: dict, comments: list) -> str:
         append_display_wrapped(lines, summary_line, "  ")
 
     lines.extend(["", "LEDGER"])
-    if comments:
-        for position, comment in enumerate(comments, start=1):
+    if linked_ids:
+        for position, comment_id in enumerate(linked_ids, start=1):
+            comment = comment_index.get(comment_id)
+            if comment is None:
+                append_display_wrapped(lines, f"MISSING {comment_id}", "  ")
+                continue
             comment_state = comment.get("status", "unknown").upper()
             append_display_wrapped(
                 lines,
@@ -474,7 +498,10 @@ def render_review_display(submitted: dict, comments: list) -> str:
         append_display_wrapped(lines, "(no linked comments)", "  ")
 
     lines.append("─" * width)
-    for position, comment in enumerate(comments, start=1):
+    for position, comment_id in enumerate(linked_ids, start=1):
+        comment = comment_index.get(comment_id)
+        if comment is None:
+            continue
         if position > 1:
             lines.append("")
         append_display_wrapped(

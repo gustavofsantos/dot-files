@@ -1043,6 +1043,59 @@ SH
   done <<< "$output"
 }
 
+@test "display: a submitted review completes only when every comment is terminal" {
+  queue app.py 1 "first finding"
+  queue app.py 2 "second finding"
+  "$REVIEW" submit --id r1 --id r2 \
+    --decision request-changes \
+    --summary "Resolve every finding." \
+    --format ids >/dev/null
+  "$REVIEW" pull --id rv1 >/dev/null
+  "$REVIEW" resolve r1 --note "fixed" >/dev/null
+
+  run "$REVIEW" display rv1
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[PULLED]"* ]]
+  [[ "$output" != *"[COMPLETE]"* ]]
+
+  "$REVIEW" reject r2 --note "intentionally retained" >/dev/null
+  run "$REVIEW" display rv1
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[COMPLETE]"* ]]
+}
+
+@test "display: a pulled summary-only review is complete" {
+  "$REVIEW" submit --no-comments \
+    --decision comment \
+    --summary "No actionable findings." \
+    --format ids >/dev/null
+  "$REVIEW" pull --id rv1 >/dev/null
+
+  run "$REVIEW" display rv1
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[COMPLETE]"* ]]
+  [[ "$output" == *"(no linked comments)"* ]]
+}
+
+@test "display: a missing linked comment stays visible and keeps the review incomplete" {
+  queue app.py 1 "missing evidence"
+  "$REVIEW" submit --id r1 \
+    --decision request-changes \
+    --summary "The linked finding must remain accountable." \
+    --format ids >/dev/null
+  "$REVIEW" pull --id rv1 >/dev/null
+
+  queue_path=$("$REVIEW" path)
+  jq 'del(.reviews[] | select(.id == "r1"))' "$queue_path" >"$queue_path.tmp"
+  mv "$queue_path.tmp" "$queue_path"
+
+  run "$REVIEW" display rv1
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[PULLED]"* ]]
+  [[ "$output" == *"MISSING r1"* ]]
+  [[ "$output" != *"[COMPLETE]"* ]]
+}
+
 @test "a decided comment survives a clear of the pending queue" {
   queue app.py 1 "decided"
   "$REVIEW" resolve r1 --note "done"
