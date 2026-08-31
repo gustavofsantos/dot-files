@@ -1,7 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "env": {
-    "CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING": "0"
+    "CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING": "0",
+    "REVIEW_AUTHOR": "claude"
   },
   "permissions": {
     "allow": [
