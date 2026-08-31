@@ -1,7 +1,7 @@
 export HISTFILE=$HOME/.zsh_history
 export HISTTIMEFORMAT="[%F %T] "
-export SAVEHIST=1000
-export HISTSIZE=999
+export SAVEHIST=10000
+export HISTSIZE=100000
 export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_ENV_HINTS=1
 
