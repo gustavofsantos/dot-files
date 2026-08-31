@@ -10,6 +10,5 @@ return {
       },
     })
 
-    vim.cmd("colorscheme jb")
   end,
 }

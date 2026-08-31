@@ -1,7 +1,7 @@
 vim.g.mapleader = " "
 vim.g.maplocalleader = ","
 
-vim.opt.background = "light"
+vim.opt.background = "dark"
 vim.cmd.colorscheme("default")
 
 vim.opt.inccommand = "split"
