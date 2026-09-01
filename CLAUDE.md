@@ -69,11 +69,11 @@ skill is what the model reaches for on its own. When both exist for one workflow
 and the `review-queue` skill), the command stays short and the skill carries the rules —
 neither is the store, the underlying script is.
 
-There is no separate "rules" mechanism anymore — every rule (including the always-apply
-`way-of-work`/`way-of-planning`/`way-of-communication` trio) is now a skill like any other,
-converted with the same eager, trigger-rich description style. Trading a rule's guaranteed
-always-on loading for a skill's model-decided invocation is a real trade-off, not a free
-repackaging — see "Conventions skills follow" below.
+There is no separate rules mechanism. Focused steering and workflow profiles are skills.
+The `rules-of-*`, `smelly-*`, and `way-of-*` families are manual profiles with
+`disable-model-invocation: true`. Scenario skills can activate when a request matches their
+narrow boundary. Review and end-gate skills remain explicit when automatic use could take
+over another task.
 
 Every component is hand-authored directly in each harness's own native plugin shape — there
 is no compile step and nothing generates `agents/plugins/<name>/` from anywhere else. A
@@ -83,14 +83,10 @@ differs per harness ships as two files, one per harness, each written directly i
 harness's own format — hooks are the clearest case of this; see "Hooks" below.
 
 Conventions skills follow (keep them when editing):
-- **Trigger is deliberate.** Skills the model should auto-load (format references like
-  `bruno`, `clojure-datomic`; context-triggered workflows like `create-pull-request`)
-  have rich trigger descriptions. The former always-apply rules (`way-of-work`,
-  `way-of-planning`, `way-of-communication`) need the eagerest descriptions of all, since a
-  skill has no guaranteed always-on loading the way a rule did — the description is the
-  only thing standing between "always followed" and "silently skipped this time."
-  Explicit-command skills set `disable-model-invocation: true` and keep the description to
-  one line — it's only shown to the human.
+- **Trigger is deliberate.** Automatically selected skills have a narrow scenario boundary.
+  Manual profiles and explicit review or mutation gates set
+  `disable-model-invocation: true`. Their descriptions explain the focused effect to the
+  human who selects them and do not contain eager triggers.
 - **Steps in `SKILL.md`, bulk reference behind pointers.** Branch-specific or
   phase-specific material lives in `references/*.md`, loaded only when that path runs
   (e.g. `bruno` detects the collection format and loads one of two format files).
@@ -297,19 +293,20 @@ The vault is `$ENGINEERING_HOME` (`.zshenv`, default `~/engineering`) — the lo
 | Section | Owner | Holds |
 |---|---|---|
 | `issues/` | `issue` skill | Tracked work items, one delta each |
-| `artifacts/` | `issue` skill | Raw material: notes, transcripts, data, diagrams, DDD surveys, hypothesis verdicts |
+| `artifacts/` | The workflow that records the evidence | Raw evidence and observations. An issue may link them. |
 | `spikes/` | `spike` skill | Answered unknowns |
-| `projects/` | `project` skill | One brief per project: glossary, topology, data map, standing questions |
+| `projects/` | `project` skill | Stable project summary, context, data map, questions, and canonical links |
+| `workflows/` | `biz-workflows` skill | Standalone canonical business and system workflow diagrams |
 | `VOCABULARY.md` | `vocabulary` skill | Canonical cross-project terms, aliases, usage, and relationships |
-| `reconcile/` | `reconcile` skill | entities/bridges/invariants/breaks tables, org-wide across every repository |
 | `facts/`, `.metadata/` | `facts-churn` | The facts base and its provenance mapping |
 
-A brief lives at `projects/<slug>.md`, named by a bare slug because other files point at it as a key. An issue names its project in an optional `project:` frontmatter key, and `members.sh` derives the membership — the brief keeps no list, so nothing rots. An issue holds a delta; a brief holds system state. A campaign moves to `projects/done/` at the end; a domain the team owns never moves.
+A brief lives at `projects/<slug>.md`, named by a stable bare slug. An issue names its
+project in optional `project:` frontmatter, and `members.sh` derives membership. The brief
+keeps no issue list. An issue holds a delta. A brief holds stable context and links the
+canonical workflow files owned by `biz-workflows`.
 
 ### A skill is code, never a store
 
-A skill directory holds `SKILL.md`, `references/`, `scripts/`, and `assets/`. Nothing else. Whatever a skill learns goes to the vault. A skill that needs durable storage delegates to the skill that owns that section, rather than inventing a path. `outcome-builder` invokes `issue`. `ddd-survey` and `reflect` offer their findings to `project`. `test_bin/skills-storage.bats` fails if a skill stores its own output.
-
-Ephemeral output stays out of the vault and goes to `/tmp` (`handoff`). Reconciliation is the
-opposite: `reconcile` keeps both its knowledge tables and executable SQL under the org-wide
-`reconcile/` vault directory, namespacing probes and traces by repository.
+A skill directory holds `SKILL.md`, `references/`, `scripts/`, and `assets`. Nothing else.
+A skill that needs durable storage uses the existing owner above instead of inventing a path.
+Ephemeral output stays out of the vault and can use `/tmp`.
