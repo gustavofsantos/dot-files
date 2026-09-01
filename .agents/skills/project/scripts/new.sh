@@ -29,8 +29,8 @@ The vocabulary of this project, in plain words.
 
 - **term** — what it means here.
 
-## Topology
-How the system works today. Mermaid. This is system state, not a change.
+## Workflow context
+Links to canonical standalone files in workflows/. Do not embed a second topology.
 
 ## Data map
 Where the data lives. Name each dataset. Say what one row means. Name the traps.
@@ -38,8 +38,7 @@ Where the data lives. Name each dataset. Say what one row means. Name the traps.
 - **dataset** — one row is X. Trap: Y.
 
 ## Standing questions
-The open unknowns. A spike answers one. The answer then moves up into Glossary,
-Topology, or Data map.
+The open unknowns. A spike answers one. Move the answer into the relevant stable section.
 
 - [ ] question
 

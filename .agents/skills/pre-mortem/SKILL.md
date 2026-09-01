@@ -1,21 +1,25 @@
 ---
 name: pre-mortem
-description: Before implementing a non-trivial solution — assume it already failed, enumerate and score failure modes, mitigate the top ones before writing code.
+description: Before implementation, expose the most credible failure modes and mitigate the ones that could invalidate the approach.
 disable-model-invocation: true
 ---
 
 # Pre-Mortem
 
-Before implementing a non-trivial solution, project into a future where it has **already failed**, work backward to the causes, and mitigate them before writing code.
+Use this before implementation. Assume the proposed solution failed, then work backward to
+the concrete causes that could invalidate the approach.
 
 ## Procedure
 
 1. **Goal** — state it in one sentence. Name what success looks like and how you'd measure it.
 2. **Assume failure** — "It is 4 weeks out. This failed." Do not ask *if* it might. Assume it did.
-3. **Enumerate ≥5 specific failure modes** across: technical (races, edge cases, perf cliffs, wrong abstractions), behavioral (misread requirements/assumptions), operational (deploy, observability, rollback), integration (broken upstream/downstream contracts), time (scope creep, underestimation, missing deps).
-4. **Score** each by likelihood × impact. Focus on high/high.
-5. **Mitigate** each top item with one concrete action — a design change, an upfront test, a guard/constraint, or a question to answer first.
-6. **Pre-flight** — top 2–3 modes have a mitigation, blocking unknowns are assigned, a rollback/recovery path exists.
+3. **Find credible failure modes** across the relevant technical, behavioral,
+   integration, operational, and delivery boundaries. Do not add filler to reach a count.
+4. **Prioritize** by likelihood and impact.
+5. **Mitigate** each high-priority mode with a design constraint, an upfront test, a
+   guard, or a question that must be answered before coding.
+6. **Pre-flight** — the approach addresses the modes that could block implementation.
+   Include containment or recovery only when the proposed change creates that need.
 
 ## Output
 
@@ -26,9 +30,10 @@ Before implementing a non-trivial solution, project into a future where it has *
 | Failure mode | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 **Blockers to resolve before coding:**
-**Rollback plan:**
+**Containment or recovery:** <only when material>
 ```
 
 ## Feeding back
 
-If tracked as an issue (`issue` skill): unresolved blockers → `## Open questions`, approach-constraining mitigations → `## Context`, must-not-break modes → `## Off-limits`.
+If the work has a tracked issue, return the result to that issue. Do not turn this into
+an end-of-change or deploy-review gate.

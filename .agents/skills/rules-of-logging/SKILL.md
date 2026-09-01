@@ -1,13 +1,21 @@
 ---
 name: rules-of-logging
-description: Enforce logging discipline — Sentry XOR log (never both), no per-item logs in loops, structured key-value fields, correct log levels, never log secrets/PII/payloads. Use whenever writing or reviewing a log statement, error handler, or Sentry capture in application code (Clojure, Kotlin, Java, Python, TypeScript, JavaScript, Go, Ruby). Trigger even on a bare "add logging" or "catch and log this error".
+description: >
+  Apply a focused logging profile with safe fields, bounded volume, structured events, and
+  single-owner error reporting.
 disable-model-invocation: true
 ---
 
 # Logging
 
-1. Log only what is needed to pivot into DB/Sentry: entity IDs, correlation ID. Log the key, never the row/payload (recoverable by query).
-2. Error → Sentry XOR log, never both (duplication). Sentry: unexpected/actionable, exactly once at the owning boundary. Log (WARN/INFO): expected handled conditions. Never log-and-rethrow.
-3. Stdout is I/O cost: no per-item logs in loops/batches. One summary line (counts, duration, failures). Guard expensive construction behind level checks. High-frequency → metrics/sampling, not logs.
-4. Structured key-value fields, not prose. Levels: ERROR is Sentry-only. WARN is degraded but handled. INFO is business state transitions only. DEBUG is off in prod.
-5. Never log secrets, PII, payloads, or stack traces for expected conditions. When in doubt, omit the log.
+1. Never log secrets, personal data, credentials, or full payloads. Log only the safe
+   identifiers needed to correlate the event with protected data sources.
+2. Emit one structured event at the boundary that owns the outcome. Do not log and
+   rethrow the same error at successive layers.
+3. Do not emit per-item logs in loops or batches. Emit a summary with counts, duration,
+   and failures. Use metrics or sampling for high-frequency signals.
+4. Follow the repository's established levels and production settings. Guard expensive
+   field construction behind enabled-level checks.
+5. In environments whose policy routes unexpected actionable errors to Sentry, capture
+   once in Sentry or log the error, not both. Treat expected handled conditions according
+   to that environment's log-level policy.

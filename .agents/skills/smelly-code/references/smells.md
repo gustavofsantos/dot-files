@@ -14,9 +14,10 @@ GOOD:  if (account.isOverdrawn()) { ... }
 
 Same smell when the compound is assigned to `flag`, `check`, or `ok`. If it takes more than a breath to read aloud, extract a predicate or explaining variable whose name is the policy.
 
-## 2. Tell, do not ask (feature envy / getter decisions)
+## 2. Decision far from its knowledge
 
-The caller interrogates another object's data, decides, then mutates. The policy lives away from the knowledge. Every new rule sprouts another getter chain.
+The caller pulls foreign data across a boundary and makes a decision far from the data and
+invariants it needs. Each new rule spreads more structure through callers.
 
 ```
 BAD:   if (order.getStatus() == PAID && daysSince(order.getDeliveredAt()) <= 30) {
@@ -24,30 +25,31 @@ BAD:   if (order.getStatus() == PAID && daysSince(order.getDeliveredAt()) <= 30)
          gateway.refund(order.getTotal())
        }
 
-GOOD:  order.refundWithinWindow(clock.today(), gateway)
-       // Order owns the window check and the state change; gateway is told what to do
+GOOD:  refundOrderWithinWindow(order, clock.today(), gateway)
+       // The named operation keeps the window rule and state change together.
 ```
 
-Train wrecks (`a.getB().getC().getD()`) are the same smell in motion: the caller knows too much about foreign structure. Tell the nearby object. Hide the path.
+Getter chains are one form of this smell. Move the decision to the closest suitable object,
+function, module, service, or boundary. Hide structure that the caller does not own.
 
-## 3. Policy in the persistence / database layer
+## 3. Unnamed policy at the persistence boundary
 
-A repository, query, or SQL fragment encodes eligibility, pricing, or workflow — so the rule is invisible to the domain and untestable without a database.
+A repository, query, or SQL fragment encodes eligibility, pricing, or workflow without a
+domain name at its boundary. The rule becomes hard to find and discuss.
 
 ```
 BAD:   // repository / query layer
        fun findRefundableOrders(now) =
          db.query("SELECT * FROM orders WHERE status = 'PAID' AND delivered_at > ?", now.minusDays(30))
 
-GOOD:  // domain owns the rule
-       fun Order.isRefundable(now) = status == PAID && !isPastReturnWindow(now)
-
-       // persistence only loads candidates or writes decided state
-       fun findPaidOrdersDeliveredAfter(cutoff) = db.query(...)
-       // caller filters with isRefundable, or receives an explicit, already-named criterion
+GOOD:  fun findRefundableOrders(now) =
+         db.query(REFUNDABLE_ORDERS_QUERY, now.minusDays(30))
+       // The boundary names the domain intent. The database keeps filtering atomic and fast.
 ```
 
-Persistence may filter on **stored facts** (status, timestamps, ids). It must not invent **business meaning** ("refundable", "eligible", "preferred") inside `where` clauses or query builders. If the criterion has a domain name, that name lives above the database.
+Database execution can be necessary for correctness, atomicity, or performance. Keep the
+domain intent visible in the repository API, query name, schema constraint, or adjacent
+domain contract. Do not hide policy in a generic method or unnamed predicate.
 
 ## 4. Nested control flow / long method
 

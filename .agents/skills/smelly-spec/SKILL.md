@@ -1,6 +1,6 @@
 ---
 name: smelly-spec
-description: Read a natural-language change spec (OpenSpec change, RFC, requirements doc, DbC-style contract in prose) as if it were a contract, and surface where it will fail to constrain an implementer — human or model. Use whenever the user wants a spec reviewed, sanity-checked, or "smelled" before it goes to implementation, whenever they ask "is this spec clear / tight / enforceable", or before handing a spec to an agent to build from. Trigger even if the user just says "look at this change and tell me what's weak" — a spec critique is what they want.
+description: Review a natural-language change specification as a contract and expose where it fails to constrain implementation.
 disable-model-invocation: true
 ---
 

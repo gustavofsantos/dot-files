@@ -6,13 +6,13 @@ disable-model-invocation: true
 
 # Diff Slop Cleanup
 
-Remove AI-generated cruft from the branch diff, touching **only changed lines**, without altering behavior.
+Remove AI-generated cruft introduced by the branch diff without altering behavior.
 
 ## Workflow
 
 1. Determine the base branch for the current branch. It is often `master`, but not always — this repo uses GitButler, so consult GitButler state to find the real base rather than assuming.
 2. Get the diff of the current branch against that base.
-3. Scan only the added/removed lines for the slop patterns below.
+3. Use added and removed lines to identify slop introduced by this diff.
 4. Fix the clearest cases, then summarize in 1–3 sentences.
 
 ## What counts as slop here
@@ -26,6 +26,8 @@ Remove AI-generated cruft from the branch diff, touching **only changed lines**,
 
 ## Guardrails
 
-- Match the surrounding file rather than imposing a global style. Consistency over verbosity.
-- No behavior changes except an obvious bug fix (wrong condition, off-by-one).
+- Match the surrounding file rather than imposing a global style.
+- Do not change behavior. Report a suspected bug separately.
+- Edit nearby unchanged lines only when the smallest behavior-preserving cleanup of
+  diff-introduced slop requires it. Do not clean pre-existing slop.
 - When many instances exist, fix the clearest and stop — no whole-function rewrites.

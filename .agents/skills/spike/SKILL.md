@@ -1,8 +1,8 @@
 ---
 name: spike
 description: >
-  Resolve one unknown with the cheapest throwaway experiment, then leave a durable
-  finding in ~/engineering/spikes/. The experiment is disposable; the finding is the artifact.
+  Resolve one genuine unknown that needs time-boxed independent exploration, then leave a
+  durable finding in ~/engineering/spikes/. The experiment is disposable.
   Trigger on "spike <unknown>", "/spike", "capture this finding", or when another skill
   hands off an unresolved question. NOT for casual mentions of "research"/"investigation".
 ---
@@ -10,6 +10,9 @@ description: >
 
 A spike answers **one** unknown with throwaway work and keeps only the answer.
 You are the investigator, not the scribe: run the experiment, then leave the receipt.
+
+If one runtime claim can be settled inside the caller's task, use `hypothesize` and return
+the verdict there. Use a spike when the exploration or answer needs its own durable life.
 
 ## Loop
 1. **Sharpen the unknown** — one question, phrased so it can be answered *wrong*. Fuzzy → sharpen before touching code.
@@ -23,6 +26,9 @@ You are the investigator, not the scribe: run the experiment, then leave the rec
 ## Boundary
 `spikes/` holds the answer. Raw material that convinced you — query output, dumps,
 transcripts — belongs in the vault's `artifacts/`, linked from `## Evidence`.
+
+A reproduction shows that a mechanism can produce the tested result. It does not prove that
+the mechanism caused a past incident without historical evidence that connects them.
 
 ## The artifact
 ```markdown

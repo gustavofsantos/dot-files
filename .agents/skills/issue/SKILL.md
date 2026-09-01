@@ -9,11 +9,9 @@ description: >
 
 # issue
 
-A tracked work item is a single markdown file. Everything it produces — notes,
-transcripts, data, diagrams — is a separate file in `artifacts/`, linked from the
-issue. A spike is the exception: the `spike` skill writes it to `spikes/`, and the
-issue links it the same way. Issues move between states. Artifacts and spikes never
-move.
+A tracked work item is one Markdown file. It owns the work delta, tasks, and completion
+state. Raw evidence stays in `artifacts/`. Durable answers to one unknown stay in `spikes/`.
+The issue links both but does not duplicate their content.
 
 The vault is `$ENGINEERING_HOME`, which defaults to `~/engineering`. Every path below is relative to it.
 
@@ -39,15 +37,13 @@ status field.
 
 ## Naming
 
-`YYYY-MM-DD-kebab-case-imperative-phrase` — for issues and artifacts alike.
+Use `YYYY-MM-DD-kebab-case-imperative-phrase` for issues.
 
 The date is the creation date and never changes. No sequential numbers: allocating
 one requires enumerating the whole namespace, which races across concurrent sessions
 and fails in weaker agents. The clock needs no coordinator.
 
-On an artifact, the date prefix is what makes staleness visible in a flat folder.
-On an issue, it means a stale link still resolves by globbing the date prefix if the
-title is later revised.
+The date helps a stale issue link resolve by prefix if the title changes later.
 
 ## Operating loop
 
@@ -120,10 +116,9 @@ by the vault, so an artifact needs no knowledge of its issue.
 An artifact serving a second issue is simply linked twice — nothing moves, nothing
 is promoted.
 
-`artifacts/` holds raw material: what was observed. `spikes/` holds answers: what is
-now known, one falsifiable question per file. Both are linked from `## Artifacts`,
-and a `[[wikilink]]` resolves regardless of folder, so the split costs the reader
-nothing.
+`artifacts/` holds raw evidence and observations. The workflow that creates an evidence
+file owns its content. `spikes/` holds durable answers, one falsifiable question per file.
+The issue owns only the links and the reason each item matters to the work.
 
 ## Invariants
 
@@ -142,10 +137,9 @@ nothing.
 - **Prose is budgeted.** No section exceeds one short paragraph. When a section
   wants to grow, the content belongs in an artifact behind an `## Artifacts` line,
   or it wanted to be a diagram. Length is not thoroughness.
-- **Issues hold deltas, not system state.** A diagram here describes the change or
-  the failing path, and is frozen at close. A diagram of how the system works today
-  belongs in the `Topology` section of the project brief. Such a diagram goes stale
-  within weeks, and a stale diagram in a closed issue still looks authoritative.
+- **Issues hold deltas, not system state.** A diagram here describes the change or the
+  failing path and freezes at close. A current business or system workflow belongs in the
+  standalone files owned by `biz-workflows`. A project brief links those files.
 - **Sections are composed, not selected from a fixed set.** The list in
   `references/sections.md` is a vocabulary, not an enum. Add a new section when the
   work needs one. Do not force work into an existing shape.

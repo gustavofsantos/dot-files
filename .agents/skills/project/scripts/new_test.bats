@@ -56,7 +56,7 @@ teardown() {
   f=$("$SCRIPT" "$SLUG")
   grep -q '^## Objective$'          "$f"
   grep -q '^## Glossary$'           "$f"
-  grep -q '^## Topology$'           "$f"
+  grep -q '^## Workflow context$'   "$f"
   grep -q '^## Data map$'           "$f"
   grep -q '^## Standing questions$' "$f"
   grep -q '^## Key artifacts$'      "$f"

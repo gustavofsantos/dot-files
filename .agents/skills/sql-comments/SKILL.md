@@ -1,21 +1,18 @@
 ---
 name: sql-comments
-description: Add COMMENT clauses to every table and column in SQL DDL, explaining why the field exists or any non-obvious constraint rather than restating the column name. Use whenever writing or modifying a CREATE TABLE, ALTER TABLE, or other DDL statement.
+description: Add useful table and column comments to SQL DDL using the target database's established comment syntax.
 ---
 
-When writing or modifying SQL DDL, always add `COMMENT` clauses to tables and columns.
+# SQL Comments
 
-```sql
--- Good
-CREATE TABLE contract (
-  id          BIGINT      NOT NULL COMMENT 'Internal surrogate key',
-  external_id VARCHAR(36) NOT NULL COMMENT 'UUID exposed to external systems',
-  status      VARCHAR(20) NOT NULL COMMENT 'lifecycle state: active | terminated | suspended'
-) COMMENT = 'Lease agreements between landlord and tenant';
+When the repository or user requires schema comments, identify the target SQL dialect from
+the existing DDL, migration tool, or database configuration. Match its syntax.
 
--- Also valid (ALTER)
-ALTER TABLE invoice
-  MODIFY COLUMN due_amount DECIMAL(15,2) NOT NULL COMMENT 'Amount owed in BRL cents';
-```
+- MySQL and MariaDB can use inline `COMMENT` clauses.
+- PostgreSQL uses separate `COMMENT ON TABLE` and `COMMENT ON COLUMN` statements.
+- SQL Server commonly uses extended properties.
+- If the dialect has no established comment form, ask before adding non-portable syntax.
 
-Keep comments short (one line) and focus on *why the field exists* or any non-obvious constraints — not just a restatement of the column name.
+Comment each table and column covered by the local policy. Explain why it exists or name a
+non-obvious unit, lifecycle, privacy boundary, or constraint. Do not restate the identifier.
+Keep comments short and preserve the repository's migration style.
