@@ -1,6 +1,7 @@
 ---
 name: smelly-test
 description: Steer test-writing toward tests that document and enforce business behavior. Use whenever writing new tests, reviewing tests, or changing business logic (domain rules, invariants, calculations, state transitions, validation). Trigger even on a bare "add a test" or "make sure this works" — the steer is that each test names the invariant it protects and reads as a rule a domain expert would recognize, not a mirror of the implementation. Skip for pure test plumbing (fixtures, CI, mocking setup) with no behavioral assertion.
+disable-model-invocation: true
 ---
 
 # Smelly Test

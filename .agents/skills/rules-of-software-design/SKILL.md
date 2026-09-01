@@ -1,6 +1,7 @@
 ---
 name: rules-of-software-design
 description: Use when designing software, either in plan mode or execution mode.
+disable-model-invocation: true
 ---
 
 # Design Defaults

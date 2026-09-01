@@ -1,6 +1,7 @@
 ---
 name: rules-of-refactoring
 description: After green tests and a behavior commit, flock alike code into a separate refactor commit
+disable-model-invocation: true
 ---
 
 # Way of refactoring — flock after green, commit separately
