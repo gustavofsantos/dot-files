@@ -4,3 +4,5 @@ __pycache__/
 
 # Per-machine private hook overrides (never committed)
 .agent-hooks.local.yml
+
+.DS_Store
