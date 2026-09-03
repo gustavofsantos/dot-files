@@ -3,7 +3,6 @@ name: rules-of-logging
 description: >
   Apply a focused logging profile with safe fields, bounded volume, structured events, and
   single-owner error reporting.
-disable-model-invocation: true
 ---
 
 # Logging

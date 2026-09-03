@@ -6,6 +6,7 @@ description: >-
   vocabulary, conceptual models, ownership boundaries, invariants, misleading
   interpretations, and evidence must travel across projects. Do not use for
   general behavioral or technical-method skills.
+disable-model-invocation: true
 ---
 
 # Domain Skill Creator

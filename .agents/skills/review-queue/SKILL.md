@@ -4,6 +4,7 @@ description: >
   Pull submitted reviews and standalone comments from the `review` queue. Work each
   comment and record its result. Use when the user asks to pull reviews, check the
   review queue, or address notes left on code. NOT for producing a new code review.
+disable-model-invocation: true
 ---
 
 # review-queue

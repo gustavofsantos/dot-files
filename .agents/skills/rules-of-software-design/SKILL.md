@@ -1,7 +1,6 @@
 ---
 name: rules-of-software-design
 description: Steer a change toward the smallest vertical design with boundaries justified by real consumers.
-disable-model-invocation: true
 ---
 
 # Design Defaults

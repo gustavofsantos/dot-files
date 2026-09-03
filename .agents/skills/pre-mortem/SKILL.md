@@ -1,7 +1,6 @@
 ---
 name: pre-mortem
 description: Before implementation, expose the most credible failure modes and mitigate the ones that could invalidate the approach.
-disable-model-invocation: true
 ---
 
 # Pre-Mortem

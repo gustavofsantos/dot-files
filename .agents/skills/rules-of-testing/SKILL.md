@@ -1,7 +1,6 @@
 ---
 name: rules-of-testing
 description: Steer test level and strategy toward integration-first evidence, focused isolation, and design feedback from test friction.
-disable-model-invocation: true
 ---
 
 # Testing

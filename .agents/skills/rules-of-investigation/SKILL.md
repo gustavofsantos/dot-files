@@ -1,7 +1,6 @@
 ---
 name: rules-of-investigation
 description: Investigate observed behavior by turning inferences into testable scenarios and gathering new evidence before drawing conclusions
-disable-model-invocation: true
 ---
 
 # Rules of investigation — infer, execute, observe

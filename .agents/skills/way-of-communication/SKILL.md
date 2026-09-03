@@ -1,7 +1,6 @@
 ---
 name: way-of-communication
 description: Apply a lightweight, STE-inspired style that makes general technical prose direct and easy to scan.
-disable-model-invocation: true
 ---
 
 # Way of Communication

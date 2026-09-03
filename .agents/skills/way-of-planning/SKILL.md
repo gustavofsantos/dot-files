@@ -1,7 +1,6 @@
 ---
 name: way-of-planning
 description: Turn an agreed behavior change into testable EARS requirements and ordered vertical slices, then obtain approval before execution.
-disable-model-invocation: true
 ---
 
 # Way of Planning

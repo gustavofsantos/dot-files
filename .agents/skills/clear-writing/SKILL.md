@@ -5,6 +5,7 @@ description: >
   Optimize for factual correctness, semantic fidelity, clear structure, consistent terminology,
   readable prose, and concise presentation. Use for design docs, investigations, incident reports,
   ADRs, proposals, runbooks, technical reports, and similar company documents.
+disable-model-invocation: true
 ---
 
 # Clear Writing

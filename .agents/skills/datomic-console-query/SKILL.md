@@ -1,6 +1,7 @@
 ---
 name: datomic-console-query
 description: Produce or repair Datomic Pro Console Datalog queries that can be pasted into the browser Console Query pane. Use for ad-hoc current, as-of, since, or history inspection and for converting application or REPL queries to Console form. Do not use for Peer/Client API query code or transactions.
+disable-model-invocation: true
 ---
 
 # Datomic Console Query

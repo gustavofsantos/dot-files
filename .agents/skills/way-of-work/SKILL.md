@@ -1,7 +1,6 @@
 ---
 name: way-of-work
 description: Sequence one approved behavior slice from a failing acceptance test through red-green implementation and a behavior commit.
-disable-model-invocation: true
 ---
 
 # Way of Work
