@@ -1,0 +1,214 @@
+#!/usr/bin/env bash
+# hooks-compare — compare a Git worktree at two agent hook events.
+#
+# Usage:
+#   hooks-compare capture
+#   hooks-compare release [--files|--diff -- validation-command [args...]]
+#   hooks-compare setup
+#
+# capture records the complete non-ignored worktree (tracked, staged, and
+# untracked files) as a temporary Git tree. release compares the current tree
+# with that capture and optionally runs one validation command when it changed.
+# --files pipes one changed path per line; --diff pipes a unified Git patch.
+
+set -u
+
+PROGRAM=${0##*/}
+COMMAND=${1:-}
+
+usage() {
+  cat <<'EOF'
+usage: hooks-compare capture
+       hooks-compare release [--files|--diff -- validation-command [args...]]
+       hooks-compare setup
+EOF
+}
+
+setup_instructions() {
+  cat <<'EOF'
+hooks-compare must be available on PATH. Set AGENT in each hook command.
+Replace `validate-files` with a command that accepts one changed path per line
+on standard input. Use `--diff` instead when the command accepts a unified Git
+patch. Omit the selector and command to report changes without validation.
+
+Claude Code (~/.claude/settings.json)
+{
+  "hooks": {
+    "SessionStart": [{"hooks": [{"type": "command", "command": "AGENT=claude hooks-compare capture"}]}],
+    "Stop": [{"hooks": [{"type": "command", "command": "AGENT=claude hooks-compare release --files -- validate-files"}]}]
+  }
+}
+
+Cursor (~/.cursor/hooks.json)
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [{"command": "AGENT=cursor hooks-compare capture"}],
+    "stop": [{"command": "AGENT=cursor hooks-compare release --files -- validate-files"}]
+  }
+}
+
+Codex (~/.codex/hooks.json)
+{
+  "hooks": {
+    "SessionStart": [{"hooks": [{"type": "command", "command": "AGENT=codex hooks-compare capture"}]}],
+    "Stop": [{"hooks": [{"type": "command", "command": "AGENT=codex hooks-compare release --files -- validate-files"}]}]
+  }
+}
+
+The two events may be changed as a pair. Keep the same AGENT value and ensure
+their payloads identify the same session and working directory.
+EOF
+}
+
+case "$COMMAND" in
+  setup) setup_instructions; exit 0 ;;
+  capture|release) ;;
+  -h|--help|"") usage; [[ -n "$COMMAND" ]] && exit 0 || exit 64 ;;
+  *) printf '%s: unknown command: %s\n' "$PROGRAM" "$COMMAND" >&2; usage >&2; exit 64 ;;
+esac
+shift
+
+input_mode=""
+
+# An unconfigured hook must be invisible. Do this before reading stdin or
+# checking dependencies so it remains a true pass-through on every machine.
+[[ -n "${AGENT:-}" ]] || exit 0
+case "$AGENT" in
+  claude|cursor|codex) ;;
+  *) printf '%s: AGENT must be claude, cursor, or codex (got %s)\n' "$PROGRAM" "$AGENT" >&2; exit 64 ;;
+esac
+
+if [[ "$COMMAND" == release && $# -gt 0 ]]; then
+  case "$1" in
+    --files) input_mode=files; shift ;;
+    --diff) input_mode=diff; shift ;;
+    *) printf '%s: release expects --files or --diff before a validation command\n' "$PROGRAM" >&2; exit 64 ;;
+  esac
+  [[ ${1:-} == -- ]] || { printf '%s: expected -- before validation command\n' "$PROGRAM" >&2; exit 64; }
+  shift
+  [[ $# -gt 0 ]] || { printf '%s: validation command required after --\n' "$PROGRAM" >&2; exit 64; }
+fi
+
+command -v git >/dev/null 2>&1 || exit 0
+command -v jq >/dev/null 2>&1 || exit 0
+
+input=$(cat 2>/dev/null || true)
+json_value() {
+  printf '%s' "$input" | jq -r "$1 // empty" 2>/dev/null
+}
+
+session=$(json_value '.session_id // .conversation_id // .thread_id')
+case "$AGENT" in
+  claude) session=${CLAUDE_SESSION_ID:-$session} ;;
+  cursor) session=${CURSOR_SESSION_ID:-$session} ;;
+  codex) session=${CODEX_THREAD_ID:-${CODEX_SESSION_ID:-$session}} ;;
+esac
+
+cwd=$(json_value '.cwd // .workspace_roots[0]')
+case "$AGENT" in
+  claude) cwd=${CLAUDE_PROJECT_DIR:-${cwd:-$PWD}} ;;
+  cursor) cwd=${CURSOR_PROJECT_DIR:-${cwd:-$PWD}} ;;
+  codex) cwd=${CODEX_PROJECT_DIR:-${cwd:-$PWD}} ;;
+esac
+
+root=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null) || exit 0
+root=$(cd "$root" 2>/dev/null && pwd) || exit 0
+
+# Cursor's stop event currently omits its conversation id even though
+# sessionStart includes it. Use one worktree slot there so the documented pair
+# remains useful; Claude and Codex retain session-isolated captures.
+if [[ "$AGENT" == cursor ]]; then
+  session=worktree
+else
+  [[ -n "$session" ]] || exit 0
+fi
+
+state_root=${HOOKS_COMPARE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/hooks-compare}
+key=$(printf '%s\0%s\0%s' "$AGENT" "$session" "$root" | git hash-object --stdin)
+state_file="$state_root/$key.json"
+
+worktree_tree() {
+  local index
+  index=$(mktemp "${TMPDIR:-/tmp}/hooks-compare-index.XXXXXX") || return 1
+  rm -f "$index"
+  if GIT_INDEX_FILE=$index git -C "$root" read-tree --empty >/dev/null 2>&1 \
+    && GIT_INDEX_FILE=$index git -C "$root" add -A -- . >/dev/null 2>&1; then
+    GIT_INDEX_FILE=$index git -C "$root" write-tree 2>/dev/null
+    local result=$?
+    rm -f "$index"
+    return "$result"
+  fi
+  rm -f "$index"
+  return 1
+}
+
+if [[ "$COMMAND" == capture ]]; then
+  tree=$(worktree_tree) || exit 0
+  mkdir -p "$state_root" || exit 0
+  chmod 700 "$state_root" 2>/dev/null || true
+  tmp=$(mktemp "$state_root/.capture.XXXXXX") || exit 0
+  if jq -n --arg agent "$AGENT" --arg session "$session" --arg root "$root" \
+      --arg tree "$tree" --argjson captured_at "$(date +%s)" \
+      '{agent:$agent, session:$session, root:$root, tree:$tree, captured_at:$captured_at}' >"$tmp"; then
+    chmod 600 "$tmp" 2>/dev/null || true
+    mv "$tmp" "$state_file"
+  else
+    rm -f "$tmp"
+  fi
+  exit 0
+fi
+
+[[ -f "$state_file" ]] || exit 0
+before=$(jq -r '.tree // empty' "$state_file" 2>/dev/null)
+captured_root=$(jq -r '.root // empty' "$state_file" 2>/dev/null)
+[[ -n "$before" && "$captured_root" == "$root" ]] || exit 0
+after=$(worktree_tree) || exit 0
+git -C "$root" diff --quiet "$before" "$after" -- 2>/dev/null && exit 0
+
+name_status=$(git -C "$root" diff --name-status --find-renames "$before" "$after" -- 2>/dev/null || true)
+stat=$(git -C "$root" diff --stat --find-renames "$before" "$after" -- 2>/dev/null || true)
+files=$(git -C "$root" diff --name-only --find-renames "$before" "$after" -- 2>/dev/null || true)
+report=$(printf 'Changes since hooks-compare capture:\n%s\n\n%s' "$name_status" "$stat")
+
+validation_output=""
+validation_status=0
+if [[ $# -gt 0 ]]; then
+  if [[ "$input_mode" == files ]]; then
+    validation_input=$files
+  else
+    validation_input=$(git -C "$root" diff --no-ext-diff --find-renames "$before" "$after" -- 2>/dev/null || true)
+  fi
+  validation_output=$(printf '%s\n' "$validation_input" | (cd "$root" && "$@") 2>&1) || validation_status=$?
+fi
+
+emit_success() {
+  case "$AGENT" in
+    claude) jq -n --arg message "$report" '{systemMessage:$message}' ;;
+    cursor) jq -n --arg context "$report" '{additional_context:$context}' ;;
+    codex) jq -n --arg context "$report" \
+      '{hookSpecificOutput:{hookEventName:"Stop", additionalContext:$context}}' ;;
+  esac
+}
+
+if [[ $validation_status -eq 0 ]]; then
+  emit_success
+  exit 0
+fi
+
+message=$(printf '%s\n\nValidation failed (exit %s):\n%s' "$report" "$validation_status" "$validation_output")
+case "$AGENT" in
+  claude)
+    printf '%s\n' "$message" >&2
+    exit 2
+    ;;
+  cursor)
+    jq -n --arg message "$message" '{followup_message:$message}'
+    exit 0
+    ;;
+  codex)
+    jq -n --arg message "$message" \
+      '{decision:"block", reason:$message, hookSpecificOutput:{hookEventName:"Stop", additionalContext:$message}}'
+    exit 0
+    ;;
+esac

@@ -161,7 +161,24 @@ including the `hooks-*` scripts, so a hook is reachable by bare name from a plug
 any hook command — it names its log file from the first argument (the hook), not the last,
 so it composes with the `--harness`/`--event` flags that now follow the hook name.
 
-Some hook scripts were already cross-harness before this convention existed and support
+`hooks-compare` is the default pattern for new hooks that relate two lifecycle events.
+The first event runs `hooks-compare capture`; the second runs `hooks-compare release`,
+optionally followed by `--files` or `--diff`, `--`, and a validation command. It
+snapshots the complete Git worktree at capture time, reports only the intervening changes
+at release time, and runs the validation only then. This keeps turn-time edits free of
+repeated lint and test feedback while still returning failures to the agent at the
+boundary. Harness dispatch comes from an `AGENT=claude|cursor|codex` environment
+assignment in each hook definition;
+without `AGENT`, capture and release are silent pass-throughs. Run `hooks-compare setup`
+for ready-to-copy definitions for all three harnesses. `--files` pipes one changed path
+per line to the validation command; `--diff` pipes a unified Git patch. The validator
+needs no `hooks-compare`-specific environment contract.
+Claude and Codex captures are isolated by session. Cursor's `stop` payload currently
+omits its conversation identifier, so Cursor uses one capture slot per worktree and is
+best-effort when multiple conversations operate in that same worktree concurrently.
+
+Older hooks may still use the earlier explicit `--harness` convention. Some were already
+cross-harness before `hooks-compare` existed and support
 real `--harness cursor` input (`hooks-session-track`, `hooks-session-log`,
 `hooks-engineering-autocommit`, `hooks-checks-snapshot`) — that's a fact about the script,
 independent of whether anything currently wires it in. One real limitation surfaced along
