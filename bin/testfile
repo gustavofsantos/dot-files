@@ -44,17 +44,10 @@ if [ ${#file_paths[@]} -eq 0 ]; then
     exit 0
 fi
 
-# Group files by project
-beyond_tests=()
-web_tests=()
 seubarriga_tests=()
 
 for file_path in "${file_paths[@]}"; do
-    if [[ "$file_path" == *"/opt/loggi/py/apps/beyond/"* ]]; then
-        beyond_tests+=("$file_path")
-    elif [[ "$file_path" == *"/opt/loggi/web/"* ]]; then
-        web_tests+=("$file_path")
-    elif [[ "$current_dir" == *"/Workplace/seubarriga"* ]] && [[ "$file_path" == test/* ]] && [[ "$file_path" == *.clj ]]; then
+    if [[ "$current_dir" == *"/Workplace/seubarriga"* ]] && [[ "$file_path" == test/* ]] && [[ "$file_path" == *.clj ]]; then
         seubarriga_tests+=("$file_path")
     fi
 done
@@ -73,30 +66,6 @@ if [ ${#seubarriga_tests[@]} -gt 0 ]; then
     if ! eval "$test_command"; then
         exit_code=1
     fi
-fi
-
-# Run beyond tests individually
-if [ ${#beyond_tests[@]} -gt 0 ]; then
-    envs="UNLEASH_URL=http://localhost:4242/api APP_DB_HOST=localhost POSTGRES_HOST=localhost POSTGRES_DB=dev_db POSTGRES_PASSWORD=[REDACTED:password] POSTGRES_HOST=localhost POSTGRES_PORT=5432"
-    
-    for file_path in "${beyond_tests[@]}"; do
-        test_arg="$(echo "$file_path" | sed 's/\/opt\/loggi\/py\/apps\/beyond\///')"
-        test_command="$envs poetry run pytest -x --disable-warnings -q --ds beyond_app.settings.test $test_arg"
-        if ! eval "$test_command"; then
-            exit_code=1
-        fi
-    done
-fi
-
-# Run web tests individually
-if [ ${#web_tests[@]} -gt 0 ]; then
-    for file_path in "${web_tests[@]}"; do
-        test_arg="$(echo "$file_path" | sed 's/\/opt\/loggi\/web\/loggi\///')"
-        test_command="docker compose exec -e DJANGO_SETTINGS_MODULE=settings.test loggi_web_app pytest -x --disable-warnings -q $test_arg"
-        if ! eval "$test_command"; then
-            exit_code=1
-        fi
-    done
 fi
 
 exit $exit_code
