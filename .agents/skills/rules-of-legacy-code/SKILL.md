@@ -12,11 +12,11 @@ When this skill is invoked, treat the code in scope as legacy. Existing behavior
 
 Trace the bounded effect surface of the proposed edit:
 
-- Entry points, callers, triggers, and reachable branches the edit can influence.
-- Downstream calls, outputs, state changes, persistence, and external side effects.
-- Data, configuration, failure, retry, ordering, timing, and concurrency contracts when they can be affected.
-- Existing tests and relevant source, schema, configuration, or runtime evidence.
-- Observed behavior that must remain distinct from behavior the request intends to change.
+1. Entry points, callers, triggers, and reachable branches the edit can influence.
+2. Downstream calls, outputs, state changes, persistence, and external side effects.
+3. Data, configuration, failure, retry, ordering, timing, and concurrency contracts when they can be affected.
+4. Existing tests and relevant source, schema, configuration, or runtime evidence.
+5. Observed behavior that must remain distinct from behavior the request intends to change.
 
 The picture is complete when every consequential effect the edit can alter is supported by evidence through a stable observable boundary. This does not require understanding the whole system. Expand the picture only along affected paths.
 
