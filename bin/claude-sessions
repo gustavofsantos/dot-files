@@ -199,21 +199,23 @@ def discover() -> list[dict]:
     return sessions
 
 
-def age(secs: int) -> str:
-    if secs < 60:    return f"{secs}s"
-    if secs < 3600:  return f"{secs // 60}m"
-    if secs < 86400: return f"{secs // 3600}h"
-    return f"{secs // 86400}d"
+def display_dir(path: str) -> str:
+    """Use a home-relative path when the directory is inside the home dir."""
+    home = os.path.expanduser("~").rstrip(os.sep)
+    if path == home:
+        return "~"
+    if path.startswith(f"{home}{os.sep}"):
+        return f"~{path[len(home):]}"
+    return path
 
 
 def render_line(s: dict) -> str:
     dot    = f"{YELLOW}●{RESET}" if s["waiting"] else f"{GREEN}●{RESET}"
     tag    = f"{DIM}{s['tag']}{RESET}"
-    name   = s["label"][:36]
-    status = f"{YELLOW}waiting{RESET}" if s["waiting"] else f"{GREEN}active{RESET}"
+    name   = s["label"][:60]
     loc    = f"{s['session']}:{s['window']}"
-    dirs   = f"{DIM}{s['dir']}{RESET}"
-    return f"{dot} {tag}  {name:<38}  {status:<18}  {age(s['age']):<5}  {loc:<20}  {dirs}"
+    dirs   = f"{DIM}{display_dir(s['dir'])}{RESET}"
+    return f"{dot} {tag}  {name:<62}  {loc:<20}  {dirs}"
 
 
 def run_fzf(sessions: list[dict]) -> dict | None:
@@ -228,7 +230,7 @@ def run_fzf(sessions: list[dict]) -> dict | None:
              "--prompt=  agents › ", "--header=Enter: jump to agent   Esc: dismiss",
              "--height=100%", "--margin=1,2",
              "--preview", "claude-session-preview {1}",
-             "--preview-window", "right:50%:wrap"],
+             "--preview-window", "bottom:50%:wrap"],
             input="\n".join(lines).encode(),
             capture_output=True,
         )
