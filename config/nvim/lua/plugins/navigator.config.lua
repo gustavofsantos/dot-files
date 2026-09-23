@@ -1,11 +1,6 @@
-return {
-  "numToStr/Navigator.nvim",
-  opts = {},
-  cmd = { "NavigatorLeft", "NavigatorRight", "NavigatorUp", "NavigatorDown" },
-  keys = {
-    { "<C-h>", "<cmd>NavigatorLeft<cr>" },
-    { "<C-l>", "<cmd>NavigatorRight<cr>" },
-    { "<C-k>", "<cmd>NavigatorUp<cr>" },
-    { "<C-j>", "<cmd>NavigatorDown<cr>" }
-  }
-}
+require("Navigator").setup({})
+
+vim.keymap.set("n", "<C-h>", "<cmd>NavigatorLeft<cr>")
+vim.keymap.set("n", "<C-l>", "<cmd>NavigatorRight<cr>")
+vim.keymap.set("n", "<C-k>", "<cmd>NavigatorUp<cr>")
+vim.keymap.set("n", "<C-j>", "<cmd>NavigatorDown<cr>")

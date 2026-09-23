@@ -274,9 +274,9 @@ Re-run `ai-stats-import` to refresh (live sessions whose transcript is still gro
 
 ## Neovim config
 
-Entry point: `config/nvim/init.lua` → loads `config/options`, `pack`, `config/keymaps`, `config/autocmds`, `config/lazy`.
+Entry point: `config/nvim/init.lua` → loads `config/options`, `config/keymaps`, `config/autocmds`, `config/pack`.
 
-Plugin configs live in `config/nvim/lua/plugins/*.config.lua`. Leader is `<Space>`, local leader is `,`.
+Plugins are managed by Neovim's native `vim.pack` (0.12+), pinned in `config/nvim/nvim-pack-lock.json`. `config/pack.lua` installs and loads plugins at startup with one `vim.pack.add`. It then sources every file in `lua/plugins/` by path; these files are plain setup code, not specs. Plugins that load only for one filetype are added with a no-op `load`, and their `after/ftplugin/<ft>.lua` loads them through `require("utils").packadd(names, setup)`. That helper runs once per session and replays the FileType autocmds the plugin registered, so the first buffer does not miss them. Build steps (`make`, `:TSUpdate`) run from a `PackChanged` autocmd. Leader is `<Space>`, local leader is `,`.
 
 ## Key environment variables (set in `.zshenv`)
 

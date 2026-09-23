@@ -37,6 +37,42 @@ function M.get_current_visual_selection()
   return selected_text
 end
 
+local packadded = {}
+
+-- Load opt plugins from an ftplugin, once per session. The current FileType
+-- event has already fired, so replay it for the autocmd groups the plugins
+-- (or setup) just registered, or the first buffer would miss them.
+function M.packadd(names, setup)
+  local key = table.concat(names, ",")
+  if packadded[key] then
+    return
+  end
+  packadded[key] = true
+
+  local known = {}
+  for _, au in ipairs(vim.api.nvim_get_autocmds({ event = "FileType" })) do
+    if au.group then
+      known[au.group] = true
+    end
+  end
+
+  for _, name in ipairs(names) do
+    vim.cmd.packadd(name)
+  end
+  if setup then
+    setup()
+  end
+
+  local replay = {}
+  for _, au in ipairs(vim.api.nvim_get_autocmds({ event = "FileType" })) do
+    if au.group and not known[au.group] then
+      replay[au.group] = true
+    end
+  end
+  for group in pairs(replay) do
+    vim.api.nvim_exec_autocmds("FileType", { group = group, pattern = vim.bo.filetype, modeline = false })
+  end
+end
 
 function M.blend_colors(base, target, ratio)
   local r1, g1, b1 = base:match("#(%x%x)(%x%x)(%x%x)")

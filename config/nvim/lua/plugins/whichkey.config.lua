@@ -1,16 +1,10 @@
-return {
-    "folke/which-key.nvim",
-    event = "VeryLazy",
-    config = function()
-      local wk = require("which-key")
-      wk.setup({})
+local wk = require("which-key")
+wk.setup({})
 
-      wk.add({
-        { "<leader>c", group = "Review" },
-        { "<leader>d", group = "Diff" },
-        { "<leader>q", group = "Query" },
-        { "<leader>t", group = "Test" },
-        { "<leader>v", group = "Version Control" }
-      })
-    end,
-  }
+wk.add({
+  { "<leader>c", group = "Review" },
+  { "<leader>d", group = "Diff" },
+  { "<leader>q", group = "Query" },
+  { "<leader>t", group = "Test" },
+  { "<leader>v", group = "Version Control" }
+})

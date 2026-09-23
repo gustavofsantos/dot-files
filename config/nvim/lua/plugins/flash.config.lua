@@ -1,9 +1,4 @@
-return {
-  "folke/flash.nvim",
-  event = "VeryLazy",
-  opts = {},
-  keys = {
-    { "s", mode = { "n", "x", "o" }, function() require("flash").jump() end,       desc = "Flash" },
-    { "S", mode = { "n", "x", "o" }, function() require("flash").treesitter() end, desc = "Flash Treesitter" },
-  }
-}
+require("flash").setup({})
+
+vim.keymap.set({ "n", "x", "o" }, "s", function() require("flash").jump() end, { desc = "Flash" })
+vim.keymap.set({ "n", "x", "o" }, "S", function() require("flash").treesitter() end, { desc = "Flash Treesitter" })
