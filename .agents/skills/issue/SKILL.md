@@ -1,149 +1,73 @@
 ---
 name: issue
 description: >
-  Create or update a tracked work item in ~/engineering/issues/. Trigger only on
-  explicit intent to file work: "create an issue", "file a bug", "track this as an issue",
-  "new story", "new feature", "/issue", or when another skill says to invoke the issue skill.
-  Does NOT trigger on casual code discussion that mentions the word "issue".
+  Create or update a tracked work item in ~/engineering/issues/. Only on explicit intent to
+  file work ("create an issue", "file a bug", "new story", "/issue") or a handoff from another
+  skill, not on casual mentions of the word "issue".
 ---
 
 # issue
 
-A tracked work item is one Markdown file. It owns the work delta, tasks, and completion
-state. Raw evidence stays in `artifacts/`. Durable answers to one unknown stay in `spikes/`.
-The issue links both but does not duplicate their content.
+One Markdown file per work item in `${ENGINEERING_HOME:-$HOME/engineering}/issues/`. It owns
+the work delta, tasks, and completion state. It links raw evidence in `artifacts/` and
+durable answers in `spikes/`, but does not copy them.
 
-The vault is `$ENGINEERING_HOME`, which defaults to `~/engineering`. Every path below is relative to it.
+State is location only, with no status field: `issues/backlog/` → `issues/` → `issues/done/`.
+Name files `YYYY-MM-DD-kebab-case-imperative-phrase`. The date is the creation date and never
+changes. Never use sequential numbers.
 
-```
-$ENGINEERING_HOME/
-├── issues/
-│   ├── 2026-08-04-extract-ledger-projection.md      ← active
-│   ├── backlog/
-│   │   └── 2026-07-22-characterize-fee-rounding.md  ← planned, not started
-│   └── done/
-│       └── 2026-06-30-retry-storm-in-settlement.md
-├── artifacts/
-│   ├── 2026-08-04-ledger-retry-sequence.md
-│   └── 2026-06-30-settlement-load-profile.csv
-└── spikes/
-    └── 2026-08-04-does-the-projection-replay.md
-```
+## Loop
 
-Three locations, three states. Moving the file is the only transition. An issue carries no
-status field.
-
-`backlog/` → `issues/` → `done/`
-
-## Naming
-
-Use `YYYY-MM-DD-kebab-case-imperative-phrase` for issues.
-
-The date is the creation date and never changes. No sequential numbers: allocating
-one requires enumerating the whole namespace, which races across concurrent sessions
-and fails in weaker agents. The clock needs no coordinator.
-
-The date helps a stale issue link resolve by prefix if the title changes later.
-
-## Operating loop
-
-1. **Search first** — `rg -il 'term' "${ENGINEERING_HOME:-$HOME/engineering}/issues/" 2>/dev/null` — searches
-   active, backlog and done. If a similar item exists, update it instead of creating
-   a duplicate. This is the only guard against near-duplicate names. Do not skip it.
-2. **Create the file** — in `issues/` if starting now, in `issues/backlog/` if
-   filing for later.
-3. **Decide what kind of work this is** — bug, investigation, prototype,
-   characterization, implementation, or something with no name yet. This decision
-   selects which optional sections to add. Do not record it as a field.
-4. **Write the kernel** (below). Add optional sections from
-   [references/sections.md](references/sections.md) as the work warrants.
-   Fill missing fields conversationally — ask only what cannot be inferred.
+1. **Search first.** Run `rg -il 'term' "${ENGINEERING_HOME:-$HOME/engineering}/issues/"`. If
+   a match exists, update it instead of creating a duplicate.
+2. Create the file in `issues/` (starting now) or `issues/backlog/` (later).
+3. Write the kernel. Add optional sections from
+   [references/sections.md](references/sections.md) as the kind of work needs them. Ask only
+   for what you cannot infer.
 
 ## Kernel
 
-Every issue has exactly these, in this order:
-
 ```markdown
 ---
-paths: []            # absolute paths to work in — repo roots, or sub-directories
-                     # inside a monorepo. List the primary one first.
-project:             # optional slug. The project brief this work belongs to.
-tags: []             # open vocabulary, for scanning
+paths: []            # absolute work paths (repo roots or monorepo subdirs), primary first
+project:             # optional project brief slug; members.sh derives the reverse
+tags: []
 created: YYYY-MM-DD
 ---
 
 ## Objective
-One sentence. What this work is for.
+One sentence.
 
 ## Context
-What situation or observation created this. 2–4 sentences.
+2–4 sentences on what created this.
 
 ## Model
-One mermaid diagram: the shape of the work. Before/after where something changes,
-the failing path for a defect, the region under question for an investigation.
-If the work touches a single point and has no sequence, write
-`Single-point change: {what}` and draw nothing.
+One mermaid diagram: before/after, the failing path, or the region in question.
+Or `Single-point change: {what}` with no diagram.
 
 ## Done when
-The observable condition that ends this issue. Specific enough to check without
-re-reading the whole file.
+An observable, checkable condition.
 
 ## Tasks
-- [ ] Present-tense imperative, one action, completable in one agent turn
+- [ ] Imperative, one action, one agent turn
 
 ## Artifacts
-- [[2026-08-04-ledger-retry-sequence]] — what it is and why it exists
+- [[2026-08-04-ledger-retry-sequence]] — what it is and why it matters
 ```
 
-Optional sections go between `Tasks` and `Artifacts`, except sections that record
-outcomes (`Findings`, `Decision`, `Resolution`), which go after `Artifacts`.
-
-`paths:` locates the work. It does not describe repository structure. A monorepo
-sub-directory is just a path. Anything needing a git root derives it —
-`git rev-parse --show-toplevel` — rather than having it declared here.
-
-`project:` names the project brief in `projects/` that this work
-belongs to. Leave it out for work that stands alone. The link is authored here
-only: the brief keeps no list of its issues, and the `project` skill derives
-membership from this field.
-
-## Artifacts
-
-Written to `artifacts/`, date-prefixed, linked from the issue that
-produced them. The link is authored in one direction only. The reverse is derived
-by the vault, so an artifact needs no knowledge of its issue.
-
-An artifact serving a second issue is simply linked twice — nothing moves, nothing
-is promoted.
-
-`artifacts/` holds raw evidence and observations. The workflow that creates an evidence
-file owns its content. `spikes/` holds durable answers, one falsifiable question per file.
-The issue owns only the links and the reason each item matters to the work.
+Optional sections go between `Tasks` and `Artifacts`. Outcome sections (`Findings`,
+`Decision`, `Resolution`) go after `Artifacts`.
 
 ## Invariants
 
-- **`Done when` must be checkable.** "Investigate the retry path" is not a
-  condition. "the retry path's failure modes are written up in an artifact" is.
-  A vague `Done when` is design feedback — the work is not understood yet. Say so
-  rather than writing a placeholder.
-- **No unlinked artifacts.** Every file written to `artifacts/` is linked from at
-  least one issue, with a line saying what it is. An unlinked artifact is invisible
-  to later sessions, and unindexed context is worse than no context.
-- **Draw structure, write judgment.** Anything that is structure, sequence, state,
-  or flow is a diagram. Prose that narrates a call path, a lifecycle, or an ordering
-  is a bug — replace it with the diagram it was describing. Rationale, intent,
-  hypotheses and decisions stay prose, and stay short. See the diagram vocabulary in
-  `references/sections.md`.
-- **Prose is budgeted.** No section exceeds one short paragraph. When a section
-  wants to grow, the content belongs in an artifact behind an `## Artifacts` line,
-  or it wanted to be a diagram. Length is not thoroughness.
-- **Issues hold deltas, not system state.** A diagram here describes the change or the
-  failing path and freezes at close. A current business or system workflow belongs in the
-  standalone files owned by `biz-workflows`. A project brief links those files.
-- **Sections are composed, not selected from a fixed set.** The list in
-  `references/sections.md` is a vocabulary, not an enum. Add a new section when the
-  work needs one. Do not force work into an existing shape.
+- `Done when` must be checkable. A vague one means the work isn't understood yet. Say so.
+- Every file written to `artifacts/` is date-prefixed and linked from at least one issue with
+  a reason. Links go one way only: from the issue to the artifact.
+- Draw structure and write judgment. Sequences, states, and flows are diagrams. Rationale and
+  decisions stay as short prose.
+- No section exceeds one short paragraph. Push overflow into an artifact.
+- Issues hold deltas. Current workflows belong to `biz-workflows`.
 
 ## Closing
 
-Add `## Resolution`, then move the file into `done/`. Artifacts stay where they are.
+Add `## Resolution`, then move the file to `done/`. Artifacts stay where they are.

@@ -70,8 +70,10 @@ and the `review-queue` skill), the command stays short and the skill carries the
 neither is the store, the underlying script is.
 
 There is no separate rules mechanism. Focused steering and workflow profiles are skills.
-The `rules-of-*`, `smelly-*`, and `way-of-*` families are manual profiles with
-`disable-model-invocation: true`. Scenario skills can activate when a request matches their
+The `rules-of-*` and `way-of-*` families stay model-invocable on purpose, so their
+descriptions must name a narrow, focused effect. The `smelly-*` family and
+`rules-of-legacy-code` are manual profiles with `disable-model-invocation: true`. Scenario
+skills can activate when a request matches their
 narrow boundary. Review and end-gate skills remain explicit when automatic use could take
 over another task.
 
