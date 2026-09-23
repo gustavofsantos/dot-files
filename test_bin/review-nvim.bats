@@ -4,15 +4,15 @@ PLUGIN="$BATS_TEST_DIRNAME/../config/nvim/after/plugin/review.lua"
 
 setup() {
   TEST_ROOT=$(mktemp -d)
-  CAPTURE="$TEST_ROOT/review-args"
-  REVIEW_STUB="$TEST_ROOT/review"
+  CAPTURE="$TEST_ROOT/rvw-args"
+  RVW_STUB="$TEST_ROOT/rvw"
   export CAPTURE
 
   printf '%s\n' \
     '#!/bin/sh' \
     'printf "%s\n" "$@" >"$CAPTURE"' \
-    'printf "rv1\n"' >"$REVIEW_STUB"
-  chmod +x "$REVIEW_STUB"
+    'printf "rv1\n"' >"$RVW_STUB"
+  chmod +x "$RVW_STUB"
 }
 
 teardown() {
@@ -20,7 +20,7 @@ teardown() {
 }
 
 @test "Neovim submits an optional review without changing review-comment entry" {
-  run env REVIEW_CMD="$REVIEW_STUB" NVIM_LOG_FILE="$TEST_ROOT/nvim.log" nvim --headless -u NONE \
+  run env RVW_CMD="$RVW_STUB" NVIM_LOG_FILE="$TEST_ROOT/nvim.log" nvim --headless -u NONE \
     -c "source $PLUGIN" \
     -c "if exists(':ReviewAdd') != 2 | cquit 11 | endif" \
     -c "ReviewSubmit request-changes" \

@@ -65,9 +65,9 @@ A plugin's `commands/` directory holds flat markdown files, one per slash comman
 `commands/<name>.md` becomes `/<name>` in both harnesses. Claude Code auto-discovers the
 directory; Cursor is declared the same way its hooks are, with `"commands": "./commands/"`
 in `.cursor-plugin/plugin.json`. A command is the explicit entry point a human types; a
-skill is what the model reaches for on its own. When both exist for one workflow (`/review`
-and the `review-queue` skill), the command stays short and the skill carries the rules —
-neither is the store, the underlying script is.
+skill is what the model reaches for on its own. When both exist for one workflow, the
+command stays short and the skill carries the rules — neither is the store, the underlying
+script is.
 
 There is no separate rules mechanism. Focused steering and workflow profiles are skills.
 The `rules-of-*` and `way-of-*` families stay model-invocable on purpose, so their
@@ -200,10 +200,17 @@ code and pulled by whatever agent you are running next door. It replaced the old
 is no flush and no clipboard hop anymore — a comment is queued the moment you write it, and
 the agent takes it from the queue.
 
+`bin/review` is now legacy: its successor is `rvw` (Go + SQLite, `~/Projects/rvw`,
+installed with `make install` into `~/go/bin/rvw`, store `~/.local/share/rvw/rvw.db`),
+which keeps the same subcommands and flags but reads no environment variables — lane,
+author, workspace and store are flags only. The editor plugin and the agent side both
+target `rvw`; `bin/review` stays only until any pending `~/.reviews` notes are drained. The
+rest of this section describes the shared model and the legacy script.
+
 The queue is the single source of truth. `config/nvim/after/plugin/review.lua` keeps **no**
-copy of it: it shells out to `review` for every read and acts on comments by id, so a
+copy of it: it shells out to `rvw` for every read and acts on comments by id, so a
 comment added from nvim, from a shell, or from another nvim instance shows up in all of
-them. Signs are redrawn from `review list --format json --file <path>` (async, on
+them. Signs are redrawn from `rvw list --format json --all-lanes --file <path>` (async, on
 `BufEnter`/`BufWritePost`/`FocusGained`, or `:ReviewRefresh`).
 
 | Piece | What it does |
@@ -240,14 +247,16 @@ survive a `clear` of the pending queue.
 
 Editor commands: `:ReviewAdd` (range-aware, `<CR>` in Visual mode), `:ReviewList`
 (`<leader>co`), `:ReviewEdit` (`<leader>ce`), `:ReviewDelete` (`<leader>cd`), `:ReviewClear`
-(`<leader>cx`), `:ReviewRefresh` (`<leader>cr`). `$REVIEW_CMD` overrides which binary the
-plugin calls.
+(`<leader>cx`), `:ReviewRefresh` (`<leader>cr`), `:ReviewSubmit <decision>`. `$RVW_CMD`
+overrides which binary the plugin calls (default `rvw`) — e.g. a wrapper running
+`rvw --db <scratch>.db "$@"` to test against a throwaway store. The editor passes no
+`--lane`, so comments added from nvim are unlaned. Tests: `bats test_bin/review-nvim.bats`.
 
-On the agent side there are two entry points over the same CLI, both in
-`agents/plugins/gustavofsantos/`: the `/review` command (`commands/review.md`) when you want
-to say "go work my comments", and the `review-queue` skill (`skills/review-queue/`) which the
-model triggers on its own when you mention notes you left. Both drain the queue with
-`review pull` and report back by id. Tests: `bats test_bin/review.bats`.
+On the agent side, the `rvw` plugin (`/plugin install rvw@rvw`, skill `rvw:rvw`, source in
+`~/Projects/rvw/skills/rvw/`) covers both directions: working the queue (`rvw pull`, then
+`resolve`/`reject` by id) and reviewing code to leave comments for another agent
+(`rvw add` + `rvw submit`). Nothing in this repo wraps it. Legacy script tests:
+`bats test_bin/review.bats`.
 
 ## GitButler provenance hooks
 

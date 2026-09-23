@@ -1,17 +1,17 @@
 --- Review: annotate code where you read it and queue the notes for whatever
 --- coding agent you are running next door.
 ---
---- This plugin is stateless. Every comment lives in the `review` queue (see
---- `review --help`), keyed by workspace; the plugin only draws what the command
+--- This plugin is stateless. Every comment lives in the `rvw` queue (see
+--- `rvw --help`), keyed by workspace; the plugin only draws what the command
 --- reports and acts on it by id. Nothing is duplicated in memory, so a comment
 --- added here, from a shell, or from another nvim shows up in all of them.
 ---
 --- Workflow:
 ---   1. Select a region in Visual mode, press <CR> -> a floating input opens.
----   2. Type your comment. <C-s> queues it (`review add`) and drops a sign in
+---   2. Type your comment. <C-s> queues it (`rvw add`) and drops a sign in
 ---      the sign column; <C-c> cancels. <Esc> only leaves insert mode -- it
 ---      never throws the text away.
----   3. The agent runs `review pull`, which dequeues everything and hands it
+---   3. The agent runs `rvw pull`, which dequeues everything and hands it
 ---      over. Pulled comments disappear from the signs on the next refresh.
 ---
 --- @class Review
@@ -30,8 +30,9 @@ local M = {}
 
 M._ns = vim.api.nvim_create_namespace("review")
 
---- The queue command. Override with $REVIEW_CMD (e.g. a checkout under test).
-M.cmd = vim.env.REVIEW_CMD or "review"
+--- The queue command. Override with $RVW_CMD (e.g. a checkout under test, or a
+--- wrapper that passes `--db`).
+M.cmd = vim.env.RVW_CMD or "rvw"
 
 local SIGN_TEXT = "💬"
 local REVIEW_DECISIONS = { "comment", "approve", "request-changes" }
@@ -55,7 +56,11 @@ local function executable()
     return true
   end
   vim.notify(
-    string.format("Review: `%s` is not on $PATH -- run ./setup.sh to link bin/", M.cmd),
+    string.format(
+      "Review: `%s` is not on $PATH -- run `make install` in ~/Projects/rvw"
+        .. " (or `go install github.com/gustavofsantos/rvw/cmd/rvw@latest`)",
+      M.cmd
+    ),
     vim.log.levels.ERROR
   )
   return false
@@ -117,7 +122,7 @@ function M.workspace_cwd(bufnr)
   return vim.fn.getcwd()
 end
 
---- @param out string? stdout of `review list --format json`
+--- @param out string? stdout of `rvw list --format json`
 --- @return ReviewItem[]
 local function decode(out)
   if not out or out == "" then
@@ -131,10 +136,9 @@ local function decode(out)
 end
 
 --- Reads are deliberately `--all-lanes`: one tree can carry several branches at
---- once, and the editor is your whole-tree view of them. Without this, launching
---- nvim from a shell pinned to $REVIEW_LANE would silently hide every other
---- lane's comments -- a file with a note on it would look unannotated. Writes
---- still inherit the pin, so a comment you add lands in the lane you are on.
+--- once, and the editor is your whole-tree view of them, so a lane pin must
+--- never hide a note on the file you are looking at. `rvw` reads no environment
+--- and the editor passes no `--lane`, so comments added here are unlaned.
 --- @param file string? absolute path to scope the query to one file
 --- @return string[] args
 local function list_args(file)
