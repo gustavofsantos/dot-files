@@ -75,6 +75,10 @@
       "rev": "f642e3ba8c12afbc8f32f6d77ef6597eac56786f",
       "src": "https://github.com/nvim-mini/mini.icons"
     },
+    "mini.jump2d": {
+      "rev": "1661829512c9cfa9cc641f49836de16b49adb497",
+      "src": "https://github.com/nvim-mini/mini.jump2d"
+    },
     "nvim-autopairs": {
       "rev": "430522f95fe4fb7c511ec64f8c1a90cc6a66c05c",
       "src": "https://github.com/windwp/nvim-autopairs"
