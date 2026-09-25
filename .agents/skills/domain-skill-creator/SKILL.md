@@ -27,7 +27,9 @@ Conventions:
 
 - Name it `domain-<capability>` in lowercase hyphen-case, with a matching folder. Add a
   qualifier only to split one term with two meanings (`domain-ledger-settlement`).
-- Install it only at a target the caller gives. Otherwise, produce a portable folder.
+- Install it at `~/.claude/skills/domain-<capability>/`, where both Claude Code and Cursor
+  read it, unless the caller gives another target. Never overwrite an existing entry there;
+  update an existing domain skill in place only when the caller asks for it.
 - Write the description to activate the skill across projects.
 - Sections, each only if it earns its place: frame (1–3 sentences), `Model`, `Invariants`,
   `Important boundaries`, `Do not infer`, `Start here`. Qualify each `Start here` entry with
