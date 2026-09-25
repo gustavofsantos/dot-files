@@ -26,8 +26,8 @@ palette = 235 = #657b83
 palette = 236 = #839496
 palette = 237 = #93a1a1
 
-background = #002b36
-foreground = #eee8d5
+background = #fdf6e3
+foreground = #657b83
 cursor-color = #cb4b16
 selection-background = #93a1a1
 selection-foreground = #eee8d5
