@@ -10,10 +10,10 @@
 font-family = CommitMono
 #font-family = BerkeleyMono Nerd Font
 adjust-cell-height = 6
-font-size = 14
+font-size = 15
 cursor-style = block
 cursor-invert-fg-bg = true
-theme = light:nord,dark:nord
+theme = light:cursorized-light,dark:cursorized-dark
 gtk-titlebar = true
 background-opacity = 1.0
 background-blur = true
