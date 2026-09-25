@@ -1,7 +1,10 @@
 vim.g.mapleader = " "
 vim.g.maplocalleader = ","
 
-vim.opt.background = "light"
+-- Default, then the system appearance wins when it can be read. Setting it
+-- here also keeps Neovim's own terminal (OSC 11) detection from overriding it.
+vim.opt.background = "dark"
+require("system_theme").setup()
 vim.cmd.colorscheme("cursorized")
 
 vim.opt.inccommand = "split"
