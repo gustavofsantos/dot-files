@@ -79,6 +79,10 @@
       "rev": "1661829512c9cfa9cc641f49836de16b49adb497",
       "src": "https://github.com/nvim-mini/mini.jump2d"
     },
+    "modus-themes.nvim": {
+      "rev": "56233f0986ef6c8d0eab97e924e87144e584d970",
+      "src": "https://github.com/miikanissi/modus-themes.nvim"
+    },
     "nvim-autopairs": {
       "rev": "430522f95fe4fb7c511ec64f8c1a90cc6a66c05c",
       "src": "https://github.com/windwp/nvim-autopairs"

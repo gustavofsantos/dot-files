@@ -43,7 +43,6 @@ vim.pack.add({
   gh("sindrets/diffview.nvim"),
   gh("folke/flash.nvim"),
   gh("lewis6991/gitsigns.nvim"),
-  { src = gh("ThePrimeagen/harpoon"), version = "harpoon2" },
   gh("mfussenegger/nvim-lint"),
   gh("williamboman/mason.nvim"),
   gh("williamboman/mason-lspconfig.nvim"),
