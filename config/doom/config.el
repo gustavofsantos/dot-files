@@ -17,7 +17,8 @@
       scroll-margin 3
       create-lockfiles nil
       org-directory "~/org/"
-      doom-modeline-buffer-file-name-style 'relative-to-project)
+      doom-modeline-buffer-file-name-style 'relative-to-project
+      eldoc-echo-area-use-multiline-p nil) ; one-line echo area, no layout shift
 
 ;; Doom picks the variant once at startup; this keeps following the OS while
 ;; Emacs runs, like nvim's system_theme.lua (portal signal on Linux).
@@ -42,6 +43,12 @@
                      (equal key "color-scheme"))
             ;; 1 = prefer dark; 0 (no preference) and 2 read as light, as in Doom
             (gs/follow-system-theme (eq 1 (car-safe (flatten-list value)))))))))
+
+;; An OS theme switch also sends a font-settings change, and Emacs answers it
+;; by putting the system UI font on `default' (Doom's font has no :user-spec to
+;; keep). Re-apply Doom's fonts after it.
+(advice-add #'font-setting-change-default-font :after
+            (lambda (&rest _) (doom-init-fonts-h 'reload)))
 
 ;;; LSP — reuse the servers Mason already installed for nvim
 
@@ -137,6 +144,113 @@ With WORKSPACES-ONLY, offer open workspaces only (tmux-sessionizer -s)."
 
 (after! ghostel
   (setq ghostel-module-auto-install 'download)) ; prebuilt libghostty-vt module
+
+;;; Terminals = agents and commands in a right-side panel, per workspace
+
+(set-popup-rule! "^\\*term:" :side 'right :size 0.4 :select t :quit nil :ttl nil)
+
+(defvar gs/term-commands '("claude" "cursor-agent")
+  "Offered by `gs/term'; any other command can be typed.")
+
+(defun gs/term--prefix ()
+  (format "*term:%s:" (+workspace-current-name)))
+
+(defun gs/term--live-p (buf)
+  (and (buffer-live-p buf)
+       (eq (buffer-local-value 'major-mode buf) 'ghostel-mode)
+       (process-live-p (buffer-local-value 'ghostel--process buf))))
+
+(defun gs/term-buffers ()
+  "This workspace's live terminals, most recent first.
+Leftovers without a live process (e.g. restored by a session) are killed."
+  (let ((prefix (gs/term--prefix)) live)
+    (dolist (buf (buffer-list))
+      (when (string-prefix-p prefix (buffer-name buf))
+        (if (gs/term--live-p buf) (push buf live) (kill-buffer buf))))
+    (nreverse live)))
+
+(defun gs/term--show (buf)
+  (if-let* ((win (get-buffer-window buf)))
+      (select-window win)
+    (pop-to-buffer buf)))
+
+(defun gs/term--start (command)
+  "Open a new shell at the project root and run COMMAND in it (none: plain shell)."
+  (let ((default-directory (or (doom-project-root) default-directory)))
+    (dlet ((ghostel-buffer-name
+            (format "%s%s*" (gs/term--prefix)
+                    (if (string-blank-p command) "shell" (car (split-string command))))))
+      (with-current-buffer (ghostel t) ; t: always a new instance, <2>, <3>...
+        (setq-local ghostel-buffer-name-function nil) ; keep the name persp tracks
+        (unless (string-blank-p command)
+          (ghostel-send-string (concat command "\r")))
+        (current-buffer)))))
+
+(defun gs/term ()
+  "Show one of this workspace's terminals, or type a command to open a new one.
+An empty command opens a plain shell."
+  (interactive)
+  (let* ((names (mapcar #'buffer-name (gs/term-buffers)))
+         (choice (completing-read "Terminal or command: "
+                                  (append names gs/term-commands))))
+    (if (member choice names)
+        (gs/term--show (get-buffer choice))
+      (gs/term--start choice))))
+
+(defun gs/term-jump ()
+  "Jump between the code and this workspace's last-used terminal."
+  (interactive)
+  (cond ((string-prefix-p (gs/term--prefix) (buffer-name))
+         (select-window (get-mru-window nil nil t)))
+        ((car (gs/term-buffers)) (gs/term--show (car (gs/term-buffers))))
+        (t (call-interactively #'gs/term))))
+
+(defun gs/term-toggle ()
+  "Hide the terminal panel, or show the last-used terminal. Hiding keeps it running."
+  (interactive)
+  (if-let* ((win (seq-some #'get-buffer-window (gs/term-buffers))))
+      (delete-window win)
+    (gs/term-jump)))
+
+(defun gs/term-send-reference (beg end)
+  "Type an @path#Lx-y reference to the region (or @path) into the last-used terminal."
+  (interactive (if (use-region-p) (list (region-beginning) (region-end)) (list nil nil)))
+  (let* ((file (or buffer-file-name (user-error "Buffer is not visiting a file")))
+         (term (or (car (gs/term-buffers)) (user-error "No terminal; open one with SPC j")))
+         (path (file-relative-name file (or (doom-project-root) default-directory)))
+         (ref (if beg
+                  (format "@%s#L%d-%d " path (line-number-at-pos beg)
+                          (line-number-at-pos (if (save-excursion (goto-char end) (bolp))
+                                                  (max beg (1- end))
+                                                end)))
+                (format "@%s " path))))
+    (when (evil-visual-state-p) (evil-exit-visual-state))
+    (gs/term--show term)
+    (ghostel-send-string ref)
+    (evil-insert-state)))
+
+(defun gs/term-visit-file-at-point ()
+  "Open the path[:line] under point (agent output) in the code window."
+  (interactive)
+  (let ((thing (or (thing-at-point 'filename t) (user-error "No path at point"))))
+    (unless (string-match "\\`@?\\(.+?\\)\\(?:[:#]L?\\([0-9]+\\)\\(?:-[0-9]+\\)?\\)?[:,.)]*\\'" thing)
+      (user-error "No path at point"))
+    (let ((file (expand-file-name (match-string 1 thing)))
+          (line (and (match-string 2 thing) (string-to-number (match-string 2 thing)))))
+      (unless (file-exists-p file) (user-error "No such file: %s" file))
+      (select-window (get-mru-window nil nil t))
+      (find-file file)
+      (when line (goto-char (point-min)) (forward-line (1- line))))))
+
+(map! :leader
+      :desc "Terminals"                :n "j" #'gs/term
+      :desc "Send region to terminal"  :v "j" #'gs/term-send-reference
+      :desc "Toggle terminal panel"    :n "J" #'gs/term-toggle)
+(map! :map general-override-mode-map
+      :ni "M-j" #'gs/term-jump              ; works while typing in a terminal too
+      :ni "M-J" #'gs/term-toggle)
+(after! ghostel
+  (map! :map ghostel-mode-map :n "gf" #'gs/term-visit-file-at-point))
 
 ;;; nvim keymaps
 
