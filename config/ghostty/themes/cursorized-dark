@@ -1,23 +1,26 @@
-palette = 0=#1f1d19
-palette = 1=#bb625e
-palette = 2=#6c8a56
-palette = 3=#987e3a
-palette = 4=#4082ad
-palette = 5=#af6585
-palette = 6=#388d90
-palette = 7=#edebe4
+# cursorized-dark — every slot is readable on the background
 
-palette = 8=#292823
-palette = 9=#b96e49
-palette = 10=#65635e
-palette = 11=#6f6d68
-palette = 12=#9a9894
-palette = 13=#7977aa
-palette = 14=#a7a6a1
-palette = 15=#f8f6f2
+palette = 0=#716f68
+palette = 1=#ff8b90
+palette = 2=#64c175
+palette = 3=#d3a82d
+palette = 4=#64b2ff
+palette = 5=#ed8ecf
+palette = 6=#00c0c0
+palette = 7=#d2cfc5
+palette = 8=#9d9b92
+palette = 9=#ffb1b2
+palette = 10=#7bd88a
+palette = 11=#eabe4a
+palette = 12=#93c8ff
+palette = 13=#ffa9e3
+palette = 14=#3ad7d7
+palette = 15=#faf8f4
 
-background = #1f1d19
-foreground = #9a9894
-cursor-color = #a7a6a1
-selection-background = #292823
-split-divider-color = #a7a6a1
+background = #1a1918
+foreground = #d2cfc5
+cursor-color = #f54e00
+cursor-text = #1a1918
+selection-background = #393833
+selection-foreground = #faf8f4
+split-divider-color = #393833

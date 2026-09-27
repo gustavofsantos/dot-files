@@ -1,8 +1,16 @@
--- cursorized — a Solarized-method colorscheme on a warm CIELAB palette.
+-- cursorized — warm paper, near-black ink, eight vivid accents.
 --
--- Eight warm grays (h 95°, mirrored around L* 55) swap roles between the light and
--- dark variants; eight low-chroma accents (L* 52–54) stay fixed in both. Every other
--- color is mixed from the 16 palette values below when the colorscheme loads.
+-- Rules the palette is solved against (see the Cursorized canvas for the numbers):
+--   * Ink first. Code is mostly fg; color marks meaning, not every identifier.
+--   * One lightness per variant. The eight accents share OKLab lightness, so they carry
+--     equal weight: WCAG >= 4.6 on bg_hl in light, APCA Lc >= 55 on bg_hl in dark.
+--   * Hues spaced for distance. Hues stay inside their names' ranges and are spread to
+--     maximize the smallest OKLab distance between any two accents.
+--   * A five-step ink ramp: border < fg_faint (3:1) < fg_comment (4.8:1 light, 5.4:1 dark,
+--     on bg_hl) < fg < fg_emph. All grays share one warm hue (OKLCH h 95).
+--   * The cursor is Cursor orange, #f54e00, the one color outside these rules.
+--   * Every terminal slot is readable text on its background. Brights are the accents
+--     pushed 0.07 OKLab L toward more contrast.
 --
 -- `:colorscheme cursorized` picks the variant from 'background'. Neovim re-sources the
 -- active colorscheme when 'background' changes, so there is no autocmd here.
@@ -11,7 +19,6 @@
 --   vim.g.cursorized = {
 --     transparent     = false,  -- bg = NONE on Normal, SignColumn, NormalFloat, ...
 --     italic_comments = true,
---     dim_slot8       = false,  -- terminal slot 8 = fg_comment instead of bg
 --     blend           = "oklab", -- or "srgb" (cheap fallback for debugging)
 --     alpha = { light = { diff_add = 0.10 }, dark = {} }, -- partial overrides
 --     on_highlights = function(hl, c) end,                -- edit `hl` in place
@@ -22,11 +29,30 @@
 -- 1. palette -----------------------------------------------------------------------
 
 local palette = {
-  base03 = "#1f1d19", base02 = "#292823", base01 = "#65635e", base00 = "#6f6d68",
-  base0  = "#9a9894", base1  = "#a7a6a1", base2  = "#edebe4", base3  = "#f8f6f2",
-  yellow = "#987e3a", orange = "#b96e49", red  = "#bb625e", magenta = "#af6585",
-  violet = "#7977aa", blue   = "#4082ad", cyan = "#388d90", green   = "#6c8a56",
+  light = {
+    bg = "#f7f7f4", bg_hl = "#eeede7", border = "#dbd9d2",
+    fg_faint = "#8a8882", fg_comment = "#696761", fg = "#31302d", fg_emph = "#161614",
+    red = "#ba3e4b", orange = "#aa5100", yellow = "#846600", green = "#007b2f",
+    cyan = "#007677", blue = "#006cbc", violet = "#7856c0", magenta = "#a9438d",
+    ansi = {
+      "#161614", "#ba3e4b", "#007b2f", "#846600", "#006cbc", "#a9438d", "#007677", "#31302d",
+      "#696761", "#a22638", "#006425", "#6c5300", "#00589b", "#922d78", "#006061", "#8a8882",
+    },
+  },
+  dark = {
+    bg = "#1a1918", bg_hl = "#272623", border = "#393833",
+    fg_faint = "#716f68", fg_comment = "#9d9b92", fg = "#d2cfc5", fg_emph = "#faf8f4",
+    red = "#ff8b90", orange = "#f69557", yellow = "#d3a82d", green = "#64c175",
+    cyan = "#00c0c0", blue = "#64b2ff", violet = "#b89fff", magenta = "#ed8ecf",
+    ansi = {
+      "#716f68", "#ff8b90", "#64c175", "#d3a82d", "#64b2ff", "#ed8ecf", "#00c0c0", "#d2cfc5",
+      "#9d9b92", "#ffb1b2", "#7bd88a", "#eabe4a", "#93c8ff", "#ffa9e3", "#3ad7d7", "#faf8f4",
+    },
+  },
 }
+
+-- The cursor is always Cursor orange, the one color not held to the accent lightness.
+local signature = "#f54e00"
 
 -- 2. color -------------------------------------------------------------------------
 
@@ -123,17 +149,16 @@ end
 local defaults = {
   transparent = false,
   italic_comments = true,
-  dim_slot8 = false,
   blend = "oklab",
   -- Light backgrounds show tint sooner, so they get lower alphas than dark ones.
   alpha = {
     light = {
       diff_add = 0.14, diff_delete = 0.14, diff_change = 0.14, diff_text = 0.30,
-      visual = 0.16, virtual_text = 0.10, border = 0.35,
+      visual = 0.16, virtual_text = 0.10,
     },
     dark = {
       diff_add = 0.20, diff_delete = 0.20, diff_change = 0.20, diff_text = 0.40,
-      visual = 0.25, virtual_text = 0.14, border = 0.35,
+      visual = 0.25, virtual_text = 0.14,
     },
   },
   on_highlights = nil,
@@ -146,21 +171,17 @@ M.space = opts.blend == "srgb" and "srgb" or "oklab"
 -- 4. roles -------------------------------------------------------------------------
 
 local variant = vim.o.background == "light" and "light" or "dark"
-local p = palette
+local p = palette[variant]
 
-local roles = {
-  light = { bg = p.base3, bg_hl = p.base2, fg = p.base00, fg_comment = p.base1, fg_emph = p.base01 },
-  dark = { bg = p.base03, bg_hl = p.base02, fg = p.base0, fg_comment = p.base01, fg_emph = p.base1 },
-}
-
--- `c` is everything the groups see: accents, the variant's roles, derived tokens.
-local c = vim.tbl_extend("force", {}, palette, roles[variant])
+-- `c` is everything the groups see: the variant's grays and accents, derived tokens.
+local c = vim.tbl_extend("force", {}, p)
+c.ansi = nil
+c.signature = signature
 local alpha = opts.alpha[variant]
 
 -- Derived tokens. Only palette values are blended, never one result into another.
 local function over_bg(color, a) return M.blend(color, c.bg, a) end
 
-c.border = over_bg(c.fg_comment, alpha.border)
 c.diff_add_bg = over_bg(p.green, alpha.diff_add)
 c.diff_delete_bg = over_bg(p.red, alpha.diff_delete)
 c.diff_change_bg = over_bg(p.blue, alpha.diff_change)
@@ -204,7 +225,7 @@ local hl = {
   Pmenu = { fg = c.fg, bg = c.bg_hl },
   PmenuSel = { fg = c.bg, bg = c.blue },
   PmenuSbar = { bg = c.bg_hl },
-  PmenuThumb = { bg = c.fg_comment },
+  PmenuThumb = { bg = c.fg_faint },
   PmenuKind = { link = "Pmenu" },
   PmenuKindSel = { link = "PmenuSel" },
   PmenuExtra = { fg = c.fg_comment, bg = c.bg_hl },
@@ -215,20 +236,20 @@ local hl = {
   CursorLine = { bg = c.bg_hl },
   CursorColumn = { bg = c.bg_hl },
   ColorColumn = { bg = c.bg_hl },
-  Cursor = { fg = c.bg, bg = c.orange },
+  Cursor = { fg = c.bg, bg = c.signature },
   lCursor = { link = "Cursor" },
   CursorIM = { link = "Cursor" },
   TermCursor = { link = "Cursor" },
   Visual = { fg = c.visual_fg, bg = c.visual_bg },
   VisualNOS = { link = "Visual" },
-  LineNr = { fg = c.fg_comment, bg = bg },
+  LineNr = { fg = c.fg_faint, bg = bg },
   LineNrAbove = { link = "LineNr" },
   LineNrBelow = { link = "LineNr" },
-  SignColumn = { fg = c.fg_comment, bg = bg },
-  FoldColumn = { fg = c.fg_comment, bg = bg },
+  SignColumn = { fg = c.fg_faint, bg = bg },
+  FoldColumn = { fg = c.fg_faint, bg = bg },
   CursorLineNr = { fg = c.fg_emph, bg = c.bg_hl, bold = true },
   CursorLineSign = { bg = c.bg_hl },
-  CursorLineFold = { fg = c.fg_comment, bg = c.bg_hl },
+  CursorLineFold = { fg = c.fg_faint, bg = c.bg_hl },
   Folded = { fg = c.fg_comment, bg = c.bg_hl },
   StatusLine = { fg = c.fg_emph, bg = c.bg_hl },
   StatusLineNC = { fg = c.fg_comment, bg = c.bg_hl },
@@ -239,11 +260,11 @@ local hl = {
   TabLine = { fg = c.fg_comment, bg = c.bg_hl },
   TabLineSel = { fg = c.fg_emph, bg = c.bg },
   TabLineFill = { bg = c.bg_hl },
-  NonText = { fg = c.fg_comment },
-  Whitespace = { fg = c.fg_comment },
-  EndOfBuffer = { fg = c.fg_comment },
-  Conceal = { fg = c.fg_comment },
-  SpecialKey = { fg = c.fg_comment },
+  NonText = { fg = c.fg_faint },
+  Whitespace = { fg = c.border },
+  EndOfBuffer = { fg = c.border },
+  Conceal = { fg = c.fg_faint },
+  SpecialKey = { fg = c.fg_faint },
   Directory = { fg = c.blue },
   Title = { fg = c.orange, bold = true },
   Search = { fg = c.bg, bg = c.yellow },
@@ -251,7 +272,7 @@ local hl = {
   CurSearch = { fg = c.bg, bg = c.orange },
   Substitute = { link = "IncSearch" },
   QuickFixLine = { link = "Visual" },
-  MatchParen = { fg = c.red, bg = c.bg_hl, bold = true },
+  MatchParen = { fg = c.fg_emph, bg = c.border, bold = true },
   ModeMsg = { fg = c.fg_emph, bold = true },
   MsgArea = { fg = c.fg },
   MoreMsg = { fg = c.yellow },
@@ -260,42 +281,45 @@ local hl = {
   WarningMsg = { fg = c.yellow },
   SnippetTabstop = { link = "Visual" },
 
-  -- Syntax
+  -- Syntax: ink first. Identifiers and operators stay fg; each accent owns one idea.
+  --   violet  keywords        blue    functions       green   strings
+  --   orange  literals        yellow  types           cyan    escapes, regex, specials
+  --   magenta macros, attributes, builtins            red     errors only
   Comment = { fg = c.fg_comment, italic = opts.italic_comments },
-  Constant = { fg = c.cyan },
-  String = { fg = c.cyan },
-  Character = { fg = c.cyan },
-  Number = { fg = c.magenta },
-  Boolean = { fg = c.magenta },
-  Float = { fg = c.magenta },
-  Identifier = { fg = c.blue },
+  Constant = { fg = c.orange },
+  String = { fg = c.green },
+  Character = { fg = c.green },
+  Number = { fg = c.orange },
+  Boolean = { fg = c.orange },
+  Float = { fg = c.orange },
+  Identifier = { fg = c.fg },
   Function = { fg = c.blue },
-  Statement = { fg = c.green },
-  Keyword = { fg = c.green },
-  Conditional = { fg = c.green },
-  Repeat = { fg = c.green },
-  Operator = { fg = c.green },
-  Exception = { fg = c.green },
-  PreProc = { fg = c.orange },
-  Include = { fg = c.orange },
-  Define = { fg = c.orange },
-  Macro = { fg = c.orange },
+  Statement = { fg = c.violet },
+  Keyword = { fg = c.violet },
+  Conditional = { fg = c.violet },
+  Repeat = { fg = c.violet },
+  Operator = { fg = c.fg },
+  Exception = { fg = c.violet },
+  PreProc = { fg = c.magenta },
+  Include = { fg = c.violet },
+  Define = { fg = c.magenta },
+  Macro = { fg = c.magenta },
   PreCondit = { link = "PreProc" },
   Type = { fg = c.yellow },
-  StorageClass = { fg = c.yellow },
+  StorageClass = { fg = c.violet },
   Structure = { fg = c.yellow },
   Typedef = { fg = c.yellow },
-  Special = { fg = c.red },
-  SpecialChar = { fg = c.red },
-  Delimiter = { fg = c.red },
-  Tag = { fg = c.red },
-  SpecialComment = { link = "Special" },
+  Special = { fg = c.cyan },
+  SpecialChar = { fg = c.cyan },
+  Delimiter = { fg = c.fg_comment },
+  Tag = { fg = c.blue },
+  SpecialComment = { fg = c.fg_comment, bold = true },
   Debug = { link = "Special" },
   Label = { fg = c.violet },
-  Underlined = { fg = c.violet, underline = true },
-  Todo = { fg = c.magenta, bold = true },
+  Underlined = { fg = c.blue, underline = true },
+  Todo = { fg = c.bg, bg = c.yellow, bold = true },
   Error = { fg = c.red, bold = true },
-  Ignore = { fg = c.fg_comment },
+  Ignore = { fg = c.fg_faint },
   Bold = { bold = true },
   Italic = { italic = true },
 
@@ -384,12 +408,12 @@ local hl = {
   ["@character"] = { link = "Character" },
   ["@number"] = { link = "Number" },
   ["@number.float"] = { link = "Number" },
-  ["@boolean"] = { link = "Number" },
+  ["@boolean"] = { link = "Boolean" },
   ["@constant"] = { link = "Constant" },
   ["@constant.builtin"] = { link = "Number" },
   ["@constant.macro"] = { link = "Macro" },
   ["@variable"] = { fg = c.fg },
-  ["@variable.builtin"] = { fg = c.orange },
+  ["@variable.builtin"] = { fg = c.magenta },
   ["@variable.parameter"] = { fg = c.fg },
   ["@variable.member"] = { fg = c.fg },
   ["@property"] = { fg = c.fg },
@@ -399,28 +423,28 @@ local hl = {
   ["@function.method"] = { link = "Function" },
   ["@function.method.call"] = { link = "Function" },
   ["@method"] = { link = "Function" },
-  ["@function.builtin"] = { fg = c.blue },
+  ["@function.builtin"] = { fg = c.magenta },
   ["@function.macro"] = { link = "Macro" },
   ["@keyword"] = { link = "Keyword" },
-  ["@keyword.return"] = { fg = c.green },
-  ["@keyword.import"] = { link = "PreProc" },
+  ["@keyword.return"] = { fg = c.violet, bold = true },
+  ["@keyword.import"] = { link = "Include" },
   ["@keyword.directive"] = { link = "PreProc" },
   ["@operator"] = { link = "Operator" },
   ["@type"] = { link = "Type" },
-  ["@type.builtin"] = { fg = c.yellow },
+  ["@type.builtin"] = { fg = c.yellow, italic = true },
   ["@constructor"] = { fg = c.yellow },
   ["@attribute"] = { link = "PreProc" },
   ["@label"] = { link = "Label" },
   ["@punctuation.delimiter"] = { fg = c.fg_comment },
-  ["@punctuation.bracket"] = { fg = c.fg },
+  ["@punctuation.bracket"] = { fg = c.fg_comment },
   ["@punctuation.special"] = { link = "Special" },
   ["@tag"] = { fg = c.blue },
   ["@tag.builtin"] = { fg = c.blue },
   ["@tag.attribute"] = { fg = c.yellow },
   ["@tag.delimiter"] = { link = "@punctuation.delimiter" },
-  ["@module"] = { fg = c.violet },
-  ["@module.builtin"] = { fg = c.violet },
-  ["@namespace"] = { fg = c.violet },
+  ["@module"] = { fg = c.yellow },
+  ["@module.builtin"] = { fg = c.magenta },
+  ["@namespace"] = { link = "@module" },
   ["@markup.heading"] = { link = "Title" },
   ["@markup.link"] = { link = "Underlined" },
   ["@markup.link.url"] = { link = "Underlined" },
@@ -429,7 +453,7 @@ local hl = {
   ["@markup.italic"] = { italic = true },
   ["@markup.strikethrough"] = { strikethrough = true },
   ["@markup.quote"] = { link = "Comment" },
-  ["@markup.list"] = { link = "Special" },
+  ["@markup.list"] = { fg = c.fg_comment },
   ["@diff.plus"] = { link = "Added" },
   ["@diff.minus"] = { link = "Removed" },
   ["@diff.delta"] = { link = "Changed" },
@@ -463,20 +487,9 @@ local hl = {
 
 -- 6. terminal ----------------------------------------------------------------------
 
--- Solarized's slot map; the light map mirrors only the gray slots across L* 55.
-local terminal = {
-  dark = {
-    p.base02, p.red, p.green, p.yellow, p.blue, p.magenta, p.cyan, p.base2,
-    p.base03, p.orange, p.base01, p.base00, p.base0, p.violet, p.base1, p.base3,
-  },
-  light = {
-    p.base2, p.red, p.green, p.yellow, p.blue, p.magenta, p.cyan, p.base02,
-    p.base3, p.orange, p.base1, p.base0, p.base00, p.violet, p.base01, p.base03,
-  },
-}
-local term = vim.list_extend({}, terminal[variant])
--- Slot 8 equals the background, so dim text (shell autosuggestions) can vanish.
-if opts.dim_slot8 then term[9] = c.fg_comment end
+-- The same 16 colors as the Ghostty themes. Slot 0 is the darkest ink and 15 the
+-- lightest, 7 is fg and 8 is fg_comment, so every slot stays readable.
+local term = p.ansi
 
 -- 7. apply -------------------------------------------------------------------------
 
