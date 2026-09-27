@@ -217,6 +217,12 @@ overrides which binary the plugin calls (default `rvw`) — e.g. a wrapper runni
 `rvw --db <scratch>.db "$@"` to test against a throwaway store. The editor passes no
 `--lane`, so comments added from nvim are unlaned. Tests: `bats test_bin/review-nvim.bats`.
 
+Doom Emacs has a port, `config/doom/review.el` (loaded from `config.el`): same stateless
+model and `$RVW_CMD`, marks in the right fringe (right margin under `-nw`), input buffer
+saved with `C-c C-c`/`C-s`, list in a `grep-mode` buffer. Keys: visual `RET` adds, `SPC r`
+prefix for `a`dd/`o` list/`e`dit/`d` withdraw/`r`efresh/`s`ubmit. `rvw` has no `drop` or
+`clear`, so "delete" is a withdraw (`rvw reject ID --note`) and there is no clear.
+
 On the agent side, the `rvw` plugin (`/plugin install rvw@rvw`, skill `rvw:rvw`, source in
 `~/Projects/rvw/skills/rvw/`) covers both directions: working the queue (`rvw pull`, then
 `resolve`/`reject` by id) and reviewing code to leave comments for another agent

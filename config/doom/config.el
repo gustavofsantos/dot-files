@@ -321,3 +321,7 @@ An empty command opens a plain shell."
       :n "C-a x" #'evil-window-delete
       :n "C-a z" #'doom/window-maximize-buffer
       :n "C-a g" #'magit-status)
+
+;;; Review queue (rvw), ported from nvim's after/plugin/review.lua
+
+(load! "review")
