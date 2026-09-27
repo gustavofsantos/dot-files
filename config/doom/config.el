@@ -325,3 +325,12 @@ An empty command opens a plain shell."
 ;;; Review queue (rvw), ported from nvim's after/plugin/review.lua
 
 (load! "review")
+
+;;; Tree-sitter: install missing grammars on first use, then use *-ts-mode.
+
+(use-package! treesit-auto
+  :custom
+  (treesit-auto-install 'prompt)
+  :config
+  (treesit-auto-add-to-auto-mode-alist 'all)
+  (global-treesit-auto-mode))
