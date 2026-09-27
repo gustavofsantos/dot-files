@@ -8,13 +8,40 @@
 
 ;;; UI
 
-(setq doom-theme '(doom-one . doom-one-light)   ; (DARK . LIGHT), follows the OS like cursorized
+(defconst gs/themes '(cursorized-dark . cursorized-light) ; themes/, ported from nvim
+  "(DARK . LIGHT), picked from the OS appearance.")
+
+(setq doom-theme gs/themes
       doom-font (font-spec :family "CommitMono" :size 16) ; px; ghostty uses 12pt
       display-line-numbers-type 'relative
       scroll-margin 3
       create-lockfiles nil
       org-directory "~/org/"
       doom-modeline-buffer-file-name-style 'relative-to-project)
+
+;; Doom picks the variant once at startup; this keeps following the OS while
+;; Emacs runs, like nvim's system_theme.lua (portal signal on Linux).
+(defun gs/follow-system-theme (dark)
+  "Switch to the DARK or light member of `gs/themes'."
+  (let ((want (if dark (car gs/themes) (cdr gs/themes)))
+        (other (if dark (cdr gs/themes) (car gs/themes))))
+    (unless (custom-theme-enabled-p want)
+      (disable-theme other)
+      (load-theme want t))))
+
+(cond ((boundp 'ns-system-appearance-change-functions)
+       (add-hook 'ns-system-appearance-change-functions
+                 (lambda (appearance) (gs/follow-system-theme (eq appearance 'dark)))))
+      ((and (featurep :system 'linux) (require 'dbus nil t)
+            (ignore-errors (dbus-ping :session "org.freedesktop.portal.Desktop" 500)))
+       (dbus-register-signal
+        :session "org.freedesktop.portal.Desktop" "/org/freedesktop/portal/desktop"
+        "org.freedesktop.portal.Settings" "SettingChanged"
+        (lambda (namespace key value)
+          (when (and (equal namespace "org.freedesktop.appearance")
+                     (equal key "color-scheme"))
+            ;; 1 = prefer dark; 0 (no preference) and 2 read as light, as in Doom
+            (gs/follow-system-theme (eq 1 (car-safe (flatten-list value)))))))))
 
 ;;; LSP — reuse the servers Mason already installed for nvim
 
