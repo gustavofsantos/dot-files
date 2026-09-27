@@ -102,6 +102,16 @@ A worktree under <project>-worktrees/<branch> becomes <project>-<branch>."
   (dolist (dir (gs/project-dirs))
     (projectile-add-known-project (abbreviate-file-name dir))))
 
+;; Telescope-style fuzzy file picking: each space-separated word matches as a
+;; literal substring or, failing that, as its characters in order anywhere in
+;; the path (`cfgpk' finds config/pack.lua). Scoped to project files so
+;; M-x and buffer switching keep plain orderless.
+(after! orderless
+  (orderless-define-completion-style gs/orderless-fuzzy
+    (orderless-matching-styles '(orderless-literal orderless-flex)))
+  (setf (alist-get 'project-file completion-category-overrides)
+        '((styles gs/orderless-fuzzy basic))))
+
 ;;; Workspaces = tmux sessions
 
 (setq +workspaces-on-switch-project-behavior t) ; every project gets its own workspace
