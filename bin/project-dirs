@@ -12,6 +12,7 @@ fixed=(
 )
 
 parents=(
+    "$HOME/Projects"
     "$HOME/Workplace"
     "$HOME/Workplace/seubarriga-worktrees"
     "$HOME/Workplace/backend-services/applications"

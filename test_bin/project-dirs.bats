@@ -25,7 +25,8 @@ teardown() {
 }
 
 @test "lists direct children of each parent, not grandchildren or files" {
-  mkdir -p "$HOME/Workplace/api/src" \
+  mkdir -p "$HOME/Projects/rvw" \
+           "$HOME/Workplace/api/src" \
            "$HOME/Workplace/seubarriga-worktrees/feat.x" \
            "$HOME/Workplace/backend-services/applications/billing"
   touch "$HOME/Workplace/notes.txt"
@@ -33,6 +34,7 @@ teardown() {
   run "$SCRIPT"
 
   [ "$status" -eq 0 ]
+  [[ "$output" == *"$HOME/Projects/rvw"* ]]
   [[ "$output" == *"$HOME/Workplace/api"* ]]
   [[ "$output" == *"$HOME/Workplace/seubarriga-worktrees/feat.x"* ]]
   [[ "$output" == *"$HOME/Workplace/backend-services/applications/billing"* ]]
