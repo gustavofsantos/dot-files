@@ -1,11 +1,5 @@
 #!/usr/bin/env bash
 
-paths=(
-    "$HOME/.dot-files"
-    "$HOME/.config/nvim"
-    "$HOME/.config/ghostty"
-)
-
 sessions_only=false
 if [[ "$1" == "--sessions-only" || "$1" == "-s" ]]; then
     sessions_only=true
@@ -30,12 +24,7 @@ else
     else
         items=$( (
             tmux ls -F "#{session_name}" 2>/dev/null
-            for path in "${paths[@]}"; do
-                echo "$path"
-            done
-            find ~/Workplace -mindepth 1 -maxdepth 1 -type d 2>/dev/null
-            find ~/Workplace/seubarriga-worktrees -mindepth 1 -maxdepth 1 -type d 2>/dev/null
-            find ~/Workplace/backend-services/applications -mindepth 1 -maxdepth 1 -type d 2>/dev/null
+            "$(dirname "$(readlink -f "$0")")/project-dirs"
         ) )
     fi
 
