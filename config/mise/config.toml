@@ -16,6 +16,8 @@ ripgrep = "latest"
 fd = "latest"
 "go:golang.org/x/tools/gopls" = "latest"
 prettier = "latest"
+zig = "latest"
+zigmod = "latest"
 
 [settings.ruby]
 compile = false
