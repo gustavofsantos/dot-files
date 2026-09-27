@@ -5,6 +5,7 @@
 set -uo pipefail
 
 fixed=(
+    "$HOME/dot-files"
     "$HOME/.dot-files"
     "$HOME/.config/nvim"
     "$HOME/.config/doom"

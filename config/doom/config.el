@@ -90,7 +90,10 @@ A worktree under <project>-worktrees/<branch> becomes <project>-<branch>."
   (setq projectile-project-name-function #'gs/project-name
         projectile-project-root-functions
         (append '(projectile-root-local gs/projectile-root-from-project-dirs)
-                (remq 'projectile-root-local projectile-project-root-functions))))
+                (remq 'projectile-root-local projectile-project-root-functions)))
+  ;; `SPC p p' offers the same list, not only projects already visited
+  (dolist (dir (gs/project-dirs))
+    (projectile-add-known-project (abbreviate-file-name dir))))
 
 ;;; Workspaces = tmux sessions
 
