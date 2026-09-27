@@ -37,7 +37,7 @@ Re-running `setup.sh` is idempotent (`ln -sf`).
 - `.agents/skills/` — every skill, one directory each, installed by `install-agents.sh`. This is the source of truth; nothing under `~/.agents/skills/` or `~/.claude/skills/` that links here is hand-edited
 - `.agents/agents/` — subagent definitions (`maintainability-reviewer.md`). Nothing installs them yet
 - `test_bin/` — bats tests for `bin/` scripts, one `<script>.bats` per script
-- `config/` — XDG config dirs: `nvim/`, `ghostty/`, `bat/`, `lazygit/`, `mise/`, `zed/`, `wezterm/`, `tmux/`, `sheldon/`, `starship.toml`, `vale/`
+- `config/` — XDG config dirs: `nvim/`, `doom/`, `ghostty/`, `bat/`, `lazygit/`, `mise/`, `zed/`, `wezterm/`, `tmux/`, `sheldon/`, `starship.toml`, `vale/`
 - `.claude/` — hand-maintained Claude Code config, `settings.json` only (`permissions`/`env`/`statusLine`/`theme`/`defaultMode`/`teammateMode`), merged into the global `~/.claude/settings.json` on install
 - `.codex/` — `hooks.json`, merged into Codex's global hooks file on install
 
