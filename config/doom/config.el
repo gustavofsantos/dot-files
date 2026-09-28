@@ -353,3 +353,23 @@ An empty command opens a plain shell."
   :config
   (treesit-auto-add-to-auto-mode-alist 'all)
   (global-treesit-auto-mode))
+
+;;; Clojure: Midje tests through the REPL (emidje)
+
+;; `emidje-setup' injects the midje-nrepl middleware into `cider-jack-in' and
+;; installs its keys; without it, emidje is loaded but inert.
+(after! cider
+  (emidje-setup))
+
+;; treesit-auto remaps to `clojure-ts-mode', whose keymap is not
+;; `clojure-mode-map', so bind both.
+(map! :after emidje
+      :localleader
+      :map (clojure-mode-map clojure-ts-mode-map)
+      (:prefix ("j" . "midje")
+       :desc "Run ns tests"      "n" #'emidje-run-ns-tests
+       :desc "Run all tests"     "p" #'emidje-run-all-tests
+       :desc "Re-run failed"     "r" #'emidje-re-run-failed-tests
+       :desc "Run test at point" "t" #'emidje-run-test-at-point
+       :desc "Test report"       "s" #'emidje-show-test-report
+       :desc "Format tabular"    "f" #'emidje-format-tabular))
