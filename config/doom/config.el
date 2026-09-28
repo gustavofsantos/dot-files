@@ -155,6 +155,15 @@ With WORKSPACES-ONLY, offer open workspaces only (tmux-sessionizer -s)."
 (after! ghostel
   (setq ghostel-module-auto-install 'download)) ; prebuilt libghostty-vt module
 
+;; Line numbers in a terminal buffer only cause layout shift: the gutter width
+;; follows the line count, and anything toggling the mode (Doom's per-mode
+;; hooks, `doom/toggle-line-numbers') resizes the text area, so the PTY columns
+;; jump and full-screen TUIs like Claude Code redraw.
+(add-hook! '(ghostel-mode-hook) (display-line-numbers-mode -1))
+;; Same class of shift in file buffers: never shrink, and start wide.
+(setq display-line-numbers-grow-only t
+      display-line-numbers-width-start t)
+
 ;;; Terminals = agents and commands in a right-side panel, per workspace
 
 (set-popup-rule! "^\\*term:" :side 'right :size 0.4 :select t :quit nil :ttl nil)
