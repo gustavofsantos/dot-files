@@ -18,6 +18,9 @@ fd = "latest"
 prettier = "latest"
 zig = "latest"
 zigmod = "latest"
+black = "latest"
+shfmt = "latest"
+clang-format = "latest"
 
 [settings.ruby]
 compile = false
