@@ -155,6 +155,14 @@ With WORKSPACES-ONLY, offer open workspaces only (tmux-sessionizer -s)."
 (after! ghostel
   (setq ghostel-module-auto-install 'download)) ; prebuilt libghostty-vt module
 
+;; Line numbers in a terminal buffer only cause layout shift: the gutter width
+;; follows the line count, and anything toggling the mode (Doom's per-mode
+;; hooks, `doom/toggle-line-numbers') resizes the text area, so the PTY columns
+;; jump and full-screen TUIs like Claude Code redraw.
+(add-hook! '(ghostel-mode-hook) (display-line-numbers-mode -1))
+;; Same class of shift in file buffers: never shrink, and start wide.
+(setq display-line-numbers-grow-only t
+      display-line-numbers-width-start t)
 ;;; Terminals = agents and commands in a right-side panel, per workspace
 
 (set-popup-rule! "^\\*term:" :side 'right :size 0.4 :select t :quit nil :ttl nil)
@@ -338,9 +346,29 @@ An empty command opens a plain shell."
 
 ;;; Tree-sitter: install missing grammars on first use, then use *-ts-mode.
 
-(use-package! treesit-auto
-  :custom
-  (treesit-auto-install 'prompt)
-  :config
-  (treesit-auto-add-to-auto-mode-alist 'all)
-  (global-treesit-auto-mode))
+;; (use-package! treesit-auto
+;;   :custom
+;;   (treesit-auto-install 'prompt)
+;;   :config
+;;   (treesit-auto-add-to-auto-mode-alist 'all)
+;;   (global-treesit-auto-mode))
+
+;;; Clojure: Midje tests through the REPL (emidje)
+
+;; `emidje-setup' injects the midje-nrepl middleware into `cider-jack-in' and
+;; installs its keys; without it, emidje is loaded but inert.
+(after! cider
+  (emidje-setup))
+
+;; treesit-auto remaps to `clojure-ts-mode', whose keymap is not
+;; `clojure-mode-map', so bind both.
+(map! :after emidje
+      :localleader
+      :map (clojure-mode-map clojure-ts-mode-map)
+      (:prefix ("j" . "midje")
+       :desc "Run ns tests"      "n" #'emidje-run-ns-tests
+       :desc "Run all tests"     "p" #'emidje-run-all-tests
+       :desc "Re-run failed"     "r" #'emidje-re-run-failed-tests
+       :desc "Run test at point" "t" #'emidje-run-test-at-point
+       :desc "Test report"       "s" #'emidje-show-test-report
+       :desc "Format tabular"    "f" #'emidje-format-tabular))
