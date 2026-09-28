@@ -54,3 +54,4 @@
 
 ;; Install missing tree-sitter grammars on demand and remap to *-ts-mode.
 (package! treesit-auto)
+(package! emidje)
