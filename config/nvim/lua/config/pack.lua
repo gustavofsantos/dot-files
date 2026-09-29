@@ -37,6 +37,7 @@ vim.pack.add({
   gh("onsails/lspkind.nvim"),
   { src = gh("saghen/blink.cmp"), version = vim.version.range("1.*") },
   gh("windwp/nvim-autopairs"),
+  gh("folke/snacks.nvim"),
   gh("numToStr/Comment.nvim"),
   gh("stevearc/conform.nvim"),
   gh("hat0uma/csvview.nvim"),
