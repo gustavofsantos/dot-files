@@ -1,41 +1,72 @@
-// Zed settings
-//
-// For information on how to configure Zed, see the Zed
-// documentation: https://zed.dev/docs/configuring-zed
-//
-// To see all of Zed's default settings without changing your
-// custom settings, run `zed: open default settings` from the
-// command palette (cmd-shift-p / ctrl-shift-p)
+// Zed settings: a port of the Neovim + tmux setup (config/nvim, config/tmux).
+// What maps where, and what Zed cannot do, is in config/zed/README.md.
 {
-  "ui_font_family": ".SystemUIFont",
+  // Agents run in terminals (the `claude` task, prefix C), as they did in tmux.
   "disable_ai": true,
-  "project_panel": {
-    "dock": "left",
-  },
-  "agent": {
-    "dock": "right",
-    "favorite_models": [],
-    "model_parameters": [],
-  },
-  "git_panel": {
-    "dock": "left",
-    "tree_view": true,
-  },
-  "agent_servers": {},
-  "ui_font_size": 15.0,
-  "buffer_font_size": 13.0,
+
+  // Look: cursorized (themes/cursorized.json), following the system light/dark
+  // like system_theme.lua does; the same fonts as Ghostty.
   "theme": {
     "mode": "system",
-    "light": "One Light",
-    "dark": "Nord Dark"
+    "light": "Cursorized Light",
+    "dark": "Cursorized Dark",
   },
   "buffer_font_family": "MonoLisa Nerd Font",
-  "vim_mode": true,
-  "relative_line_numbers": "enabled",
-  "gutter": {
-    "line_numbers": false,
-    "min_line_number_digits": 2,
+  "buffer_font_size": 13.0,
+  "buffer_line_height": "comfortable",
+  "ui_font_family": ".SystemUIFont",
+  "ui_font_size": 15.0,
+  "terminal": {
+    "font_family": "MonoLisa Nerd Font",
+    "dock": "bottom",
+    "copy_on_select": true,
+    "blinking": "off",
+    "cursor_shape": "block",
+    "max_scroll_history_lines": 10000,
+    "toolbar": { "breadcrumbs": false },
+    "button": false,
   },
+
+  // Vim (options.lua)
+  "vim_mode": true,
+  "vim": {
+    "use_system_clipboard": "always", // clipboard=unnamedplus
+    "use_smartcase_find": true, // ignorecase + smartcase
+    "highlight_on_yank_duration": 500, // vim.highlight.on_yank timeout
+    "toggle_relative_line_numbers": false,
+  },
+  "use_smartcase_search": true,
+  "relative_line_numbers": "enabled",
+  "vertical_scroll_margin": 3, // scrolloff=3
+  "current_line_highlight": "all", // cursorline
+  "cursor_blink": false,
+  "show_whitespaces": "trailing", // listchars trail=·
+  "soft_wrap": "none",
+  "which_key": { "enabled": true, "delay_ms": 400 }, // which-key.nvim
+  "command_aliases": {
+    "Q": "q",
+    "Qall": "qall",
+    "QA": "qa",
+    "E": "e",
+    "X": "x",
+    "W": "w",
+    "Wq": "wq",
+    "WQ": "wq",
+    "Wa": "wa",
+    "WA": "wa",
+  },
+
+  // A bare editor, like the nvim UI: signcolumn, no tabline chrome, no blame.
+  "gutter": {
+    "line_numbers": true,
+    "runnables": false,
+    "breakpoints": false,
+    "folds": false,
+    "min_line_number_digits": 3,
+  },
+  "indent_guides": { "enabled": false },
+  "scrollbar": { "show": "never" },
+  "minimap": { "show": "never" },
   "tab_bar": {
     "show_nav_history_buttons": false,
     "show_tab_bar_buttons": false,
@@ -47,30 +78,52 @@
     "agent_review": false,
     "code_actions": false,
   },
-  "indent_guides": {
-    "enabled": false,
-  },
-  "edit_predictions": {
-    "provider": "zed",
-    "disabled_globs": ["*"],
-  },
-  "show_edit_predictions": false,
-  "collaboration_panel": {
-    "dock": "left",
-    "button": false,
-  },
-  "outline_panel": {
-    "dock": "left",
-    "button": false,
-  },
-  "git": {
-    "inline_blame": {
-      "enabled": false,
+  "git": { "inline_blame": { "enabled": false } },
+  "git_panel": { "dock": "left", "tree_view": true },
+  "project_panel": { "dock": "left", "hide_gitignore": false },
+  "outline_panel": { "dock": "left", "button": false },
+  "collaboration_panel": { "dock": "left", "button": false },
+
+  // Diagnostics: no virtual text (gK toggles them inline), the list on gD.
+  "diagnostics": { "inline": { "enabled": false } },
+
+  // Formatting (conform.lua): off on save, `gf` formats on demand.
+  "format_on_save": "off",
+  "languages": {
+    "Lua": {
+      "tab_size": 2,
+      "hard_tabs": false,
+      "formatter": { "external": { "command": "stylua", "arguments": ["-"] } },
+    },
+    "JSON": { "tab_size": 2, "formatter": "prettier" },
+    "Markdown": {
+      "soft_wrap": "editor_width",
+      "formatter": "prettier",
+    },
+    "Python": {
+      "language_servers": ["pyright", "ruff", "!basedpyright", "..."],
+      "formatter": [
+        { "external": { "command": "isort", "arguments": ["-"] } },
+        { "external": { "command": "black", "arguments": ["-q", "-"] } },
+      ],
+    },
+    "Clojure": {
+      "formatter": { "external": { "command": "cljstyle", "arguments": ["pipe"] } },
+    },
+    "SQL": {
+      "formatter": { "external": { "command": "sqlfmt", "arguments": ["-"] } },
     },
   },
-  "command_aliases": {
-    "W": "w",
-    "Wq": "wq",
-    "Q": "q",
+
+  // The extensions behind the LSP servers mason installed.
+  "auto_install_extensions": {
+    "clojure": true,
+    "kotlin": true,
+    "lua": true,
+    "dockerfile": true,
+    "docker-compose": true,
+    "sql": true,
+    "toml": true,
+    "make": true,
   },
 }
