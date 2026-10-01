@@ -1,184 +1,214 @@
-// Zed keymap
+// Zed keymap: a port of the Neovim (config/nvim) + tmux (config/tmux) bindings.
+// The README next to this file maps each binding to its origin and lists what
+// Zed cannot reproduce.
 //
-// For information on binding keys, see the Zed
-// documentation: https://zed.dev/docs/key-bindings
+// Layout model: a tmux pane is a Zed pane, a tmux window is a tab in it, and a
+// shell or agent is a terminal tab in the center (prefix c), so ctrl-h/j/k/l
+// moves between code and agents exactly as vim-tmux-navigator did.
 //
-// To see the default key bindings run `zed: open default keymap`
-// from the command palette.
+// Order matters: a multi-key binding defined here (e.g. `ctrl-a s`) wins over a
+// shorter built-in one (`ctrl-a` = increment), because user bindings load later.
 [
+  // ---------------------------------------------------------------------------
+  // tmux: prefix ctrl-a. Unlike tmux, Zed drops a pending prefix after ~1s.
+  // ---------------------------------------------------------------------------
   {
-    "context": "Editor || Workspace",
+    "context": "Workspace",
     "bindings": {
-      "ctrl-b": "workspace::ToggleLeftDock",
-      "ctrl-\\": "terminal_panel::ToggleFocus",
-      "ctrl-shift-f": "project_search::ToggleFocus",
+      "ctrl-a s": "pane::SplitRight",
+      "ctrl-a shift-s": "pane::SplitDown",
+      "ctrl-a c": "workspace::NewCenterTerminal",
+      "ctrl-a shift-c": ["task::Spawn", { "task_name": "claude" }],
+      "ctrl-a x": "pane::CloseActiveItem",
+      "ctrl-a z": "workspace::ToggleZoom",
+      "ctrl-a n": "pane::ActivateNextItem",
+      "ctrl-a p": "pane::ActivatePreviousItem",
+      "ctrl-a 1": ["pane::ActivateItem", 0],
+      "ctrl-a 2": ["pane::ActivateItem", 1],
+      "ctrl-a 3": ["pane::ActivateItem", 2],
+      "ctrl-a 4": ["pane::ActivateItem", 3],
+      "ctrl-a 5": ["pane::ActivateItem", 4],
+      "ctrl-a 6": ["pane::ActivateItem", 5],
+      "ctrl-a 7": ["pane::ActivateItem", 6],
+      "ctrl-a 8": ["pane::ActivateItem", 7],
+      "ctrl-a 9": "pane::ActivateLastItem",
+      "ctrl-a ctrl-h": "vim::ResizePaneLeft",
+      "ctrl-a ctrl-j": "vim::ResizePaneDown",
+      "ctrl-a ctrl-k": "vim::ResizePaneUp",
+      "ctrl-a ctrl-l": "vim::ResizePaneRight",
+      // tmux-sessionizer -s / tmux-sessionizer / claude-sessions
+      "ctrl-a o": "projects::OpenRecent",
+      "ctrl-a shift-o": ["task::Spawn", { "task_name": "project: open" }],
+      "ctrl-a a": "tab_switcher::ToggleAll",
+      "ctrl-a g": ["task::Spawn", { "task_name": "lazygit" }],
+      "ctrl-a shift-d": ["task::Spawn", { "task_name": "lazydocker" }],
+      "ctrl-a w": ["task::Spawn", { "task_name": "worklog" }],
+      "ctrl-shift-left": "pane::SwapItemLeft",
+      "ctrl-shift-right": "pane::SwapItemRight",
+      // vim-tmux-navigator: C-\ is the last pane.
+      "ctrl-\\": "workspace::ActivatePreviousPane",
+      // toggleterm open_mapping
+      "ctrl-t": "terminal_panel::Toggle",
     },
   },
   {
-    "context": "EmptyPane || SharedScreen",
+    // prefix prefix sends the prefix (bind-key C-a send-prefix)
+    "context": "Editor && (vim_mode == normal || vim_mode == visual)",
     "bindings": {
-      "space o": "file_finder::Toggle",
-      "space b": "tab_switcher::Toggle",
-      "space l": "pane::DeploySearch",
-      "space z": "buffer_search::Deploy",
-      "space t f": [
-        "task::Spawn",
-        { "task_name": "testfile", "reveal": "no_focus" },
-      ],
-      "space t c": [
-        "task::Spawn",
-        { "task_name": "testchanged", "reveal": "no_focus" },
-      ],
+      "ctrl-a ctrl-a": "vim::Increment",
     },
   },
   {
-    "context": "Extension || (Workspace &&  vim_mode == normal && !VimWaiting && !VimCount)",
+    "context": "Terminal",
     "bindings": {
-      "-": "workspace::ToggleLeftDock",
-      "space b": "tab_switcher::Toggle",
-      "space o": "file_finder::Toggle",
-    },
-  },
-  {
-    "context": "ProjectSearchBar || ProjectSearchView",
-    "bindings": {
-      "escape": "project_search::ToggleFocus",
-      "ctrl-c": "project_search::ToggleFocus",
-    },
-  },
-  {
-    "context": "Editor && showing_completions && vim_mode == insert",
-    "bindings": {
-      "ctrl-y": "editor::ComposeCompletion",
-    },
-  },
-  {
-    "context": "Editor && !showing_completions && !edit_prediction && vim_mode == insert",
-    "bindings": {
-      "ctrl-space": "editor::ShowCompletions",
-      "alt-l": "editor::ShowEditPrediction",
-    },
-  },
-  {
-    "context": "Editor && edit_prediction && !showing_completions && vim_mode == insert",
-    "bindings": {
-      "alt-l": "editor::AcceptEditPrediction",
-    },
-  },
-  {
-    "context": "Editor && (edit_prediction && in_leading_whitespace) && vim_mode == insert",
-    "bindings": {
-      "alt-l": "editor::AcceptEditPrediction",
-    },
-  },
-  {
-    "context": "VimControl && !menu && vim_mode != operator",
-    "bindings": {
-      "w": "vim::NextSubwordStart",
-      "b": "vim::PreviousSubwordStart",
-      "e": "vim::NextSubwordEnd",
-      "g e": "vim::PreviousSubwordEnd",
-    },
-  },
-  {
-    "context": "Editor && VimControl && !VimWaiting && !menu",
-    "bindings": {
-      "ctrl-w z": "workspace::ToggleZoom",
-      // Navigation
+      "ctrl-a ctrl-a": ["terminal::SendKeystroke", "ctrl-a"],
+      "ctrl-a [": "terminal::ToggleViMode", // copy-mode
       "ctrl-h": "workspace::ActivatePaneLeft",
-      "ctrl-l": "workspace::ActivatePaneRight",
-      "ctrl-k": "workspace::ActivatePaneUp",
       "ctrl-j": "workspace::ActivatePaneDown",
+      "ctrl-k": "workspace::ActivatePaneUp",
+      "ctrl-l": "workspace::ActivatePaneRight",
+    },
+  },
+
+  // ---------------------------------------------------------------------------
+  // Pane navigation everywhere (Navigator.nvim + the tmux is_vim switch).
+  // ---------------------------------------------------------------------------
+  {
+    "context": "VimControl && !menu || ProjectPanel || GitPanel || EmptyPane || Dock",
+    "bindings": {
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-j": "workspace::ActivatePaneDown",
+      "ctrl-k": "workspace::ActivatePaneUp",
+      "ctrl-l": "workspace::ActivatePaneRight",
+    },
+  },
+
+  // ---------------------------------------------------------------------------
+  // Neovim: keymaps.lua and the plugin configs. Leader is space.
+  // ---------------------------------------------------------------------------
+  {
+    "context": "Editor && vim_mode == normal && !menu",
+    "bindings": {
+      "ctrl-s": "workspace::Save",
+      "ctrl-q": "pane::CloseActiveItem",
+      "shift-q": null,
+      "space space": "pane::AlternateFile",
       "space w s": "pane::SplitRight",
       "space w shift-s": "pane::SplitDown",
-      "space q": "pane::CloseAllItems",
-      "ctrl-w s": "pane::SplitLeft",
-      "ctrl-w ctrl-s": "pane::SplitLeft",
-      "ctrl-w shift-s": "pane::SplitDown",
-      "ctrl-\\": "terminal_panel::ToggleFocus",
+      "space shift-q": "zed::Quit",
+      "space shift-w": "workspace::SaveAll",
+      "space y p": "workspace::CopyRelativePath",
+
+      // telescope
+      "space o": "file_finder::Toggle",
+      "space b": "tab_switcher::Toggle",
+      "space e": "file_finder::Toggle",
+      "space f": "buffer_search::Deploy",
+      "space l": "pane::DeploySearch",
+      "space h": "command_palette::Toggle",
+      "space shift-t": "tab_switcher::ToggleAll",
+      "f3": "pane::DeploySearch",
+
+      // oil
       "-": "pane::RevealInProjectPanel",
 
-      "alt-k": "editor::MoveLineUp",
-      "alt-j": "editor::MoveLineDown",
+      // LSP (lsp.config.lua); K is Zed's default hover
+      "g r a": "editor::ToggleCodeActions",
+      "g r d": "editor::GoToDefinition",
+      "g r r": "editor::FindAllReferences",
+      "g r i": "editor::GoToImplementation",
+      "g r n": "editor::Rename",
+      "g r t": "editor::GoToTypeDefinition",
+      "g f": "editor::Format",
 
-      "g .": "editor::ToggleCodeActions",
-      "g r": "editor::Rename",
-      "g shift-r": "editor::FindAllReferences",
+      // diagnostics
+      "g shift-d": "diagnostics::Deploy",
+      "g shift-k": "editor::ToggleInlineDiagnostics",
+      "] d": "editor::GoToDiagnostic",
+      "[ d": "editor::GoToPreviousDiagnostic",
+      "] e": ["editor::GoToDiagnostic", { "severity": { "min": "error", "max": "error" } }],
+      "[ e": ["editor::GoToPreviousDiagnostic", { "severity": { "min": "error", "max": "error" } }],
+
+      // gitsigns / diffview
+      "] h": "editor::GoToHunk",
+      "[ h": "editor::GoToPreviousHunk",
+      "space d h p": "editor::ToggleSelectedDiffHunks",
+      "space g h r": "git::Restore",
+      "space g h d t": "git::Diff",
+      "space d v": "git::Diff",
+
+      // vim-test
+      "space t f": ["task::Spawn", { "task_name": "test: file" }],
+      "space t c": ["task::Spawn", { "task_name": "test: changed" }],
+      "space t l": "task::Rerun",
+
+      // rvw review queue (after/plugin/review.lua, bin/zed-review)
+      "space r a": ["task::Spawn", { "task_name": "review: add" }],
+      "space r e": ["task::Spawn", { "task_name": "review: edit" }],
+      "space r d": ["task::Spawn", { "task_name": "review: withdraw" }],
+      "space r o": ["task::Spawn", { "task_name": "review: list" }],
+      "space r s": ["task::Spawn", { "task_name": "review: submit" }],
+
+      // flash: s jumps by labels, S grows a syntax-node selection
+      "s": "vim::HelixJumpToWord",
+      "shift-s": "editor::SelectLargerSyntaxNode",
     },
   },
   {
-    "context": "ProjectPanel",
+    "context": "Editor && vim_mode == visual && !menu",
     "bindings": {
-      "ctrl-h": "workspace::ActivatePaneLeft",
-      "ctrl-l": "workspace::ActivatePaneRight",
-      "ctrl-k": "workspace::ActivatePaneUp",
-      "ctrl-j": "workspace::ActivatePaneDown",
+      "enter": ["task::Spawn", { "task_name": "review: add" }],
+      "space r a": ["task::Spawn", { "task_name": "review: add" }],
+      "space y p": "editor::CopyFileLocation",
+      "space b": "git::Blame",
+      "f3": "pane::DeploySearch",
+      "s": "vim::HelixJumpToWord",
+      "shift-s": "editor::SelectLargerSyntaxNode",
     },
   },
+  {
+    // The leader works before any file is open.
+    "context": "EmptyPane",
+    "bindings": {
+      "space o": "file_finder::Toggle",
+      "space e": "file_finder::Toggle",
+      "space b": "tab_switcher::Toggle",
+      "space l": "pane::DeploySearch",
+      "space shift-t": "tab_switcher::ToggleAll",
+      "-": "workspace::ToggleLeftDock",
+    },
+  },
+  {
+    // blink.cmp default preset
+    "context": "Editor && vim_mode == insert",
+    "bindings": {
+      "ctrl-space": "editor::ShowCompletions",
+    },
+  },
+  {
+    "context": "Editor && showing_completions",
+    "bindings": {
+      "ctrl-y": "editor::ConfirmCompletion",
+      "ctrl-e": "editor::Cancel",
+    },
+  },
+  {
+    // markdown ftplugin: j/k move by display line
+    "context": "Editor && extension == md && vim_mode == normal && !menu",
+    "bindings": {
+      "j": ["vim::Down", { "display_lines": true }],
+      "k": ["vim::Up", { "display_lines": true }],
+    },
+  },
+
+  // ---------------------------------------------------------------------------
+  // Pickers and panels: telescope / oil feel.
+  // ---------------------------------------------------------------------------
   {
     "context": "ProjectPanel && not_editing",
     "bindings": {
-      "ctrl-b": "workspace::ToggleLeftDock",
       "-": "workspace::ToggleLeftDock",
-    },
-  },
-  {
-    "context": "Editor && vim_mode == normal && !VimWaiting && !VimCount",
-    "bindings": {
-      "0": ["vim::StartOfLine", { "display_lines": true }],
-      "$": ["vim::EndOfLine", { "display_lines": true }],
-      "ctrl-s": "workspace::Save",
-      "ctrl-q": "pane::CloseActiveItem",
-      "space w": "workspace::SaveAll",
-    },
-  },
-  {
-    "context": "Editor && vim_mode == normal",
-    "bindings": {
-      "space space": "pane::AlternateFile",
-      "space o": "file_finder::Toggle",
-      "space b": "tab_switcher::Toggle",
-      "space l": "pane::DeploySearch",
-      "space z": "buffer_search::Deploy",
-      "g c c": "editor::ToggleComments",
-      "g r a": "editor::ToggleCodeActions",
-      "g r t": "editor::GoToTypeDefinition",
-      "g r d": "editor::GoToDefinition",
-      "g r r": "editor::FindAllReferences",
-      "g r n": "editor::Rename",
-      "] c": "editor::GoToDiagnostic",
-      "[ c": "editor::GoToPreviousDiagnostic",
-      "] d": "editor::GoToDiagnostic",
-      "[ d": "editor::GoToPreviousDiagnostic",
-      "space t f": [
-        "task::Spawn",
-        { "task_name": "testfile", "reveal": "no_focus" },
-      ],
-      "space t c": [
-        "task::Spawn",
-        { "task_name": "testchanged", "reveal": "no_focus" },
-      ],
-    },
-  },
-  {
-    "context": "Editor && vim_mode == visual",
-    "bindings": {
-      "g c": "editor::ToggleComments",
-    },
-  },
-  {
-    "context": "vim_mode == normal || vim_mode == visual",
-    "bindings": {
-      "s": "vim::PushSneak",
-      "shift-s": "vim::PushSneakBackward",
-    },
-  },
-  {
-    "context": "FileFinder",
-    "bindings": {
-      "ctrl-s": "pane::SplitRight",
-      "ctrl-shift-s": "pane::SplitDown",
-      "ctrl-d": "pane::CloseActiveItem",
+      "ctrl-q": "workspace::ToggleLeftDock",
     },
   },
   {
@@ -188,19 +218,9 @@
     },
   },
   {
-    "context": "Terminal",
+    "context": "ProjectSearchBar || ProjectSearchView",
     "bindings": {
-      "ctrl-\\": "workspace::ToggleBottomDock",
-      "ctrl-u": "terminal::Clear",
-    },
-  },
-  {
-    "context": "Dock",
-    "bindings": {
-      "ctrl-h": "workspace::ActivatePaneLeft",
-      "ctrl-l": "workspace::ActivatePaneRight",
-      "ctrl-k": "workspace::ActivatePaneUp",
-      "ctrl-j": "workspace::ActivatePaneDown",
+      "escape": "project_search::ToggleFocus",
     },
   },
 ]

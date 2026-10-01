@@ -1,15 +1,108 @@
-// Static tasks configuration.
+// Global tasks: the tmux windows, vim-test and the rvw review plugin of the
+// Neovim + tmux setup. Bound in keymap.json; also listed by `task: spawn`.
 //
-// Example:
+// Zed puts every ZED_* task variable in the environment, so scripts read them
+// directly instead of having them pasted (and shell-quoted) into the command.
 [
+  // vim-test (<leader>tf): the same `testf` transformation as vim-test.config.lua.
+  // Output goes to the bottom terminal, as VTR sent it to the runner pane.
   {
-    "label": "testfile",
-    "command": "testfile",
-    "args": ["$ZED_RELATIVE_FILE"],
+    "label": "test: file",
+    "command": "source ~/.zhelpers && testf \"$ZED_WORKTREE_ROOT\" \"$ZED_RELATIVE_FILE\"",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "reveal": "no_focus",
+    "save": "current",
   },
   {
-    "label": "testchanged",
+    "label": "test: changed",
     "command": "testallchanged",
-    "args": [],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "reveal": "no_focus",
+    "save": "all",
+  },
+
+  // tmux: prefix g / D / w / O
+  {
+    "label": "lazygit",
+    "command": "lazygit -p \"$ZED_WORKTREE_ROOT\"",
+    "reveal_target": "center",
+    "hide": "always",
+    "show_summary": false,
+    "show_command": false,
+  },
+  {
+    "label": "lazydocker",
+    "command": "lazydocker",
+    "reveal_target": "center",
+    "hide": "always",
+    "show_summary": false,
+    "show_command": false,
+  },
+  {
+    "label": "worklog",
+    "command": "wlog today -e",
+    "reveal_target": "center",
+    "hide": "always",
+    "show_summary": false,
+    "show_command": false,
+  },
+  {
+    // tmux-sessionizer without -s: pick any project dir, open it in Zed.
+    "label": "project: open",
+    "command": "dir=$(project-dirs | fzf --reverse) && zed \"$dir\"",
+    "reveal_target": "center",
+    "hide": "always",
+    "show_summary": false,
+    "show_command": false,
+  },
+  {
+    // A claude window next to the code, as a center tab: split it, zoom it,
+    // reach it with ctrl-h/j/k/l like any other pane.
+    "label": "claude",
+    "command": "claude",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "reveal_target": "center",
+    "use_new_terminal": true,
+    "allow_concurrent_runs": true,
+    "show_summary": false,
+    "show_command": false,
+  },
+
+  // rvw review queue (after/plugin/review.lua). See bin/zed-review.
+  {
+    "label": "review: add",
+    "command": "zed-review add",
+    "reveal": "no_focus",
+    "hide": "on_success",
+    "save": "current",
+    "show_command": false,
+  },
+  {
+    "label": "review: edit",
+    "command": "zed-review edit",
+    "reveal": "no_focus",
+    "hide": "on_success",
+    "show_command": false,
+  },
+  {
+    "label": "review: withdraw",
+    "command": "zed-review withdraw",
+    "reveal": "always",
+    "hide": "on_success",
+    "show_command": false,
+  },
+  {
+    "label": "review: list",
+    "command": "zed-review list",
+    "reveal": "always",
+    "show_summary": false,
+    "show_command": false,
+  },
+  {
+    "label": "review: submit",
+    "command": "zed-review submit",
+    "reveal": "always",
+    "hide": "on_success",
+    "show_command": false,
   },
 ]

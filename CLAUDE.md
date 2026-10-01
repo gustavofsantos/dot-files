@@ -223,6 +223,12 @@ saved with `C-c C-c`/`C-s`, list in a `grep-mode` buffer. Keys: visual `RET` add
 prefix for `a`dd/`o` list/`e`dit/`d` withdraw/`r`efresh/`s`ubmit. `rvw` has no `drop` or
 `clear`, so "delete" is a withdraw (`rvw reject ID --note`) and there is no clear.
 
+Zed has a port too, `bin/zed-review`, run as Zed tasks from `config/zed/tasks.json`. Zed
+has no gutter API, so it draws no signs. It reads the selection from the task environment
+(`ZED_FILE`, `ZED_ROW`, `ZED_SELECTED_TEXT`) and takes the comment text in a Zed tab opened
+with `zed --existing --wait`. Delete is a withdraw (`rvw reject --note`), as in Doom. Tests:
+`bats test_bin/zed-review.bats`.
+
 On the agent side, the `rvw` plugin (`/plugin install rvw@rvw`, skill `rvw:rvw`, source in
 `~/Projects/rvw/skills/rvw/`) covers both directions: working the queue (`rvw pull`, then
 `resolve`/`reject` by id) and reviewing code to leave comments for another agent
@@ -244,6 +250,14 @@ On the agent side, the `rvw` plugin (`/plugin install rvw@rvw`, skill `rvw:rvw`,
 Entry point: `config/nvim/init.lua` → loads `config/options`, `config/keymaps`, `config/autocmds`, `config/pack`.
 
 Plugins are managed by Neovim's native `vim.pack` (0.12+), pinned in `config/nvim/nvim-pack-lock.json`. `config/pack.lua` installs and loads plugins at startup with one `vim.pack.add`. It then sources every file in `lua/plugins/` by path; these files are plain setup code, not specs. Plugins that load only for one filetype are added with a no-op `load`, and their `after/ftplugin/<ft>.lua` loads them through `require("utils").packadd(names, setup)`. That helper runs once per session and replays the FileType autocmds the plugin registered, so the first buffer does not miss them. Build steps (`make`, `:TSUpdate`) run from a `PackChanged` autocmd. Leader is `<Space>`, local leader is `,`.
+
+## Zed config
+
+`config/zed/` ports the Neovim + tmux setup to Zed: `settings.json` (options), `keymap.json`
+(nvim leader maps plus the tmux `ctrl-a` prefix), `tasks.json` (lazygit, tests, rvw), and
+`themes/cursorized.json` (the cursorized palette from `colors/cursorized.lua`). Terminals and
+agents live as center tabs so `ctrl-h/j/k/l` crosses code and agents as tmux did.
+`config/zed/README.md` maps each binding to its origin and lists what Zed cannot reproduce.
 
 ## Key environment variables (set in `.zshenv`)
 

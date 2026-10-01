@@ -1,0 +1,218 @@
+#!/usr/bin/env bash
+# zed-review: the Zed side of the rvw review queue.
+#
+# Port of config/nvim/after/plugin/review.lua (and config/doom/review.el). Zed has
+# no plugin API that can draw signs or open a floating input, so this runs as a
+# Zed task (config/zed/tasks.json) and reads the editor state from the task
+# environment:
+#
+#   ZED_FILE            absolute path of the active file
+#   ZED_ROW             first line of the selection (or the cursor line)
+#   ZED_SELECTED_TEXT   the selection; its line count gives the last line
+#   ZED_LANGUAGE        language name, mapped to an nvim-style --filetype
+#
+# Stateless, like the nvim plugin: every comment lives in the `rvw` queue and is
+# acted on by id. The comment text is typed in a Zed tab: the script opens a
+# scratch Markdown file with `zed --existing --wait` and blocks until the tab is
+# closed. Save and close to queue it; close it empty to cancel.
+#
+# Usage: zed-review add | edit | withdraw | list | submit [DECISION]
+#
+# Environment:
+#   RVW_CMD            queue command (default: rvw)
+#   ZED_REVIEW_EDITOR  command that edits one file and blocks until it is done
+#                      (default: the Zed CLI, `zed --existing --wait`)
+set -euo pipefail
+
+RVW=${RVW_CMD:-rvw}
+DECISIONS=(comment approve request-changes)
+
+die() {
+  printf 'zed-review: %s\n' "$*" >&2
+  exit 1
+}
+
+need_file() {
+  [[ -n ${ZED_FILE:-} ]] || die "no file is active in Zed"
+}
+
+# rvw resolves the workspace from its cwd: run it from the file's directory, so
+# a file outside the open project still lands in its own repo's queue.
+queue() {
+  local dir=${ZED_FILE:+$(dirname "$ZED_FILE")}
+  (cd "${dir:-${ZED_WORKTREE_ROOT:-$PWD}}" && "$RVW" "$@")
+}
+
+# Zed's language names, as the nvim filetypes rvw already stores.
+filetype() {
+  case ${ZED_LANGUAGE:-} in
+    "") ;;
+    "Shell Script") echo sh ;;
+    TSX) echo typescriptreact ;;
+    JSX) echo javascriptreact ;;
+    "C++") echo cpp ;;
+    "C#") echo cs ;;
+    *) printf '%s\n' "$ZED_LANGUAGE" | tr -d ' ' | tr '[:upper:]' '[:lower:]' ;;
+  esac
+}
+
+# The selection's last line. ZED_ROW is where it starts; a linewise (V)
+# selection ends on the newline of its last line, which adds no line.
+end_line() {
+  local start=$1 text=${ZED_SELECTED_TEXT:-}
+  local newlines=${text//[^$'\n']/}
+  local n=${#newlines}
+  if [[ $text == *$'\n' ]] && ((n > 0)); then
+    n=$((n - 1))
+  fi
+  echo $((start + n))
+}
+
+format_range() {
+  if [[ $1 == "$2" ]]; then echo "$1"; else echo "$1-$2"; fi
+}
+
+zed_cli() {
+  local cli
+  for cli in zed zeditor; do
+    if command -v "$cli" >/dev/null; then
+      echo "$cli"
+      return
+    fi
+  done
+  die "the Zed CLI (zed or zeditor) is not on \$PATH"
+}
+
+# Open a scratch Markdown file named TITLE, pre-filled with INITIAL, and print
+# what it holds once the editor returns. Called in $(...), so the EXIT trap
+# removes the temp dir as soon as the text is read.
+input() {
+  local title=$1 initial=${2:-}
+  INPUT_DIR=$(mktemp -d "${TMPDIR:-/tmp}/zed-review.XXXXXX")
+  trap 'rm -rf "$INPUT_DIR"' EXIT
+  local file="$INPUT_DIR/$title.md"
+  printf '%s' "$initial" >"$file"
+  # The editor's own output goes to stderr: stdout is the comment.
+  if [[ -n ${ZED_REVIEW_EDITOR:-} ]]; then
+    $ZED_REVIEW_EDITOR "$file" >&2
+  else
+    "$(zed_cli)" --existing --wait "$file" >&2
+  fi
+  cat "$file"
+}
+
+blank() {
+  [[ -z ${1//[[:space:]]/} ]]
+}
+
+# The queued comment nearest ZED_ROW in ZED_FILE, as one JSON object: a range
+# holding the line wins, else the nearest by distance, first in queue order on a
+# tie. The queue is asked fresh every time.
+near_cursor() {
+  local item
+  item=$(queue list --format json --all-lanes --file "$ZED_FILE" | jq -c --argjson line "${ZED_ROW:-1}" '
+    [(.reviews // [])[]
+      | . + {dist: (if $line >= .start_line and $line <= .end_line then 0
+                    else ([($line - .start_line | fabs), ($line - .end_line | fabs)] | min) end)}]
+    | sort_by(.dist) | first // empty')
+  [[ -n $item ]] || die "no queued comment near line ${ZED_ROW:-1} of $(basename "$ZED_FILE")"
+  echo "$item"
+}
+
+label() {
+  jq -r '"\(.id): \(.path | split("/") | last):\(if .start_line == .end_line then .start_line else "\(.start_line)-\(.end_line)" end)"' <<<"$1"
+}
+
+cmd_add() {
+  need_file
+  local start=${ZED_ROW:-1} end range ft text out
+  end=$(end_line "$start")
+  range=$(format_range "$start" "$end")
+  text=$(input "review $(basename "$ZED_FILE") L$range")
+  if blank "$text"; then
+    echo "Review: empty comment, nothing queued"
+    return
+  fi
+  # The task saves the buffer first ("save": "current"), so rvw snapshots the
+  # code from disk exactly as it reads in the editor.
+  local args=(add --file "$ZED_FILE" --lines "$range" --comment "$text" --format ids)
+  ft=$(filetype)
+  [[ -n $ft ]] && args+=(--filetype "$ft")
+  out=$(queue "${args[@]}")
+  echo "Review queued ${out//[[:space:]]/}: $(basename "$ZED_FILE"):$range"
+}
+
+cmd_edit() {
+  need_file
+  local item id text
+  item=$(near_cursor)
+  id=$(jq -r .id <<<"$item")
+  text=$(input "edit review $id" "$(jq -r .comment <<<"$item")")
+  if blank "$text"; then
+    echo "Review: empty comment, $id left unchanged"
+    return
+  fi
+  queue edit "$id" --comment "$text" >/dev/null
+  echo "Review updated $(label "$item")"
+}
+
+# rvw deletes nothing: withdrawing is a reject with a reason, so the comment
+# leaves the queue but stays on record.
+cmd_withdraw() {
+  need_file
+  local item id note
+  item=$(near_cursor)
+  id=$(jq -r .id <<<"$item")
+  printf 'Withdraw %s\n  %s\n' "$(label "$item")" "$(jq -r '.comment | split("\n") | first' <<<"$item")"
+  read -r -p "Reason [withdrawn]: " note || true
+  blank "$note" && note=withdrawn
+  queue reject "$id" --note "$note" >/dev/null
+  echo "Review withdrew $(label "$item")"
+}
+
+# The workspace queue as path:line lines: ctrl-click one in the Zed terminal to
+# jump to it, then edit or withdraw the comment under the cursor.
+cmd_list() {
+  local out
+  out=$(queue list --format json --all-lanes)
+  if [[ $(jq '(.reviews // []) | length' <<<"$out") == 0 ]]; then
+    echo "Review: the queue is empty for this workspace"
+    return
+  fi
+  jq -r '(.reviews // [])[]
+    | ([if .author then "@\(.author)" else empty end, if .lane then "#\(.lane)" else empty end] | join(" ")) as $who
+    | "\(.path):\(.start_line): \(.id). [\(if .start_line == .end_line then .start_line else "\(.start_line)-\(.end_line)" end)] \(if $who == "" then "" else "\($who) " end)\(.comment | split("\n") | first)"' <<<"$out"
+}
+
+cmd_submit() {
+  local decision=${1:-}
+  if [[ -z $decision ]]; then
+    PS3="Decision: "
+    select decision in "${DECISIONS[@]}"; do
+      [[ -n $decision ]] && break
+    done
+  fi
+  [[ " ${DECISIONS[*]} " == *" $decision "* ]] ||
+    die "decision must be comment, approve, or request-changes"
+  local summary out
+  summary=$(input "review summary ($decision)")
+  if blank "$summary"; then
+    echo "Review: empty summary, nothing submitted"
+    return
+  fi
+  out=$(queue submit --decision "$decision" --summary "$summary" --format ids)
+  echo "Review submitted ${out//[[:space:]]/}"
+}
+
+case ${1:-} in
+  add) cmd_add ;;
+  edit) cmd_edit ;;
+  withdraw) cmd_withdraw ;;
+  list) cmd_list ;;
+  submit) shift; cmd_submit "$@" ;;
+  -h | --help | "")
+    sed -n '2,/^set -euo/{/^set -euo/d;s/^# \{0,1\}//;p}' "$0"
+    [[ -n ${1:-} ]] || exit 1
+    ;;
+  *) die "unknown command: $1 (add, edit, withdraw, list, submit)" ;;
+esac
