@@ -10,7 +10,7 @@
 #font-family = BerkeleyMono Nerd Font
 font-family = MonoLisa Nerd Font
 adjust-cell-height = 4
-font-size = 16
+font-size = 14
 cursor-style = block
 cursor-invert-fg-bg = true
 theme = light:cursorized-light,dark:cursorized-dark

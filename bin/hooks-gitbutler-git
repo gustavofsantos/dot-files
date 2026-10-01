@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# hooks-gitbutler-git — PreToolUse(Bash) hook: in GitButler-managed repos, deny raw
-# git write commands — mutations must go through the `but` CLI so lane state
-# stays coherent (gitbutler-provenance). Read-only git (status, log, blame,
-# diff, show) passes untouched.
+# hooks-gitbutler-git — PreToolUse(Bash) hook: deny raw git write commands only
+# while the checkout at cwd is the GitButler workspace branch. Any other branch,
+# including a linked worktree, is a pass-through. On that branch, mutations must
+# go through the `but` CLI so lane state stays coherent (gitbutler-provenance).
+# Read-only git (status, log, blame, diff, show) passes untouched.
 #
 # Usage: hooks-gitbutler-git --harness claude
 #
@@ -31,6 +32,13 @@ cd "$cwd" 2>/dev/null || exit 0
 
 git_dir=$(git rev-parse --git-common-dir 2>/dev/null) || exit 0
 [ -d "$git_dir/gitbutler" ] || exit 0
+
+# HEAD of this checkout, not the main worktree. A linked worktree on a feature
+# branch must pass through even when the primary checkout is gitbutler/workspace.
+branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)
+if [[ "$branch" != "gitbutler/workspace" ]]; then
+  exit 0
+fi
 
 cmd=$(jq -r '.tool_input.command // empty' <<<"$input")
 [ -n "$cmd" ] || exit 0
