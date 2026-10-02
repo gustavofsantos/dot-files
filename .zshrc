@@ -5,6 +5,7 @@ export HISTSIZE=100000
 export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_ENV_HINTS=1
 
+autoload -Uz compinit && compinit
 
 fpath=("$HOME/completions/" $fpath)
 
@@ -57,7 +58,7 @@ if command -v "but" &> /dev/null; then
 fi
 
 if command -v "entire" &> /dev/null; then
-  autoload -Uz compinit && compinit && source <(entire completion zsh)
+  source <(entire completion zsh)
 fi
 
 if [ -e "$HOME/.local_envs" ]; then source "$HOME/.local_envs"; fi
@@ -68,6 +69,7 @@ if [ -e "$HOME/.sdkman/bin/sdkman-init.sh" ]; then source "$HOME/.sdkman/bin/sdk
 if [ -s "$NVM_DIR/nvm.sh" ]; then source "$NVM_DIR/nvm.sh"; fi
 if [ -s "$NVM_DIR/bash_completion" ]; then source "$NVM_DIR/bash_completion"; fi
 if [ -e "$HOME/.turso" ]; then . "$HOME/.turso/env"; fi
+if [ -e "$HOME/.zshlocal" ]; then source "$HOME/.zshlocal"; fi
 
 # pnpm
 export PNPM_HOME="$HOME/.local/share/pnpm"
