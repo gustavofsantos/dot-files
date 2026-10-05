@@ -1,5 +1,5 @@
 ---
-name: legacy-review-conditionals
+name: review-legacy-conditionals
 description: Review a legacy-code change for conditional and branching risk only — decision drift, fail-open defaults, absent-value semantics, exhaustiveness — and name the safe-change strategy for each finding.
 disable-model-invocation: true
 ---

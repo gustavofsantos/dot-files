@@ -1,5 +1,5 @@
 ---
-name: critical-systems-design
+name: rules-of-critical-systems-design
 description: Use this skill for a feature, refactor, API change, persistence or network change, concurrency change, or any change whose failure or resource behavior is not immediately obvious.
 ---
 
