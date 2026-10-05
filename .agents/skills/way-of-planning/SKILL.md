@@ -12,13 +12,9 @@ Create a short plan in the conversation. Do not create a plan file.
    - `WHEN <trigger>, THE <system> SHALL <response>`
    - `IF <condition>, THEN THE <system> SHALL <response>`
    - `WHILE <state>, THE <system> SHALL <response>` only for a real state.
-2. Order the requirements as thin, end-to-end slices. Each slice must go green without
-   breaking an earlier slice.
+2. Order the requirements as thin, end-to-end slices. Each slice must go green without breaking an earlier slice.
 3. Show the requirements and slices to the user. Wait for approval before execution.
-4. If execution disproves the plan's shape, revise the affected requirement or slice and
-   obtain approval for that delta.
+4. If execution disproves the plan's shape, revise the affected requirement or slice and obtain approval for that delta.
 5. Stop when the approved slices are complete. Do not invent more work.
 
-If the causal model is not agreed, hand that question to `change-frame` before planning.
-Once approved, each slice can enter `way-of-work`. Other design, code, test, and cost steers
-remain independent choices.
+Once approved, each slice can enter `way-of-work`. Other design, code, test, and cost steers remain independent choices.
