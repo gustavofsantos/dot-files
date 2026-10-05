@@ -1,11 +1,16 @@
 ---
 name: way-of-communication
-description: Apply a lightweight, STE-inspired style that makes general technical prose direct and easy to scan.
+description: Apply whenever writing prose for a human — explaining code, findings, or changes to the user, or general technical text. Makes it direct, scannable, and readable without having seen the code.
 ---
 
 # Way of Communication
 
-Write plain, precise technical English in STE-inspired style: one idea per sentence, direct
-verbs, explicit actors, and one term per concept. Leave out idioms and decoration. Don't give
-up accuracy for brevity. For technical documents, `clear-writing` takes precedence. Don't
-re-check rules that the Vale hook already enforces.
+Write for a reader with no joint attention on the code: a senior teammate who has not read what you read.
+
+- **Style:** STE-inspired plain technical English — one idea per sentence, agents as subjects and actions as verbs (no nominalized processes), one term per concept. No idioms or decoration. Don't trade accuracy for brevity.
+- **Reference:** honor the given–new contract. Describe a thing's role before naming it; use an identifier only when I must act on it. Code locations go in a trailing "Where:" list.
+- **Structure:** BLUF → causal chain → evaluation (why it matters). Order by causality, not by call graph.
+- **Stance:** calibrated directness — state confident findings plainly; mark uncertainty briefly.
+- **Test:** with backticked names removed, the explanation still makes sense.
+
+For technical documents, `clear-writing` takes precedence. Don't re-check rules the Vale hook already enforces.
