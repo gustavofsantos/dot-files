@@ -63,6 +63,7 @@ vim.pack.add({
   gh("prochri/telescope-all-recent.nvim"),
   { src = gh("akinsho/toggleterm.nvim"), version = vim.version.range("*") },
   { src = gh("nvim-treesitter/nvim-treesitter"), version = "main" },
+  gh("MeanderingProgrammer/render-markdown.nvim"),
   gh("vim-test/vim-test"),
   gh("folke/which-key.nvim"),
 }, { load = true })
