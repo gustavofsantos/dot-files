@@ -399,6 +399,17 @@ local hl = {
   SpellRare = { undercurl = true, sp = c.cyan },
   SpellLocal = { undercurl = true, sp = c.yellow },
 
+  -- transient (lua/transient): the strip has no border, so its bg is the only edge and
+  -- stays bg_hl even when transparent. Entry kinds: menu blue, loop green, action ink.
+  TransientNormal = { fg = c.fg, bg = c.bg_hl },
+  TransientTitle = { fg = c.fg_emph, bold = true },
+  TransientCrumb = { fg = c.fg_comment },
+  TransientKey = { fg = c.orange, bold = true },
+  TransientAction = { fg = c.fg },
+  TransientLoop = { fg = c.green },
+  TransientMenu = { fg = c.blue },
+  TransientHint = { fg = c.fg_comment },
+
   -- Treesitter
   ["@comment"] = { link = "Comment" },
   ["@string"] = { link = "String" },

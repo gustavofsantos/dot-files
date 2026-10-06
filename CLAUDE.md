@@ -251,6 +251,16 @@ Entry point: `config/nvim/init.lua` → loads `config/options`, `config/keymaps`
 
 Plugins are managed by Neovim's native `vim.pack` (0.12+), pinned in `config/nvim/nvim-pack-lock.json`. `config/pack.lua` installs and loads plugins at startup with one `vim.pack.add`. It then sources every file in `lua/plugins/` by path; these files are plain setup code, not specs. Plugins that load only for one filetype are added with a no-op `load`, and their `after/ftplugin/<ft>.lua` loads them through `require("utils").packadd(names, setup)`. That helper runs once per session and replays the FileType autocmds the plugin registered, so the first buffer does not miss them. Build steps (`make`, `:TSUpdate`) run from a `PackChanged` autocmd. Leader is `<Space>`, local leader is `,`.
 
+`lua/transient/` is a local, dependency-free key-menu engine (hydra-style repeat plus
+which-key-style discovery): `t.menu(trigger, mode)` makes a root and `menu:on(key, desc[, action])`
+adds a child menu or an action. `node.lua` holds the two node kinds, `engine.lua` the blocking
+`getcharstr()` stack loop, `layout.lua` the pure layout, and `strip.lua` the default bottom-strip
+renderer (`setup({ renderer = { show, close } })` swaps it). Triggers are expr mappings so
+operator-pending mode can be cancelled with `<Esc>` and the operator retyped by the action.
+The example menus are in `lua/plugins/transient.config.lua` on `<leader>m`. It does not replace
+which-key yet. Its headless Lua suites live in `tests/transient/` and run through
+`bats test_bin/transient-nvim.bats`.
+
 ## Zed config
 
 `config/zed/` ports the Neovim + tmux setup to Zed: `settings.json` (options), `keymap.json`
