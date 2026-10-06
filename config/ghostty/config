@@ -8,9 +8,10 @@
 #font-family = Operator Mono
 #font-family = CommitMono
 #font-family = BerkeleyMono Nerd Font
-font-family = MonoLisa Nerd Font
+#font-family = MonoLisa Nerd Font
+font-family = Iosevka Custom
 adjust-cell-height = 4
-font-size = 14
+font-size = 16
 cursor-style = block
 cursor-invert-fg-bg = true
 theme = light:cursorized-light,dark:cursorized-dark
