@@ -36,7 +36,7 @@ vim.keymap.set("n", ']e', function() vim.diagnostic.jump { count = 1, severity =
 
 vim.keymap.set("n", "<leader>u", "<cmd>UndotreeToggle<cr>", { desc = "Toggle undo tree", noremap = true, silent = true })
 
-vim.keymap.set("v", "<CR>", ":ReviewAdd<CR>",
+vim.keymap.set("v", "c", ":ReviewAdd<CR>",
   { desc = "Queue a review comment for selection", noremap = true, silent = true })
 vim.keymap.set("n", "<leader>rx", "<cmd>ReviewClear<CR>",
   { desc = "Drop every pending review comment", noremap = true, silent = true })
