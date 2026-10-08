@@ -3,32 +3,64 @@
 # Wraps any command; knows nothing about where the data comes from.
 #
 #   inv run   SLUG [options] -- COMMAND [ARGS...]   run COMMAND and record it as the next step
+#   inv map   SLUG --template T --params P [options] -- COMMAND ... {sql} ...
+#                                                   one step per params row, then one merged step
 #   inv log   SLUG                                  table of every step
 #   inv trace SLUG STEP [ROWS]                      facts-only handoff: the ancestors of STEP
 #   inv board INVESTIGATION                         one line per front of an investigation
+#   inv status SLUG STATUS                          set a front's status (lead's verdict)
+#   inv as-of INVESTIGATION [TIMESTAMP]             print or pin the investigation's as_of
+#   inv watermark INVESTIGATION [--probe CMD] [--table T]...
+#                                                   probe how far each table's data reaches
 #
 # SLUG is "investigation" or "investigation/front" (lowercase a-z, 0-9, -).
 #
 # run options:
 #   --why TEXT           why this step (shown in log; defaults to the command)
-#   --parent N           branch from step N (default: previous step; 0 = root)
-#   --attach FILE        snapshot an input file (e.g. the .sql), repeatable
+#   --parent N           branch from step N (default: last recorded step; 0 = root)
+#   --attach FILE        snapshot an input file (e.g. the .sql), repeatable; an argument
+#                        naming that file is rewritten to the snapshot, so what is
+#                        recorded is what ran
 #   --expect-rows EXPR   row-count check: >N, >=N, <N, <=N or =N
 #   --expect-unique COLS comma-separated columns that must be unique together
+#   --timeout DUR        kill the command after DUR (90, 90s, 5m, 1h); recorded as
+#                        check=timeout (default: the front's step_timeout, else none)
+#
+# map options (plus --why, --parent, --expect-rows, --expect-unique, --timeout per row):
+#   --template FILE      SQL with {column} placeholders, one per params column
+#   --params FILE        TSV with a header line; each row renders one SQL
+#   --parallel N         rows running at once (default: INV_MAP_PARALLEL, else 2)
+#   --fresh              rerun rows whose rendered SQL already has an ok step
+# {sql} in COMMAND is the rendered file. Rows whose rendered SQL already has an ok or
+# empty step are reused, not rerun. The last step merges every row, tagged by param.
+#
+# {as_of} in an attached file, a template or an argument is filled from the pinned
+# as_of. With as_of pinned, SQL using now(), current_date, current_timestamp,
+# current_time, localtime or localtimestamp is rejected (exit 3, nothing recorded).
 #
 # Output is expected to be tabular with a header line (rows = lines - 1).
-# Exit code: the command's own; 3 when the command succeeded but a check failed;
-# 4 when the step budget of SLUG is spent (SLUG/budget, else INV_MAX_STEPS, default 20).
+# Exit code: the command's own; 3 when a check failed (or a map row did not finish ok);
+# 4 when the step budget is spent or the front's lease expired; 124 on timeout.
+# A map costs one step of the budget however many rows it has.
 # Steps live in $INV_ROOT/SLUG (default ~/.investigations/SLUG). Keep it out of git.
 set -euo pipefail
 
 INV_ROOT="${INV_ROOT:-$HOME/.investigations}"
 DEFAULT_BUDGET="${INV_MAX_STEPS:-20}"
+DEFAULT_PARALLEL="${INV_MAP_PARALLEL:-2}"
+KILL_GRACE=10
 CHECK_FAILED_EXIT=3
-BUDGET_SPENT_EXIT=4
+STOP_EXIT=4
+TIMEOUT_EXIT=124
+WATERMARK_FRONT="watermark"
+PROBE_TIMEOUT="${INV_PROBE_TIMEOUT:-5m}"
+TIMEOUT_BIN="$(command -v timeout || command -v gtimeout || true)"
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+EVENTS_HEADER=$'step\tparent\ttimestamp\texit\trows\tout_sha\tcheck\twhy\tsecs\tkey\twatermark'
+RELATIVE_TIME='(^|[^a-z0-9_])(now[[:space:]]*\(|current_date|current_timestamp|current_time|localtimestamp|localtime)([^a-z0-9_]|$)'
 
 usage() {
-    sed -n '2,24p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
+    awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "${BASH_SOURCE[0]}" >&2
     exit 1
 }
 
@@ -49,10 +81,147 @@ check_slug() {
         die "slug must be 'investigation' or 'investigation/front' (lowercase a-z, 0-9, -)"
 }
 
+check_inv() {
+    [[ "$1" =~ ^[a-z0-9][a-z0-9-]*$ ]] || die "expected an investigation, not a front: $1"
+}
+
+# 90 / 90s / 5m / 1h → seconds.
+secs_of() {
+    [[ "$1" =~ ^([0-9]+)(s|m|h)?$ ]] || die "duration must look like 90, 90s, 5m or 1h: $1"
+    local n="${BASH_REMATCH[1]}"
+    case "${BASH_REMATCH[2]}" in
+        m) n=$(( n * 60 )) ;;
+        h) n=$(( n * 3600 )) ;;
+    esac
+    printf '%s' "$n"
+}
+
+now_iso() { date -u +"%Y-%m-%dT%H:%M:%SZ"; }
+
+sha_of() { shasum -a 256 | cut -c1-16; }
+
+# Path of a step's file. kind: sh (command), tsv (output), att (attachments dir).
+# Logs written before the steps/ layout keep cmd/N.sh, out/N.tsv and att/N/.
+step_file() {
+    local dir="$1" step="$2" kind="$3" new old
+    case "$kind" in
+        sh)  new="$dir/steps/$step.sh";  old="$dir/cmd/$step.sh" ;;
+        tsv) new="$dir/steps/$step.tsv"; old="$dir/out/$step.tsv" ;;
+        att) new="$dir/steps/$step.att"; old="$dir/att/$step" ;;
+    esac
+    if [[ ! -e "$new" && -e "$old" ]]; then printf '%s' "$old"; else printf '%s' "$new"; fi
+}
+
+# Serialises writers of one front (step numbers, events.tsv, front.md). Held for
+# milliseconds; a lock older than a minute belongs to a killed process. The lock is a
+# file created with noclobber (O_EXCL) by the shell itself: `mkdir` is not atomic
+# under contention in every coreutils (uutils mkdir lets two callers win).
+lock() {
+    local f="$1/.lock" tries=0
+    until ( set -C; printf '%s\n' "$$" > "$f" ) 2> /dev/null; do
+        tries=$(( tries + 1 ))
+        if (( tries % 250 == 0 )) && [[ -n "$(find "$f" -maxdepth 0 -mmin +1 2> /dev/null)" ]]; then
+            rm -f "$f"
+        fi
+        sleep 0.02
+    done
+}
+
+unlock() { rm -f "$1/.lock"; }
+
+# front.md starts with "# <slug>", then "key: value" lines up to the first blank line.
+# Logs from before front.md kept each value in its own file (question, status, budget).
+front_get() {
+    local dir="$1" key="$2" value=""
+    if [[ -f "$dir/front.md" ]]; then
+        value="$(K="$key" awk 'NR == 1 { next } /^$/ { exit }
+            { i = index($0, ": "); if (i && substr($0, 1, i - 1) == ENVIRON["K"]) { print substr($0, i + 2); exit } }' "$dir/front.md")"
+    fi
+    [[ -n "$value" || ! -f "$dir/$key" ]] || value="$(head -n 1 "$dir/$key")"
+    printf '%s' "$value"
+}
+
+# Caller holds the lock.
+front_set_locked() {
+    local dir="$1" key="$2" value tmp
+    value="$(one_line "$3")"
+    [[ -f "$dir/front.md" ]] || printf '# %s\n\n' "${dir#"$INV_ROOT"/}" > "$dir/front.md"
+    tmp="$(mktemp "$dir/.front.XXXXXX")"
+    K="$key" V="$value" awk '
+        NR == 1 { print; next }
+        !done && /^$/ { if (!set) print ENVIRON["K"] ": " ENVIRON["V"]; done = 1; print; next }
+        !done { i = index($0, ": "); if (i && substr($0, 1, i - 1) == ENVIRON["K"]) { print ENVIRON["K"] ": " ENVIRON["V"]; set = 1; next } }
+        { print }
+        END { if (!done && !set) print ENVIRON["K"] ": " ENVIRON["V"] }
+    ' "$dir/front.md" > "$tmp"
+    mv "$tmp" "$dir/front.md"
+}
+
+front_set() {
+    mkdir -p "$1"
+    lock "$1"
+    front_set_locked "$@"
+    unlock "$1"
+}
+
+# The highest step number in events.tsv (0 when none).
+last_recorded() {
+    [[ -f "$1/events.tsv" ]] || { printf '0'; return; }
+    awk -F'\t' 'NR > 1 && $1 + 0 > m { m = $1 + 0 } END { print m + 0 }' "$1/events.tsv"
+}
+
+# Counters, initialised from events.tsv for logs that predate them:
+#   .seq   last step number handed out (a step may be running, not yet in events.tsv)
+#   .spent steps charged to the budget (a map row is not; the map's merged step is)
+counter() {
+    local dir="$1" name="$2"
+    [[ -f "$dir/.$name" ]] || last_recorded "$dir" > "$dir/.$name"
+    tr -dc '0-9' < "$dir/.$name"
+}
+
+as_of_of() {
+    local f="$INV_ROOT/$1/as_of"
+    [[ -f "$f" ]] && head -n 1 "$f" || true
+}
+
+# "w<round>@<oldest table watermark of that round>", or "-" before any probe.
+current_stamp() {
+    local f="$INV_ROOT/$1/watermarks.tsv"
+    [[ -f "$f" ]] || { printf -- '-'; return; }
+    awk -F'\t' '
+        NR > 1 && $1 + 0 > r { r = $1 + 0; m = "" }
+        NR > 1 && $1 + 0 == r && $4 != "?" && (m == "" || $4 < m) { m = $4 }
+        END { if (r) printf "w%d@%s", r, (m == "" ? "?" : m); else printf "-" }
+    ' "$f"
+}
+
+uses_relative_time() { grep -Eiq "$RELATIVE_TIME"; }
+
+reject_relative_time() {
+    echo "[inv] REJECTED: $1 uses relative time (now(), current_date, ...) while as_of is pinned" >&2
+    echo "[inv] write the {as_of} placeholder instead; inv fills it with the pinned value" >&2
+    echo "[inv] nothing was run or recorded" >&2
+    exit $CHECK_FAILED_EXIT
+}
+
+# Replaces every {name} of VARS (lines "name<TAB>value") in SRC, literally.
+render() {
+    local src="$1" vars="$2"
+    awk -F'\t' '
+        function repl(s, a, b,   out, i) {
+            out = ""
+            while ((i = index(s, a)) > 0) { out = out substr(s, 1, i - 1) b; s = substr(s, i + length(a)) }
+            return out s
+        }
+        NR == FNR { name[++n] = "{" $1 "}"; value[n] = $2; next }
+        { for (i = 1; i <= n; i++) $0 = repl($0, name[i], value[i]); print }
+    ' "$vars" "$src"
+}
+
 # Prints nothing when every check passes, otherwise "check:detail" items separated by ';'.
 run_checks() {
     local out_file="$1" rows="$2"
-    local failures=() op n passed dup
+    local failures=() op n passed dup missing
 
     if [[ -n "$EXPECT_ROWS" ]]; then
         [[ "$EXPECT_ROWS" =~ ^(>=|<=|>|<|=)([0-9]+)$ ]]
@@ -90,79 +259,154 @@ run_checks() {
         [[ -z "$dup" ]] || failures+=("unique(${EXPECT_UNIQUE}):${dup}")
     fi
 
+    # A map's merged step: every member row must have finished ok or empty.
+    if [[ -n "$EXPECT_COMPLETE" ]]; then
+        missing="$(awk -F'\t' '
+            NR > 1 && $2 != "ok" && $2 != "empty" { k = $2; sub(/:.*/, "", k); if (k == "FAIL") k = "failed"; c[k]++ }
+            END { s = ""; for (k in c) s = s (s == "" ? "" : ",") k "=" c[k]; print s }
+        ' "$EXPECT_COMPLETE")"
+        [[ -z "$missing" ]] || failures+=("incomplete:${missing}")
+    fi
+
     if (( ${#failures[@]} > 0 )); then
         local IFS=';'
         printf '%s' "${failures[*]}"
     fi
 }
 
-cmd_run() {
-    local slug="$1"; shift
-    check_slug "$slug"
+# Records one step. Options come in globals (set by cmd_run / cmd_map / cmd_watermark):
+#   SLUG WHY PARENT ATTACH[] EXPECT_ROWS EXPECT_UNIQUE EXPECT_COMPLETE TIMEOUT
+#   KEY QUIET LEASE_GATE SPEND RESULT_FILE
+record_step() {
+    local slug="$SLUG" dir="$INV_ROOT/$SLUG" inv="${SLUG%%/*}"
+    local events="$INV_ROOT/$SLUG/events.tsv"
+    local args=("$@") f i j a
 
-    local why="" parent_arg=""
-    local attachments=()
-    EXPECT_ROWS=""
-    EXPECT_UNIQUE=""
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --why)           [[ $# -ge 2 ]] || usage; why="$2"; shift 2 ;;
-            --parent)        [[ $# -ge 2 ]] || usage; parent_arg="$2"; shift 2 ;;
-            --attach)        [[ $# -ge 2 ]] || usage; attachments+=("$2"); shift 2 ;;
-            --expect-rows)   [[ $# -ge 2 ]] || usage; EXPECT_ROWS="$2"; shift 2 ;;
-            --expect-unique) [[ $# -ge 2 ]] || usage; EXPECT_UNIQUE="$2"; shift 2 ;;
-            --)              shift; break ;;
-            *)               die "unknown option $1 (put the command after --)" ;;
-        esac
-    done
-
-    [[ $# -gt 0 ]] || die "missing command after --"
-    [[ -z "$EXPECT_ROWS" || "$EXPECT_ROWS" =~ ^(>=|<=|>|<|=)[0-9]+$ ]] || die "--expect-rows must look like >0, >=1, <100 or =1"
-    [[ -z "$parent_arg" || "$parent_arg" =~ ^[0-9]+$ ]] || die "--parent must be a step number"
-    local f
-    for f in ${attachments[@]+"${attachments[@]}"}; do
+    local as_of seen_names=" "
+    as_of="$(as_of_of "$inv")"
+    for f in ${ATTACH[@]+"${ATTACH[@]}"}; do
         [[ -f "$f" ]] || die "--attach file not found: $f"
+        # Snapshots share one directory per step, and arguments are rewritten to them.
+        [[ "$seen_names" != *" $(basename "$f") "* ]] || die "two --attach files are named $(basename "$f"); rename one"
+        seen_names+="$(basename "$f") "
+        if grep -q '{as_of}' "$f"; then
+            [[ -n "$as_of" ]] || die "$f uses {as_of} but none is pinned: inv as-of $inv 'YYYY-MM-DD HH:MM:SS'"
+            local passed=0
+            for a in "${args[@]}"; do
+                [[ -f "$a" && "$a" -ef "$f" ]] && passed=1
+                [[ "$a" == *=* && -f "${a#*=}" && "${a#*=}" -ef "$f" ]] && passed=1
+            done
+            (( passed )) || die "$f uses {as_of}, so the command must read it by that path (it gets the rendered copy)"
+        fi
+        [[ -z "$as_of" ]] || ! uses_relative_time < "$f" || reject_relative_time "$f"
     done
+    if printf '%s\n' "${args[@]}" | grep -q '{as_of}'; then
+        [[ -n "$as_of" ]] || die "the command uses {as_of} but none is pinned: inv as-of $inv 'YYYY-MM-DD HH:MM:SS'"
+    fi
+    [[ -z "$as_of" ]] || ! printf '%s\n' "${args[@]}" | uses_relative_time || reject_relative_time "the command"
 
-    local dir="$INV_ROOT/$slug"
-    local events="$dir/events.tsv"
-    mkdir -p "$dir/cmd" "$dir/out"
-    [[ -f "$events" ]] || \
-        printf 'step\tparent\ttimestamp\texit\trows\tout_sha\tcheck\twhy\n' > "$events"
-
-    local step=$(( $(wc -l < "$events") ))   # header line makes the first step 1
-    local previous=$(( step - 1 ))
-    local parent="${parent_arg:-$previous}"
-    (( parent < step )) || die "--parent $parent does not exist yet (last step is $previous)"
-
-    local budget="$DEFAULT_BUDGET"
-    [[ -f "$dir/budget" ]] && budget="$(tr -dc '0-9' < "$dir/budget")"
-    if (( previous >= ${budget:-$DEFAULT_BUDGET} )); then
-        echo "[inv] step budget spent for $slug ($previous of ${budget:-$DEFAULT_BUDGET} steps)" >&2
-        echo "[inv] stop running commands and return your findings with their step numbers" >&2
-        exit $BUDGET_SPENT_EXIT
+    if (( LEASE_GATE )); then
+        local lease
+        lease="$(front_get "$dir" lease)"
+        lease="${lease%% *}"
+        if [[ "$lease" =~ ^[0-9]+$ ]] && (( $(date +%s) >= lease )); then
+            echo "[inv] time is up for $slug: the lease expired" >&2
+            echo "[inv] stop running commands and return now, citing the steps you have" >&2
+            exit $STOP_EXIT
+        fi
     fi
 
-    printf '%q ' "$@" > "$dir/cmd/$step.sh"
-    echo >> "$dir/cmd/$step.sh"
-    if (( ${#attachments[@]} > 0 )); then
-        mkdir -p "$dir/att/$step"
-        for f in "${attachments[@]}"; do
-            cp "$f" "$dir/att/$step/$(basename "$f")"
+    mkdir -p "$dir/steps"
+    lock "$dir"
+    [[ -f "$events" ]] || printf '%s\n' "$EVENTS_HEADER" > "$events"
+    local seq spent budget step parent
+    seq="$(counter "$dir" seq)"
+    spent="$(counter "$dir" spent)"
+    if (( SPEND )); then
+        budget="$(front_get "$dir" budget | tr -dc '0-9')"
+        budget="${budget:-$DEFAULT_BUDGET}"
+        if (( spent >= budget )); then
+            unlock "$dir"
+            echo "[inv] step budget spent for $slug ($spent of $budget steps)" >&2
+            echo "[inv] stop running commands and return your findings with their step numbers" >&2
+            exit $STOP_EXIT
+        fi
+        printf '%s\n' "$(( spent + 1 ))" > "$dir/.spent"
+    fi
+    step=$(( seq + 1 ))
+    printf '%s\n' "$step" > "$dir/.seq"
+    parent="${PARENT:-$(last_recorded "$dir")}"
+    unlock "$dir"
+    (( parent < step )) || die "--parent $parent does not exist yet (last step is $seq)"
+
+    if (( ${#ATTACH[@]} > 0 )); then
+        local att snap vars
+        att="$(step_file "$dir" "$step" att)"
+        mkdir -p "$att"
+        vars="$(mktemp)"
+        printf 'as_of\t%s\n' "$as_of" > "$vars"
+        for j in "${!ATTACH[@]}"; do
+            f="${ATTACH[$j]}"
+            snap="$att/$(basename "$f")"
+            if grep -q '{as_of}' "$f"; then render "$f" "$vars" > "$snap"; else cp "$f" "$snap"; fi
+            for i in "${!args[@]}"; do
+                a="${args[$i]}"
+                if [[ -f "$a" && "$a" -ef "$f" ]]; then
+                    args[i]="$snap"
+                elif [[ "$a" == *=* && -f "${a#*=}" && "${a#*=}" -ef "$f" ]]; then
+                    args[i]="${a%%=*}=$snap"
+                fi
+            done
         done
+        rm -f "$vars"
     fi
-    [[ -n "$why" ]] || why="$(< "$dir/cmd/$step.sh")"
+    if [[ -n "$as_of" ]]; then
+        for i in "${!args[@]}"; do args[i]="${args[$i]//"{as_of}"/"$as_of"}"; done
+    fi
+    printf '%q ' "${args[@]}" > "$(step_file "$dir" "$step" sh)"
+    echo >> "$(step_file "$dir" "$step" sh)"
+    local why="$WHY"
+    [[ -n "$why" ]] || why="$(< "$(step_file "$dir" "$step" sh)")"
 
-    local out="$dir/out/$step.tsv" exit_code
+    local stamp="${STAMP:--}"
+    [[ -n "$STAMP" || "$slug" == "$inv/$WATERMARK_FRONT" ]] || stamp="$(current_stamp "$inv")"
+
+    # timeout runs the command in its own process group, so a kill (deadline or TERM)
+    # reaches every process it started. TIMEOUT=0 keeps the group without a deadline.
+    local runner=()
+    if [[ -n "$TIMEOUT_BIN" ]]; then
+        runner=("$TIMEOUT_BIN" -k "$KILL_GRACE" "$TIMEOUT")
+    elif (( TIMEOUT > 0 )); then
+        die "--timeout needs the timeout command (coreutils timeout or gtimeout)"
+    fi
+
+    # The command runs in the background so a TERM (the worker's hard deadline) is
+    # handled now: forward it, then record the step as killed instead of losing it.
+    local out started exit_code child killed=0
+    out="$(step_file "$dir" "$step" tsv)"
+    started="$(date +%s)"
     set +e
-    "$@" > "$out"
-    exit_code=$?
+    ${runner[@]+"${runner[@]}"} "${args[@]}" > "$out" <&0 &
+    child=$!
+    trap 'killed=1; kill -TERM "$child" 2> /dev/null' TERM INT HUP
+    while :; do
+        wait "$child"
+        exit_code=$?
+        kill -0 "$child" 2> /dev/null || break
+    done
+    trap - TERM INT HUP
     set -e
-    cat "$out"
+    local secs=$(( $(date +%s) - started ))
+    (( QUIET )) || cat "$out"
 
     local rows=0 sha="-" check="error" lines failures
-    if [[ $exit_code -eq 0 ]]; then
+    if (( killed )); then
+        check="killed"
+        exit_code=143
+    elif (( TIMEOUT > 0 )) && [[ "$exit_code" == 124 || "$exit_code" == 137 ]]; then
+        check="timeout"
+        exit_code=$TIMEOUT_EXIT
+    elif [[ $exit_code -eq 0 ]]; then
         lines=$(( $(wc -l < "$out") ))
         (( lines > 0 )) && rows=$(( lines - 1 ))
         sha="$(shasum -a 256 "$out" | cut -c1-12)"
@@ -176,17 +420,280 @@ cmd_run() {
         fi
     fi
 
-    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-        "$step" "$parent" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" "$exit_code" "$rows" \
-        "$sha" "$check" "$(one_line "$why")" >> "$events"
-    echo "[inv] $slug step=$step parent=$parent rows=$rows check=$check" >&2
+    lock "$dir"
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+        "$step" "$parent" "$(now_iso)" "$exit_code" "$rows" "$sha" "$check" \
+        "$(one_line "$why")" "$secs" "${KEY:--}" "$stamp" >> "$events"
+    unlock "$dir"
+    [[ -z "$RESULT_FILE" ]] || printf '%s\t%s\t%s\n' "$step" "$check" "$stamp" > "$RESULT_FILE"
+    echo "[inv] $slug step=$step parent=$parent rows=$rows secs=$secs check=$check" >&2
 
-    [[ $exit_code -eq 0 ]] || exit $exit_code
-    if [[ "$check" == FAIL:* ]]; then
-        echo "[inv] CHECK FAILED at step $step: ${check#FAIL:}" >&2
-        echo "[inv] this result is wrong; do not use it for any conclusion" >&2
-        exit $CHECK_FAILED_EXIT
+    case "$check" in
+        killed)  exit "$exit_code" ;;
+        timeout)
+            echo "[inv] TIMEOUT at step $step after ${secs}s: the command was killed" >&2
+            echo "[inv] narrow it (fewer keys, a partition filter) or split it with inv map" >&2
+            exit $TIMEOUT_EXIT ;;
+        FAIL:*)
+            echo "[inv] CHECK FAILED at step $step: ${check#FAIL:}" >&2
+            echo "[inv] this result is wrong; do not use it for any conclusion" >&2
+            exit $CHECK_FAILED_EXIT ;;
+    esac
+    exit "$exit_code"
+}
+
+reset_step_options() {
+    WHY="" PARENT="" EXPECT_ROWS="" EXPECT_UNIQUE="" EXPECT_COMPLETE="" TIMEOUT=0
+    KEY="" QUIET=0 LEASE_GATE=1 SPEND=1 RESULT_FILE="" STAMP=""
+    ATTACH=()
+}
+
+default_timeout() {
+    local t
+    t="$(front_get "$INV_ROOT/$SLUG" step_timeout | tr -dc '0-9')"
+    printf '%s' "${t:-0}"
+}
+
+cmd_run() {
+    SLUG="$1"; shift
+    check_slug "$SLUG"
+    reset_step_options
+    TIMEOUT="$(default_timeout)"
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --why)           [[ $# -ge 2 ]] || usage; WHY="$2"; shift 2 ;;
+            --parent)        [[ $# -ge 2 ]] || usage; PARENT="$2"; shift 2 ;;
+            --attach)        [[ $# -ge 2 ]] || usage; ATTACH+=("$2"); shift 2 ;;
+            --expect-rows)   [[ $# -ge 2 ]] || usage; EXPECT_ROWS="$2"; shift 2 ;;
+            --expect-unique) [[ $# -ge 2 ]] || usage; EXPECT_UNIQUE="$2"; shift 2 ;;
+            --timeout)       [[ $# -ge 2 ]] || usage; TIMEOUT="$(secs_of "$2")"; shift 2 ;;
+            --)              shift; break ;;
+            *)               die "unknown option $1 (put the command after --)" ;;
+        esac
+    done
+
+    [[ $# -gt 0 ]] || die "missing command after --"
+    [[ -z "$EXPECT_ROWS" || "$EXPECT_ROWS" =~ ^(>=|<=|>|<|=)[0-9]+$ ]] || die "--expect-rows must look like >0, >=1, <100 or =1"
+    [[ -z "$PARENT" || "$PARENT" =~ ^[0-9]+$ ]] || die "--parent must be a step number"
+    record_step "$@"
+}
+
+# Splits one TSV line into the array FIELDS, keeping empty fields.
+split_tsv() {
+    local rest="$1" n="$2" c
+    FIELDS=()
+    for (( c = 0; c < n; c++ )); do
+        FIELDS+=("${rest%%$'\t'*}")
+        if [[ "$rest" == *$'\t'* ]]; then rest="${rest#*$'\t'}"; else rest=""; fi
+    done
+}
+
+cmd_map() {
+    SLUG="$1"; shift
+    check_slug "$SLUG"
+    reset_step_options
+    TIMEOUT="$(default_timeout)"
+    local template="" params="" parallel="$DEFAULT_PARALLEL" fresh=0
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --why)           [[ $# -ge 2 ]] || usage; WHY="$2"; shift 2 ;;
+            --parent)        [[ $# -ge 2 ]] || usage; PARENT="$2"; shift 2 ;;
+            --template)      [[ $# -ge 2 ]] || usage; template="$2"; shift 2 ;;
+            --params)        [[ $# -ge 2 ]] || usage; params="$2"; shift 2 ;;
+            --parallel)      [[ $# -ge 2 ]] || usage; parallel="$2"; shift 2 ;;
+            --expect-rows)   [[ $# -ge 2 ]] || usage; EXPECT_ROWS="$2"; shift 2 ;;
+            --expect-unique) [[ $# -ge 2 ]] || usage; EXPECT_UNIQUE="$2"; shift 2 ;;
+            --timeout)       [[ $# -ge 2 ]] || usage; TIMEOUT="$(secs_of "$2")"; shift 2 ;;
+            --fresh)         fresh=1; shift ;;
+            --)              shift; break ;;
+            *)               die "unknown option $1 (put the command after --)" ;;
+        esac
+    done
+
+    local cmd_template=("$@") a has_sql=0
+    (( ${#cmd_template[@]} > 0 )) || die "missing command after --"
+    for a in "${cmd_template[@]}"; do [[ "$a" == *"{sql}"* ]] && has_sql=1; done
+    (( has_sql )) || die "the command must read the rendered SQL through {sql}"
+    [[ -f "$template" ]] || die "--template file not found: $template"
+    [[ -f "$params" ]] || die "--params file not found: $params"
+    [[ "$parallel" =~ ^[1-9][0-9]*$ ]] || die "--parallel must be a positive number"
+    [[ -z "$EXPECT_ROWS" || "$EXPECT_ROWS" =~ ^(>=|<=|>|<|=)[0-9]+$ ]] || die "--expect-rows must look like >0, >=1, <100 or =1"
+    [[ -z "$PARENT" || "$PARENT" =~ ^[0-9]+$ ]] || die "--parent must be a step number"
+
+    local dir="$INV_ROOT/$SLUG" inv="${SLUG%%/*}" as_of
+    as_of="$(as_of_of "$inv")"
+    if grep -q '{as_of}' "$template"; then
+        [[ -n "$as_of" ]] || die "$template uses {as_of} but none is pinned: inv as-of $inv 'YYYY-MM-DD HH:MM:SS'"
     fi
+    [[ -z "$as_of" ]] || ! uses_relative_time < "$template" || reject_relative_time "$template"
+
+    local header cols=() c
+    header="$(head -n 1 "$params" | tr -d '\r')"
+    IFS=$'\t' read -r -a cols <<< "$header"
+    (( ${#cols[@]} > 0 )) || die "$params has no header line"
+    for c in "${cols[@]}"; do
+        [[ "$c" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || die "params column '$c' is not a placeholder name"
+        [[ "$c" != "as_of" && "$c" != "sql" ]] || die "params column '$c' is reserved"
+    done
+
+    mkdir -p "$dir"
+    local work
+    work="$(mktemp -d "$dir/.map.XXXXXX")"
+    trap 'rm -rf "$work"' EXIT
+
+    # Render every row, then look each one up in the log before running anything.
+    local sql_name line n=0 vars leftover key
+    local labels=() files=() keys=() cached_step=() cached_check=() cached_stamp=() values=()
+    sql_name="$(basename "$template" .tmpl)"
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line%$'\r'}"
+        [[ -n "${line//[[:space:]]/}" ]] || continue
+        n=$(( n + 1 ))
+        split_tsv "$line" "${#cols[@]}"
+        mkdir -p "$work/$n"
+        vars="$work/$n/vars"
+        : > "$vars"
+        local label=""
+        for c in "${!cols[@]}"; do
+            printf '%s\t%s\n' "${cols[$c]}" "${FIELDS[$c]}" >> "$vars"
+            label="$label${label:+, }${cols[$c]}=${FIELDS[$c]}"
+        done
+        printf 'as_of\t%s\n' "$as_of" >> "$vars"
+        render "$template" "$vars" > "$work/$n/$sql_name"
+        leftover="$(grep -oE '\{[A-Za-z_][A-Za-z0-9_]*\}' "$work/$n/$sql_name" | sort -u | tr '\n' ' ' || true)"
+        [[ -z "$leftover" ]] || die "row $n leaves placeholders unfilled: $leftover(add them as params columns)"
+        key="$({ cat "$work/$n/$sql_name"; printf '\0%s\0%s\0' "$EXPECT_UNIQUE" "$EXPECT_ROWS"; printf '%q ' "${cmd_template[@]}"; } | sha_of)"
+        labels+=("$label")
+        values+=("$(printf '%s\t' "${FIELDS[@]}")")
+        files+=("$work/$n/$sql_name")
+        keys+=("$key")
+        local hit=""
+        if (( ! fresh )) && [[ -f "$dir/events.tsv" ]]; then
+            hit="$(K="$key" awk -F'\t' 'NR > 1 && $10 == ENVIRON["K"] && ($7 == "ok" || $7 == "empty") { h = $1 "\t" $7 "\t" $11 } END { print h }' "$dir/events.tsv")"
+        fi
+        if [[ -n "$hit" ]]; then
+            IFS=$'\t' read -r cached_step[n] cached_check[n] cached_stamp[n] <<< "$hit"
+        else
+            cached_step[n]=""
+        fi
+    done < <(tail -n +2 "$params")
+    (( n > 0 )) || die "$params has no rows"
+
+    local to_run=() i
+    for (( i = 1; i <= n; i++ )); do [[ -n "${cached_step[i]}" ]] || to_run+=("$i"); done
+
+    # The map is one step of the budget (its merged step); refuse before running rows.
+    local budget spent
+    lock "$dir"
+    spent="$(counter "$dir" spent)"
+    unlock "$dir"
+    budget="$(front_get "$dir" budget | tr -dc '0-9')"
+    budget="${budget:-$DEFAULT_BUDGET}"
+    if (( spent >= budget )); then
+        echo "[inv] step budget spent for $SLUG ($spent of $budget steps); the map was not run" >&2
+        exit $STOP_EXIT
+    fi
+    PARENT="${PARENT:-$(last_recorded "$dir")}"
+
+    echo "[inv] map $SLUG: $n rows, ${#to_run[@]} to run, $(( n - ${#to_run[@]} )) cached, parallel $parallel" >&2
+
+    local lease stopped=0 cmd
+    trap 'kill -TERM $(jobs -rp) 2> /dev/null; wait; rm -rf "$work"; exit 143' TERM INT HUP
+    for i in ${to_run[@]+"${to_run[@]}"}; do
+        while (( $(jobs -rp | wc -l) >= parallel )); do wait -n || true; done
+        lease="$(front_get "$dir" lease)"
+        lease="${lease%% *}"
+        if [[ "$lease" =~ ^[0-9]+$ ]] && (( $(date +%s) >= lease )); then
+            stopped=1
+            break
+        fi
+        cmd=()
+        for a in "${cmd_template[@]}"; do cmd+=("${a//"{sql}"/"${files[i-1]}"}"); done
+        (
+            ATTACH=("${files[i-1]}")
+            KEY="${keys[i-1]}" QUIET=1 SPEND=0 RESULT_FILE="$work/$i/result"
+            WHY="${WHY:-map $sql_name} [${labels[i-1]}]"
+            record_step "${cmd[@]}"
+        ) &
+    done
+    wait || true
+    trap 'rm -rf "$work"' EXIT
+    trap - TERM INT HUP
+
+    local manifest="$work/manifest.tsv" status=() counts
+    printf 'step\tcheck\tcached\twatermark\t%s\n' "$header" > "$manifest"
+    for (( i = 1; i <= n; i++ )); do
+        if [[ -n "${cached_step[i]}" ]]; then
+            printf '%s\t%s\tyes\t%s\t%s\n' "${cached_step[i]}" "${cached_check[i]}" "${cached_stamp[i]}" "${values[i-1]%$'\t'}"
+        elif [[ -f "$work/$i/result" ]]; then
+            IFS=$'\t' read -r -a status < "$work/$i/result"
+            printf '%s\t%s\tno\t%s\t%s\n' "${status[0]}" "${status[1]}" "${status[2]}" "${values[i-1]%$'\t'}"
+        else
+            printf -- '-\tskipped\tno\t-\t%s\n' "${values[i-1]%$'\t'}"
+        fi
+    done >> "$manifest"
+    counts="$(awk -F'\t' 'NR > 1 { k = $2; sub(/:.*/, "", k); if ($3 == "yes") k = "cached"; c[k]++ }
+        END { s = ""; for (k in c) s = s (s == "" ? "" : " ") k "=" c[k]; print s }' "$manifest")"
+
+    # Run in the background and wait, so set -e still holds inside record_step.
+    # The merged step carries its rows' data stamp; cached rows may come from an older
+    # watermark round than the rows run now, and then the merge is not comparable.
+    local stamps stamp
+    stamps="$(awk -F'\t' 'NR > 1 && ($2 == "ok" || $2 == "empty") { s = $4; sub(/@.*/, "", s); if (!seen[s]++) l = l (l == "" ? "" : ",") s; full = $4 }
+        END { print (index(l, ",") ? "mixed:" l : full) }' "$manifest")"
+    stamp="${stamps:-$(current_stamp "$inv")}"
+    [[ "$stamp" != mixed:* ]] || echo "[inv] rows come from different watermark rounds ($stamp): rerun with --fresh before comparing" >&2
+
+    local why="map ${WHY:-$sql_name}: $n rows ($counts)" parent="$PARENT" merged_exit=0
+    (
+        reset_step_options
+        WHY="$why" PARENT="$parent" EXPECT_COMPLETE="$manifest" LEASE_GATE=0 STAMP="$stamp"
+        ATTACH=("$manifest")
+        record_step "$SELF" _merge "$SLUG" "$manifest"
+    ) &
+    wait $! || merged_exit=$?
+
+    if (( stopped )); then
+        echo "[inv] time is up for $SLUG: the lease expired, rows not started are skipped" >&2
+        echo "[inv] return now; a later inv map with the same params resumes from the cache" >&2
+        exit $STOP_EXIT
+    fi
+    if (( merged_exit == CHECK_FAILED_EXIT )); then
+        echo "[inv] some rows did not finish ok ($counts); rerun the same inv map to retry only those" >&2
+    fi
+    exit "$merged_exit"
+}
+
+# Merged output of a map: params columns, the row's step, then the row's output.
+cmd_merge() {
+    local slug="$1" manifest="$2" dir="$INV_ROOT/$1"
+    awk -F'\t' -v OFS='\t' -v dir="$dir" '
+        function out_of(s,   f, probe) {
+            f = dir "/steps/" s ".tsv"
+            if ((getline probe < f) < 0) return dir "/out/" s ".tsv"
+            close(f)
+            return f
+        }
+        NR == 1 { for (i = 5; i <= NF; i++) ph = ph (ph == "" ? "" : OFS) $i; next }
+        $2 != "ok" && $2 != "empty" { next }
+        {
+            p = ""
+            for (i = 5; i <= NF; i++) p = p (p == "" ? "" : OFS) $i
+            f = out_of($1); r = 0
+            while ((getline line < f) > 0) {
+                if (r++ == 0) {
+                    if (header == "") { header = line; print ph, "step", line }
+                    else if (line != header) { print "member step " $1 " has a different header" > "/dev/stderr"; bad = 1; exit }
+                    continue
+                }
+                print p, $1, line
+            }
+            close(f)
+        }
+        END { if (bad) exit 1; if (header == "") print ph, "step" }
+    ' "$manifest"
 }
 
 events_of() {
@@ -199,15 +706,20 @@ events_of() {
 cmd_log() {
     local events
     events="$(events_of "$1")"
-    awk -F'\t' '{ printf "%-4s %-6s %-4s %-6s %-36s %s\n", $1, $2, $4, $5, $7, $8 }' "$events"
+    printf '%-4s %-6s %-4s %-6s %-5s %-24s %-26s %s\n' step parent exit rows secs check data why
+    tail -n +2 "$events" | sort -t$'\t' -k1,1n | awk -F'\t' '{
+        printf "%-4s %-6s %-4s %-6s %-5s %-24s %-26s %s\n", $1, $2, $4, $5,
+            ($9 == "" ? "-" : $9), $7, ($11 == "" ? "-" : $11), $8
+    }'
 }
 
 cmd_trace() {
     local slug="$1" target="$2" head_rows="${3:-10}"
     [[ "$target" =~ ^[0-9]+$ ]] || usage
-    local events dir chain
+    local events dir chain as_of
     events="$(events_of "$slug")"
     dir="$INV_ROOT/$slug"
+    as_of="$(as_of_of "${slug%%/*}")"
 
     chain="$(awk -F'\t' -v target="$target" '
         NR > 1 { parent[$1] = $2; seen[$1] = 1 }
@@ -222,20 +734,23 @@ cmd_trace() {
     echo
     echo "Facts only: commands as run and outputs as returned. No interpretation from any session."
     echo "Steps outside this chain are abandoned branches and are not included."
+    [[ -z "$as_of" ]] || echo "as_of: $as_of (every {as_of} below was rendered with it)"
+    echo "ran = when the step finished; data = the watermark: how far the source data reached."
 
-    local step row parent exit_code rows sha check why f
+    local step parent ts exit_code rows sha check why secs wm f out
     for step in $chain; do
-        row="$(awk -F'\t' -v s="$step" 'NR > 1 && $1 == s' "$events")"
-        IFS=$'\t' read -r _ parent _ exit_code rows sha check why <<< "$row"
+        IFS=$'\x1f' read -r parent ts exit_code rows sha check why secs wm < <(awk -F'\t' -v s="$step" '
+            NR > 1 && $1 == s { printf "%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\n",
+                $2, $3, $4, $5, $6, $7, $8, ($9 == "" ? "-" : $9), ($11 == "" ? "-" : $11) }' "$events")
         echo
         echo "## Step $step (parent $parent) — $why"
-        echo "exit=$exit_code rows=$rows check=$check sha=$sha"
+        echo "exit=$exit_code rows=$rows check=$check sha=$sha ran=$ts secs=$secs data=$wm"
         echo
         echo '```sh'
-        cat "$dir/cmd/$step.sh"
+        cat "$(step_file "$dir" "$step" sh)"
         echo '```'
-        if [[ -d "$dir/att/$step" ]]; then
-            for f in "$dir/att/$step"/*; do
+        if [[ -d "$(step_file "$dir" "$step" att)" ]]; then
+            for f in "$(step_file "$dir" "$step" att)"/*; do
                 echo
                 echo "\`$(basename "$f")\`:"
                 echo '```'
@@ -243,53 +758,206 @@ cmd_trace() {
                 echo '```'
             done
         fi
-        if [[ "$exit_code" == "0" ]]; then
+        out="$(step_file "$dir" "$step" tsv)"
+        if [[ "$exit_code" == "0" && -f "$out" ]]; then
             echo
             echo '```tsv'
-            head -n $(( head_rows + 1 )) "$dir/out/$step.tsv"
-            (( rows <= head_rows )) || echo "… +$(( rows - head_rows )) row(s) in out/$step.tsv"
+            head -n $(( head_rows + 1 )) "$out"
+            (( rows <= head_rows )) || echo "… +$(( rows - head_rows )) row(s) in $out"
             echo '```'
         fi
     done
 }
 
-# One line per front: steps, failed checks, last step's check, last activity,
-# status (written by the lead) and the front's question (written by inv-worker).
+# One line per front: steps, failed checks, last check, last activity, status (written
+# by the lead and inv-worker; "late" once a running front's lease expired) and question.
 cmd_board() {
     local inv="$1"
-    [[ "$inv" =~ ^[a-z0-9][a-z0-9-]*$ ]] || die "board takes an investigation, not a front"
+    check_inv "$inv"
     local root="$INV_ROOT/$inv"
     [[ -d "$root" ]] || die "no investigation at $root"
 
-    printf '%-24s %-5s %-5s %-36s %-20s %-10s %s\n' front steps fails last_check last_at status question
-    local dir front events steps fails last_check last_at status question
+    local as_of
+    as_of="$(as_of_of "$inv")"
+    echo "as_of: ${as_of:-not pinned}   data: $(current_stamp "$inv")"
+    printf '%-24s %-5s %-5s %-30s %-20s %-10s %s\n' front steps fails last_check last_at status question
+    local dir front events steps fails last_check last_at status lease question
     for dir in "$root" "$root"/*/; do
         dir="${dir%/}"
-        [[ -f "$dir/events.tsv" || -f "$dir/question" ]] || continue
+        [[ -f "$dir/events.tsv" || -f "$dir/front.md" || -f "$dir/question" ]] || continue
         front="${dir#"$INV_ROOT"/}"
         events="$dir/events.tsv"
         steps=0 fails=0 last_check="-" last_at="-"
         if [[ -f "$events" ]]; then
             read -r steps fails last_check last_at < <(awk -F'\t' '
-                NR > 1 { n++; if ($7 ~ /^FAIL/ || $7 == "error") f++; c = $7; t = $3 }
+                NR > 1 { n++; if ($7 ~ /^FAIL/ || $7 == "error" || $7 == "timeout" || $7 == "killed") f++; c = $7; t = $3 }
                 END { printf "%d %d %s %s\n", n, f, (c == "" ? "-" : c), (t == "" ? "-" : t) }
             ' "$events")
         fi
-        status="open"
-        [[ -f "$dir/status" ]] && status="$(head -n 1 "$dir/status")"
-        question="-"
-        [[ -f "$dir/question" ]] && question="$(head -n 1 "$dir/question")"
-        printf '%-24s %-5s %-5s %-36s %-20s %-10s %s\n' \
-            "$front" "$steps" "$fails" "${last_check:0:36}" "$last_at" "$status" "$question"
+        status="$(front_get "$dir" status)"
+        status="${status:-open}"
+        lease="$(front_get "$dir" lease)"
+        lease="${lease%% *}"
+        if [[ "$status" == running && "$lease" =~ ^[0-9]+$ ]] && (( $(date +%s) >= lease )); then
+            status="late"
+        fi
+        question="$(front_get "$dir" question)"
+        printf '%-24s %-5s %-5s %-30s %-20s %-10s %s\n' \
+            "$front" "$steps" "$fails" "${last_check:0:30}" "$last_at" "$status" "${question:--}"
     done
+}
+
+cmd_as_of() {
+    local inv="$1" value="${2:-}"
+    check_inv "$inv"
+    local f="$INV_ROOT/$inv/as_of"
+    if [[ -z "$value" ]]; then
+        [[ -f "$f" ]] || die "no as_of pinned for $inv"
+        cat "$f"
+        return
+    fi
+    [[ "$value" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}([\ T][0-9]{2}:[0-9]{2}(:[0-9]{2}(\.[0-9]+)?)?)?$ ]] || \
+        die "as_of must look like 'YYYY-MM-DD HH:MM:SS'"
+    value="${value/T/ }"
+    mkdir -p "$INV_ROOT/$inv"
+    if [[ -f "$f" && "$(< "$f")" != "$value" ]]; then
+        echo "[inv] as_of changes from $(< "$f") to $value: steps rendered with the old value no longer match" >&2
+    fi
+    printf '%s\n' "$value" > "$f"
+    echo "as_of: $value"
+}
+
+# Qualified table names after FROM/JOIN in the given files, lowercased.
+tables_in() {
+    cat "$@" 2> /dev/null | tr '\n' ' ' | tr -d '"`\\' \
+        | grep -oiE '(^|[^a-z0-9_])(from|join)[[:space:]]+[a-z0-9_]+\.[a-z0-9_]+(\.[a-z0-9_]+)?' \
+        | awk '{ print tolower($NF) }' | sort -u || true
+}
+
+cmd_watermark() {
+    local inv="$1"; shift
+    check_inv "$inv"
+    local root="$INV_ROOT/$inv" t
+    mkdir -p "$root"
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --probe)
+                [[ $# -ge 2 ]] || usage
+                [[ "$2" == *"{table}"* ]] || die "--probe must contain {table}"
+                printf '%s\n' "$2" > "$root/probe"; shift 2 ;;
+            --table)
+                [[ $# -ge 2 ]] || usage
+                [[ "$2" =~ ^[A-Za-z0-9_.]+$ ]] || die "table must look like catalog.schema.table: $2"
+                { cat "$root/tables" 2> /dev/null || true; printf '%s\n' "${2,,}"; } | sort -u > "$root/tables.tmp"
+                mv "$root/tables.tmp" "$root/tables"; shift 2 ;;
+            *) die "unknown option $1" ;;
+        esac
+    done
+    [[ -f "$root/probe" ]] || die "no probe: inv watermark $inv --probe '<command printing max(ts_cdc_transaction) of {table}>'"
+
+    local front_dirs=() d
+    for d in "$root" "$root"/*/; do
+        d="${d%/}"
+        [[ -f "$d/events.tsv" && "$d" != "$root/$WATERMARK_FRONT" ]] && front_dirs+=("$d")
+    done
+    local tables=()
+    while IFS= read -r t; do [[ -n "$t" ]] && tables+=("$t"); done < <(
+        { cat "$root/tables" 2> /dev/null || true
+          for d in ${front_dirs[@]+"${front_dirs[@]}"}; do
+              tables_in "$d"/steps/*.sh "$d"/steps/*.att/* "$d"/cmd/*.sh "$d"/att/*/*
+          done; } | sort -u)
+    (( ${#tables[@]} > 0 )) || die "no tables: add --table catalog.schema.table, or run steps first"
+
+    local wm="$root/watermarks.tsv" round probe probe_timeout
+    [[ -f "$wm" ]] || printf 'round\tprobed_at\ttable\tmax_ts\tstep\n' > "$wm"
+    round=$(awk -F'\t' 'NR > 1 && $1 + 0 > r { r = $1 + 0 } END { print r + 0 }' "$wm")
+    probe="$(< "$root/probe")"
+    probe_timeout="$(secs_of "$PROBE_TIMEOUT")"
+
+    local result="$root/.probe-result" step check value previous moved=() changed=0
+    local values=() steps=() previous_values=()
+    for t in "${tables[@]}"; do
+        rm -f "$result"
+        (
+            reset_step_options
+            SLUG="$inv/$WATERMARK_FRONT" WHY="watermark $t" QUIET=1 LEASE_GATE=0 SPEND=0
+            TIMEOUT="$probe_timeout" RESULT_FILE="$result"
+            record_step bash -c "${probe//"{table}"/$t}"
+        ) &
+        wait $! || true
+        step="-" value="?"
+        if [[ -f "$result" ]]; then
+            IFS=$'\t' read -r step check _ < "$result"
+            if [[ "$check" == ok ]]; then
+                value="$(sed -n 2p "$(step_file "$root/$WATERMARK_FRONT" "$step" tsv)" | cut -f1)"
+                value="${value:-?}"
+            fi
+        fi
+        previous="$(T="$t" awk -F'\t' 'NR > 1 && $3 == ENVIRON["T"] { v = $4 } END { print v }' "$wm")"
+        [[ "$previous" == "$value" ]] || changed=1
+        [[ -z "$previous" || "$previous" == "$value" ]] || moved+=("$t")
+        values+=("$value") steps+=("$step") previous_values+=("$previous")
+    done
+    rm -f "$result"
+
+    # A new round only when a table moved or appeared; otherwise the stamps stand.
+    (( changed )) && round=$(( round + 1 ))
+    printf '%-48s %-26s %-26s %s\n' table before now moved
+    local k flag
+    for k in "${!tables[@]}"; do
+        printf '%s\t%s\t%s\t%s\t%s\n' "$round" "$(now_iso)" "${tables[$k]}" "${values[$k]}" "${steps[$k]}" >> "$wm"
+        flag=""
+        [[ -z "${previous_values[$k]}" || "${previous_values[$k]}" == "${values[$k]}" ]] || flag="yes"
+        printf '%-48s %-26s %-26s %s\n' "${tables[$k]}" "${previous_values[$k]:--}" "${values[$k]}" "$flag"
+    done
+    if (( changed )); then echo "data: $(current_stamp "$inv") (new round)"; else echo "data: $(current_stamp "$inv") (unchanged)"; fi
+
+    (( ${#moved[@]} > 0 )) || return 0
+    echo
+    echo "Data moved since the last probe. Steps stamped with an older round that read a moved table:"
+    local events s r text
+    for d in ${front_dirs[@]+"${front_dirs[@]}"}; do
+        events="$d/events.tsv"
+        while IFS=$'\t' read -r s r; do
+            text="$({ cat "$(step_file "$d" "$s" sh)" "$(step_file "$d" "$s" att)"/* 2> /dev/null || true; } | tr -d '"`\\' | tr '[:upper:]' '[:lower:]')"
+            for t in "${moved[@]}"; do
+                if [[ "$text" == *"$t"* ]]; then
+                    echo "  ${d#"$INV_ROOT"/}#$s ($r)"
+                    break
+                fi
+            done
+        done < <(awk -F'\t' -v cur="$round" 'NR > 1 && $11 ~ /^w[0-9]+@/ { r = $11; sub(/^w/, "", r); sub(/@.*/, "", r); if (r + 0 < cur) print $1 "\t" $11 }' "$events")
+    done
+    echo "Compare numbers only between steps with the same data stamp."
+}
+
+# Internal, for inv-worker: front.md fields and counters, under the front's lock.
+cmd_front() {
+    local action="$1" slug="$2"
+    check_slug "$slug"
+    local dir="$INV_ROOT/$slug"
+    mkdir -p "$dir"
+    case "$action" in
+        get)    front_get "$dir" "$3"; echo ;;
+        set)    front_set "$dir" "$3" "$4" ;;
+        append) lock "$dir"; [[ -f "$dir/front.md" ]] || front_set_locked "$dir" status open; cat >> "$dir/front.md"; unlock "$dir" ;;
+        counters) lock "$dir"; echo "$(counter "$dir" seq) $(counter "$dir" spent)"; unlock "$dir" ;;
+        *) usage ;;
+    esac
 }
 
 [[ $# -ge 1 ]] || usage
 command="$1"; shift
 case "$command" in
-    run)   [[ $# -ge 1 ]] || usage; cmd_run "$@" ;;
-    log)   [[ $# -eq 1 ]] || usage; cmd_log "$1" ;;
-    trace) [[ $# -ge 2 ]] || usage; cmd_trace "$@" ;;
-    board) [[ $# -eq 1 ]] || usage; cmd_board "$1" ;;
-    *)     usage ;;
+    run)       [[ $# -ge 1 ]] || usage; cmd_run "$@" ;;
+    map)       [[ $# -ge 1 ]] || usage; cmd_map "$@" ;;
+    log)       [[ $# -eq 1 ]] || usage; cmd_log "$1" ;;
+    trace)     [[ $# -ge 2 ]] || usage; cmd_trace "$@" ;;
+    board)     [[ $# -eq 1 ]] || usage; cmd_board "$1" ;;
+    status)    [[ $# -eq 2 ]] || usage; check_slug "$1"; front_set "$INV_ROOT/$1" status "$2" ;;
+    as-of)     [[ $# -ge 1 && $# -le 2 ]] || usage; cmd_as_of "$@" ;;
+    watermark) [[ $# -ge 1 ]] || usage; cmd_watermark "$@" ;;
+    _merge)    [[ $# -eq 2 ]] || usage; cmd_merge "$@" ;;
+    _front)    [[ $# -ge 2 ]] || usage; cmd_front "$@" ;;
+    *)         usage ;;
 esac

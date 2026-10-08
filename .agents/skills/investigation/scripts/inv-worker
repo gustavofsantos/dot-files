@@ -1,15 +1,24 @@
 #!/usr/bin/env bash
-# inv-worker — dispatch one card to a headless Cursor agent and keep its record.
+# inv-worker — dispatch one card to a headless Cursor agent, bounded in steps and time.
 #
 #   inv-worker FRONT CARD_FILE [--model MODEL] [--budget N]
+#                              [--soft DUR] [--hard DUR] [--step-timeout DUR]
 #
-# FRONT is "investigation/front". The card is stored as FRONT/cards/<n>.md, the
-# agent's raw output as FRONT/worker/<n>.json and its final message as
-# FRONT/worker/<n>.md. Only the final message is printed, so the caller's
-# context never holds the worker's transcript.
+# FRONT is "investigation/front". The card and the agent's final message are appended
+# to FRONT/front.md, and only the final message is printed, so the caller's context
+# never holds the worker's transcript. Raw output and stderr are kept, under
+# FRONT/worker/, only when the worker fails or times out.
 #
-#   --model MODEL  worker model (default: $INV_WORKER_MODEL)
-#   --budget N     steps this card may add to FRONT (default: 15)
+#   --model MODEL        worker model (default: $INV_WORKER_MODEL)
+#   --budget N           steps this card may charge to FRONT (default: 15)
+#   --soft DUR           lease: after it, inv refuses new steps with exit 4 (default: 10m)
+#   --hard DUR           the agent is killed (TERM, then KILL) after it (default: 13m)
+#   --step-timeout DUR   each inv step is killed after it (default: 3m)
+# DUR is 90, 90s, 5m or 1h. Defaults come from INV_WORKER_SOFT, INV_WORKER_HARD and
+# INV_STEP_TIMEOUT when set.
+#
+# Exit code: the agent's own; 124 when it passed the hard deadline (status timed-out).
+# Every step it ran is in the log either way: read it with inv log / inv trace.
 #
 # The agent command is $INV_WORKER_CMD, default: agent -p --output-format json
 # Model and card text are appended as: --model MODEL "<card>".
@@ -17,9 +26,11 @@ set -euo pipefail
 
 INV_ROOT="${INV_ROOT:-$HOME/.investigations}"
 WORKER_CMD="${INV_WORKER_CMD:-agent -p --output-format json}"
+INV="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/inv"
+KILL_GRACE=30
 
 usage() {
-    sed -n '2,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
+    awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "${BASH_SOURCE[0]}" >&2
     exit 1
 }
 
@@ -28,6 +39,18 @@ die() {
     exit 1
 }
 
+secs_of() {
+    [[ "$1" =~ ^([0-9]+)(s|m|h)?$ ]] || die "duration must look like 90, 90s, 5m or 1h: $1"
+    local n="${BASH_REMATCH[1]}"
+    case "${BASH_REMATCH[2]}" in
+        m) n=$(( n * 60 )) ;;
+        h) n=$(( n * 3600 )) ;;
+    esac
+    printf '%s' "$n"
+}
+
+iso_of() { date -u -d "@$1" +"%Y-%m-%dT%H:%M:%SZ" 2> /dev/null || date -u -r "$1" +"%Y-%m-%dT%H:%M:%SZ"; }
+
 [[ $# -ge 2 ]] || usage
 front="$1"
 card_file="$2"
@@ -35,65 +58,120 @@ shift 2
 
 model="${INV_WORKER_MODEL:-}"
 allowance=15
+soft="${INV_WORKER_SOFT:-10m}"
+hard="${INV_WORKER_HARD:-13m}"
+step_timeout="${INV_STEP_TIMEOUT:-3m}"
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --model)  [[ $# -ge 2 ]] || usage; model="$2"; shift 2 ;;
-        --budget) [[ $# -ge 2 ]] || usage; allowance="$2"; shift 2 ;;
-        *)        die "unknown option $1" ;;
+        --model)        [[ $# -ge 2 ]] || usage; model="$2"; shift 2 ;;
+        --budget)       [[ $# -ge 2 ]] || usage; allowance="$2"; shift 2 ;;
+        --soft)         [[ $# -ge 2 ]] || usage; soft="$2"; shift 2 ;;
+        --hard)         [[ $# -ge 2 ]] || usage; hard="$2"; shift 2 ;;
+        --step-timeout) [[ $# -ge 2 ]] || usage; step_timeout="$2"; shift 2 ;;
+        *)              die "unknown option $1" ;;
     esac
 done
 
 [[ "$front" =~ ^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$ ]] || die "FRONT must be 'investigation/front'"
+[[ "${front#*/}" != "watermark" ]] || die "'watermark' is reserved for inv watermark"
 [[ -f "$card_file" ]] || die "card not found: $card_file"
 [[ -n "$model" ]] || die "no model: pass --model or set INV_WORKER_MODEL"
 [[ "$allowance" =~ ^[0-9]+$ ]] || die "--budget must be a number"
+soft_s="$(secs_of "$soft")"
+hard_s="$(secs_of "$hard")"
+step_s="$(secs_of "$step_timeout")"
+(( hard_s > soft_s )) || die "--hard must be later than --soft"
+timeout_bin="$(command -v timeout || command -v gtimeout || true)"
+[[ -n "$timeout_bin" ]] || die "needs the timeout command (coreutils timeout or gtimeout)"
 
 dir="$INV_ROOT/$front"
-mkdir -p "$dir/cards" "$dir/worker"
+mkdir -p "$dir"
 
-n=$(( $(find "$dir/cards" -name '*.md' | wc -l) + 1 ))
-cp "$card_file" "$dir/cards/$n.md"
-
-if [[ ! -f "$dir/question" ]]; then
+cards="$("$INV" _front get "$front" cards | tr -dc '0-9')"
+n=$(( ${cards:-0} + 1 ))
+if [[ -z "$("$INV" _front get "$front" question)" ]]; then
     question="$(grep -m 1 -i '^question:' "$card_file" | sed 's/^[Qq]uestion:[[:space:]]*//' || true)"
     [[ -n "$question" ]] || question="$(grep -m 1 -v '^[[:space:]]*$' "$card_file" | sed 's/^#*[[:space:]]*//')"
-    printf '%s\n' "$question" > "$dir/question"
+    "$INV" _front set "$front" question "$question"
 fi
 
-steps=0
-[[ -f "$dir/events.tsv" ]] && steps=$(( $(wc -l < "$dir/events.tsv") - 1 ))
-printf '%s\n' "$(( steps + allowance ))" > "$dir/budget"
-printf 'running\n' > "$dir/status"
+read -r seq_before spent < <("$INV" _front counters "$front")
+lease=$(( $(date +%s) + soft_s ))
+"$INV" _front set "$front" cards "$n"
+"$INV" _front set "$front" status running
+"$INV" _front set "$front" budget "$(( spent + allowance ))"
+"$INV" _front set "$front" step_timeout "$step_s"
+"$INV" _front set "$front" lease "$lease ($(iso_of "$lease"))"
+{
+    echo
+    echo "## Card $n — $model, dispatched $(iso_of "$(date +%s)")"
+    echo
+    cat "$card_file"
+} | "$INV" _front append "$front"
 
 read -r -a cmd <<< "$WORKER_CMD"
-echo "[inv-worker] $front card $n → $model (budget: steps $((steps + 1))..$((steps + allowance)))" >&2
+echo "[inv-worker] $front card $n → $model (budget $allowance steps, soft ${soft_s}s, hard ${hard_s}s, step ${step_s}s)" >&2
 
+raw="$(mktemp)"
+err="$(mktemp)"
+trap 'rm -f "$raw" "$err"' EXIT
 set +e
-"${cmd[@]}" --model "$model" "$(< "$card_file")" > "$dir/worker/$n.json" 2> "$dir/worker/$n.err"
+"$timeout_bin" -k "$KILL_GRACE" "$hard_s" "${cmd[@]}" --model "$model" "$(< "$card_file")" > "$raw" 2> "$err"
 exit_code=$?
 set -e
 
-if jq -e . "$dir/worker/$n.json" > /dev/null 2>&1; then
-    jq -r '.result // .text // .message // tostring' "$dir/worker/$n.json" > "$dir/worker/$n.md"
-else
-    cp "$dir/worker/$n.json" "$dir/worker/$n.md"
-fi
-
 if [[ $exit_code -eq 0 ]]; then
-    printf 'returned\n' > "$dir/status"
+    status="returned"
+elif [[ $exit_code -eq 124 || $exit_code -eq 137 ]]; then
+    status="timed-out"
+    exit_code=124
 else
-    printf 'failed\n' > "$dir/status"
+    status="failed"
 fi
 
-steps_after=0
-[[ -f "$dir/events.tsv" ]] && steps_after=$(( $(wc -l < "$dir/events.tsv") - 1 ))
+if jq -e . "$raw" > /dev/null 2>&1; then
+    result="$(jq -r '.result // .text // .message // tostring' "$raw")"
+else
+    result="$(< "$raw")"
+fi
+[[ -n "$result" ]] || result="(no final message)"
 
-echo "# $front — card $n result (exit $exit_code, steps $((steps + 1))..$steps_after)"
+if [[ "$status" != returned ]]; then
+    mkdir -p "$dir/worker"
+    cp "$raw" "$dir/worker/$n.out"
+    cp "$err" "$dir/worker/$n.err"
+fi
+
+read -r seq_after _ < <("$INV" _front counters "$front")
+steps="steps $(( seq_before + 1 ))..$seq_after"
+(( seq_after > seq_before )) || steps="no steps"
+
+# After a bad return the lease stays expired: a tool shell that escaped the kill
+# must not keep adding steps. The next card opens a new lease.
+"$INV" _front set "$front" status "$status"
+if [[ "$status" == returned ]]; then
+    "$INV" _front set "$front" lease "-"
+else
+    now="$(date +%s)"
+    "$INV" _front set "$front" lease "$now ($(iso_of "$now"), closed: $status)"
+fi
+{
+    echo
+    echo "### Result of card $n — $status (exit $exit_code, $steps)"
+    echo
+    printf '%s\n' "$result"
+} | "$INV" _front append "$front"
+
+echo "# $front — card $n $status (exit $exit_code, $steps)"
 echo
-cat "$dir/worker/$n.md"
-if [[ $exit_code -ne 0 ]]; then
+printf '%s\n' "$result"
+if [[ "$status" == timed-out ]]; then
+    echo
+    echo "The worker passed its hard deadline and was killed. Its steps are in the log:"
+    echo "inv log $front, then inv trace $front <step>."
+elif [[ "$status" == failed ]]; then
     echo
     echo "stderr (last lines):"
-    tail -n 5 "$dir/worker/$n.err"
+    tail -n 5 "$err"
 fi
 exit $exit_code

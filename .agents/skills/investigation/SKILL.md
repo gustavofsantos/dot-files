@@ -34,12 +34,25 @@ inv run <slug> --why "<what this step should tell us>" \
   overwritten between steps; the snapshot is the only record of what actually ran.
 - `--expect-unique` declares the grain of the result. Use it whenever you join.
 - `--parent N` branches from step N when the path since N was wrong.
+- Write `{as_of}` where the SQL needs "now"; `inv` fills it with the pinned time.
+
+The same query over many keys or dates is one `inv map`, not many `inv run`:
+
+```bash
+inv map <slug> --why "<what the rows tell us>" --template q.sql.tmpl --params keys.tsv \
+  [--expect-unique <cols>] -- <command reading {sql}>
+```
+
+`keys.tsv` has a header; each `{column}` in the template is filled per row. The map
+prints one merged table, every row tagged with its params. Rerunning it reruns only
+the rows that did not finish ok.
 
 | Exit | Meaning | What to do |
 |------|---------|------------|
 | 0 | Ran, checks passed | Continue. `check=empty` means zero rows: confirm that is expected. |
-| 3 | A check failed | The output is wrong. Do not use it for any conclusion. Fix and rerun. |
-| 4 | Step budget spent | Stop running commands. Return what you have. |
+| 3 | A check failed, a map row failed, or the SQL uses now()/current_date | The output is wrong or incomplete. Do not use it for any conclusion. Fix and rerun. |
+| 4 | Step budget spent or time is up | Stop running commands. Return what you have now. |
+| 124 | The step timed out | Narrow the query or split it with `inv map`. |
 | other | The command failed | Fix it and rerun. |
 
 When you report a finding, cite its step ("step 7: 412 rows"), never a retelling.

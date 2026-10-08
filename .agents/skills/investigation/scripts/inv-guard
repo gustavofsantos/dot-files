@@ -5,10 +5,11 @@
 # beforeShellExecution hook: it reads the host's JSON on stdin and answers in
 # that host's format.
 #
-# Binding: when a session runs `inv run <slug> ...`, the guard binds that
+# Binding: when a session runs `inv run|map <slug> ...`, the guard binds that
 # session (Claude session_id / Cursor conversation_id) to <slug>. From then on,
 # any command listed in $INV_ROOT/guard (one name per line, e.g. trino-q) is
-# denied in that session unless it runs inside `inv run`. A binding expires
+# denied in that session unless it runs inside `inv run`, `inv map` or
+# `inv watermark`. A binding expires
 # after INV_GUARD_TTL_HOURS without new steps. Sessions never bound are free,
 # so other sessions keep using those commands directly.
 #
@@ -49,13 +50,13 @@ while IFS= read -r part; do
     parts+=("$part")
 done < <(printf '%s\n' "$command_line" | sed -E 's/(&&|\|\||;|\|)/\n/g')
 
-inv_run='^[[:space:]]*([^[:space:]]*/)?inv[[:space:]]+run[[:space:]]+([^[:space:]]+)'
+inv_run='^[[:space:]]*([^[:space:]]*/)?inv[[:space:]]+(run|map|watermark)[[:space:]]+([^[:space:]]+)'
 
 # Learn the binding from any wrapped command in this call.
 for part in "${parts[@]}"; do
     if [[ "$part" =~ $inv_run ]]; then
         mkdir -p "$SESSIONS_DIR"
-        printf '%s\n' "${BASH_REMATCH[2]}" > "$binding"
+        printf '%s\n' "${BASH_REMATCH[3]}" > "$binding"
     fi
 done
 
