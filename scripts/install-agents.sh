@@ -42,6 +42,27 @@ run_full_install() {
   done
   echo "Installing standalone skills... OK"
 
+  # Subagent definitions: one file each under .agents/agents/, linked into
+  # ~/.claude/agents/. Cursor reads that directory too, so one file serves both.
+  echo "Installing subagents..."
+  AGENTS_SOURCE="$DOTFILES_DIR/.agents/agents"
+  CLAUDE_AGENTS_DIR="$HOME/.claude/agents"
+  mkdir -p "$CLAUDE_AGENTS_DIR"
+  if [ -d "$AGENTS_SOURCE" ]; then
+    for agent in "$AGENTS_SOURCE"/*.md; do
+      [ -f "$agent" ] || continue
+      ln -sfn "$agent" "$CLAUDE_AGENTS_DIR/$(basename "$agent")"
+    done
+  fi
+  # Remove only stale links that point into this source tree.
+  find "$CLAUDE_AGENTS_DIR" -maxdepth 1 -type l | while read -r link; do
+    target=$(readlink "$link")
+    case "$target" in
+      "$AGENTS_SOURCE/"*) [ -e "$link" ] || rm "$link" ;;
+    esac
+  done
+  echo "Installing subagents... OK"
+
   echo "Installing Codex hooks..."
   DOTFILES_CODEX_HOOKS="$DOTFILES_DIR/.codex/hooks.json"
   CODEX_CONFIG_DIR="${CODEX_HOME:-$HOME/.codex}"

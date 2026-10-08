@@ -338,3 +338,68 @@ params() {
   [[ "$output" == *"late"* ]]
   [[ "$output" == *"how many?"* ]]
 }
+
+@test "open sets the budget, lease and step timeout and appends the card" {
+  printf 'Question: why do totals differ?\n' > card.md
+  run "$INV" open demo/f --card card.md --budget 3 --soft 5m --step-timeout 90s
+  [ "$status" -eq 0 ]
+  front="$INV_ROOT/demo/f/front.md"
+  grep -q '^status: running$' "$front"
+  grep -q '^budget: 3$' "$front"
+  grep -q '^step_timeout: 90$' "$front"
+  grep -q '^lease: [0-9]* (' "$front"
+  grep -q '^question: why do totals differ?$' "$front"
+  grep -q '^## Card 1 — dispatched' "$front"
+}
+
+@test "a card opened with --budget 1 refuses the second step with exit 4" {
+  "$INV" open demo/f --budget 1
+  "$INV" run demo/f -- printf 'a\n1\n'
+  run "$INV" run demo/f -- printf 'a\n1\n'
+  [ "$status" -eq 4 ]
+}
+
+@test "a second card gets a budget counted from the steps already spent" {
+  "$INV" open demo/f --budget 1
+  "$INV" run demo/f -- printf 'a\n1\n'
+  echo "done" | "$INV" close demo/f
+  "$INV" open demo/f --budget 1
+  run "$INV" run demo/f -- printf 'a\n1\n'
+  [ "$status" -eq 0 ]
+  grep -q '^## Card 2 ' "$INV_ROOT/demo/f/front.md"
+}
+
+@test "close records the result and the card's step range, and releases the lease" {
+  "$INV" open demo/f
+  "$INV" run demo/f -- printf 'a\n1\n'
+  "$INV" run demo/f -- printf 'a\n2\n'
+  run bash -c "echo 'ANSWER: 2 rows' | '$INV' close demo/f"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"card 1 returned (steps 1..2)"* ]]
+  front="$INV_ROOT/demo/f/front.md"
+  grep -q '^status: returned$' "$front"
+  grep -q '^lease: -$' "$front"
+  grep -q '^### Result of card 1 — returned (steps 1..2)' "$front"
+  grep -q '^ANSWER: 2 rows$' "$front"
+}
+
+@test "close with a bad status leaves the lease expired" {
+  "$INV" open demo/f
+  echo "partial" | "$INV" close demo/f --status timed-out
+  run "$INV" run demo/f -- printf 'a\n1\n'
+  [ "$status" -eq 4 ]
+  grep -q '^status: timed-out$' "$INV_ROOT/demo/f/front.md"
+}
+
+@test "open needs a front and refuses the reserved watermark front" {
+  run "$INV" open demo
+  [ "$status" -eq 1 ]
+  run "$INV" open demo/watermark
+  [ "$status" -eq 1 ]
+}
+
+@test "close without an open card is an error" {
+  run bash -c "echo x | '$INV' close demo/f"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"no card is open"* ]]
+}

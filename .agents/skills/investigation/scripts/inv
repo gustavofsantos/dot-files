@@ -9,6 +9,10 @@
 #   inv trace SLUG STEP [ROWS]                      facts-only handoff: the ancestors of STEP
 #   inv board INVESTIGATION                         one line per front of an investigation
 #   inv status SLUG STATUS                          set a front's status (lead's verdict)
+#   inv open  SLUG [--card FILE] [--budget N] [--soft DUR] [--step-timeout DUR]
+#                                                   open a card: step budget, lease and step timeout
+#   inv close SLUG [--status returned|timed-out|failed]
+#                                                   close it; the worker's final message is read from stdin
 #   inv as-of INVESTIGATION [TIMESTAMP]             print or pin the investigation's as_of
 #   inv watermark INVESTIGATION [--probe CMD] [--table T]...
 #                                                   probe how far each table's data reaches
@@ -97,6 +101,7 @@ secs_of() {
 }
 
 now_iso() { date -u +"%Y-%m-%dT%H:%M:%SZ"; }
+iso_of() { date -u -d "@$1" +"%Y-%m-%dT%H:%M:%SZ" 2> /dev/null || date -u -r "$1" +"%Y-%m-%dT%H:%M:%SZ"; }
 
 mtime_of() { stat -c %Y "$1" 2> /dev/null || stat -f %m "$1"; }
 
@@ -938,6 +943,94 @@ cmd_watermark() {
     echo "Compare numbers only between steps with the same data stamp."
 }
 
+# Opens a card on a front: the bookkeeping a dispatcher does before a worker runs. A
+# harness that launches workers itself (native subagents) has no dispatcher, so the lead
+# calls this; the bounds below are what stops a worker, whoever launched it.
+cmd_open() {
+    local slug="$1"; shift
+    check_slug "$slug"
+    [[ "$slug" == */* ]] || die "open needs 'investigation/front'"
+    [[ "${slug#*/}" != "$WATERMARK_FRONT" ]] || die "'$WATERMARK_FRONT' is reserved for inv watermark"
+    local card="" allowance=15 soft="10m" step_timeout="3m"
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --card)         [[ $# -ge 2 ]] || usage; card="$2"; shift 2 ;;
+            --budget)       [[ $# -ge 2 && "$2" =~ ^[0-9]+$ ]] || die "--budget must be a number"; allowance="$2"; shift 2 ;;
+            --soft)         [[ $# -ge 2 ]] || usage; soft="$2"; shift 2 ;;
+            --step-timeout) [[ $# -ge 2 ]] || usage; step_timeout="$2"; shift 2 ;;
+            *)              die "unknown option $1" ;;
+        esac
+    done
+    [[ -z "$card" || -f "$card" ]] || die "card not found: $card"
+    local soft_s step_s dir cards n seq_before spent lease question
+    soft_s="$(secs_of "$soft")"
+    step_s="$(secs_of "$step_timeout")"
+    dir="$INV_ROOT/$slug"
+    mkdir -p "$dir"
+    cards="$(front_get "$dir" cards | tr -dc '0-9')"
+    n=$(( ${cards:-0} + 1 ))
+    if [[ -n "$card" && -z "$(front_get "$dir" question)" ]]; then
+        question="$(grep -m 1 -i '^question:' "$card" | sed 's/^[Qq]uestion:[[:space:]]*//' || true)"
+        [[ -n "$question" ]] || question="$(grep -m 1 -v '^[[:space:]]*$' "$card" | sed 's/^#*[[:space:]]*//' || true)"
+        front_set "$dir" question "$question"
+    fi
+    read -r seq_before spent < <(cmd_front counters "$slug")
+    lease=$(( $(date +%s) + soft_s ))
+    front_set "$dir" cards "$n"
+    front_set "$dir" card_start "$seq_before"
+    front_set "$dir" status running
+    front_set "$dir" budget "$(( spent + allowance ))"
+    front_set "$dir" step_timeout "$step_s"
+    front_set "$dir" lease "$lease ($(iso_of "$lease"))"
+    {
+        echo
+        echo "## Card $n — dispatched $(now_iso)"
+        echo
+        [[ -z "$card" ]] || cat "$card"
+    } | cmd_front append "$slug"
+    echo "[inv] $slug card $n open: $allowance steps, lease until $(iso_of "$lease"), step timeout ${step_s}s" >&2
+}
+
+# Closes the open card: records the worker's final message (stdin) and releases or
+# expires the lease. After a bad return the lease stays expired, so a shell that escaped
+# a kill cannot keep adding steps; the next card opens a new lease.
+cmd_close() {
+    local slug="$1"; shift
+    check_slug "$slug"
+    local status="returned"
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --status) [[ $# -ge 2 ]] || usage; status="$2"; shift 2 ;;
+            *)        die "unknown option $1" ;;
+        esac
+    done
+    case "$status" in returned|timed-out|failed) ;; *) die "--status is returned, timed-out or failed" ;; esac
+    local dir="$INV_ROOT/$slug" n start seq_after result steps now
+    n="$(front_get "$dir" cards | tr -dc '0-9')"
+    [[ -n "$n" ]] || die "no card is open on $slug"
+    start="$(front_get "$dir" card_start | tr -dc '0-9')"
+    start="${start:-0}"
+    read -r seq_after _ < <(cmd_front counters "$slug")
+    result="$(cat)"
+    [[ -n "$result" ]] || result="(no final message)"
+    steps="steps $(( start + 1 ))..$seq_after"
+    (( seq_after > start )) || steps="no steps"
+    front_set "$dir" status "$status"
+    if [[ "$status" == returned ]]; then
+        front_set "$dir" lease "-"
+    else
+        now="$(date +%s)"
+        front_set "$dir" lease "$now ($(iso_of "$now"), closed: $status)"
+    fi
+    {
+        echo
+        echo "### Result of card $n — $status ($steps)"
+        echo
+        printf '%s\n' "$result"
+    } | cmd_front append "$slug"
+    echo "# $slug — card $n $status ($steps)"
+}
+
 # Internal, for inv-worker: front.md fields and counters, under the front's lock.
 cmd_front() {
     local action="$1" slug="$2"
@@ -961,6 +1054,8 @@ case "$command" in
     log)       [[ $# -eq 1 ]] || usage; cmd_log "$1" ;;
     trace)     [[ $# -ge 2 ]] || usage; cmd_trace "$@" ;;
     board)     [[ $# -eq 1 ]] || usage; cmd_board "$1" ;;
+    open)      [[ $# -ge 1 ]] || usage; cmd_open "$@" ;;
+    close)     [[ $# -ge 1 ]] || usage; cmd_close "$@" ;;
     status)    [[ $# -eq 2 ]] || usage; check_slug "$1"; front_set "$INV_ROOT/$1" status "$2" ;;
     as-of)     [[ $# -ge 1 && $# -le 2 ]] || usage; cmd_as_of "$@" ;;
     watermark) [[ $# -ge 1 ]] || usage; cmd_watermark "$@" ;;

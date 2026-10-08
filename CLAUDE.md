@@ -21,7 +21,7 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 | `init-engineering-repo.sh` | Idempotently `git init`s `~/engineering`, writes its `.gitignore`, seeds the first commit |
 | `link-bin-files.sh` | Symlinks every file in `bin/` into `~/.bin/` (hook scripts live there too, prefixed `hooks-*`) |
 | `link-xdg-config.sh` | Symlinks each subdir of `config/` into `~/.config/` |
-| `install-agents.sh` | Symlinks each `.agents/skills/<name>/` into `~/.agents/skills/` and from there into `~/.claude/skills/`, prunes links whose source is gone, merges `.codex/hooks.json` into `$CODEX_HOME/hooks.json`, and merges `.claude/settings.json` into `~/.claude/settings.json` |
+| `install-agents.sh` | Symlinks each `.agents/skills/<name>/` into `~/.agents/skills/` and from there into `~/.claude/skills/`, links each `.agents/agents/*.md` into `~/.claude/agents/`, prunes links whose source is gone, merges `.codex/hooks.json` into `$CODEX_HOME/hooks.json`, and merges `.claude/settings.json` into `~/.claude/settings.json` |
 | `set-caps-lock-ctrl.sh` | Sets the GNOME "Caps Lock as Ctrl" `xkb-options` key (`ctrl:nocaps`) via `gsettings`, no `gnome-tweaks` package needed. No-ops if `gsettings` is absent. |
 
 Re-running `setup.sh` is idempotent (`ln -sf`).
@@ -35,7 +35,7 @@ Re-running `setup.sh` is idempotent (`ln -sf`).
 
 - `bin/` — personal scripts added to `$PATH` via `~/.bin/`, including hook scripts (`hooks-*`)
 - `.agents/skills/` — every skill, one directory each, installed by `install-agents.sh`. This is the source of truth; nothing under `~/.agents/skills/` or `~/.claude/skills/` that links here is hand-edited
-- `.agents/agents/` — subagent definitions (`maintainability-reviewer.md`). Nothing installs them yet
+- `.agents/agents/` — subagent definitions, one `.md` each, linked into `~/.claude/agents/` by `install-agents.sh`. Cursor reads that directory too, so one file serves both. The `inv-*` agents (`inv-worker`, `inv-verifier`, `inv-gap-finder`) belong to `investigation-lead`; their frontmatter uses Claude Code keys (`tools`, `maxTurns`, `skills`, `hooks`), and whether Cursor tolerates them is unverified
 - `test_bin/` — bats tests for `bin/` scripts, one `<script>.bats` per script
 - `config/` — XDG config dirs: `nvim/`, `doom/`, `ghostty/`, `bat/`, `lazygit/`, `mise/`, `zed/`, `wezterm/`, `tmux/`, `sheldon/`, `starship.toml`, `vale/`
 - `.claude/` — hand-maintained Claude Code config, `settings.json` only (`permissions`/`env`/`statusLine`/`theme`/`defaultMode`/`teammateMode`), merged into the global `~/.claude/settings.json` on install

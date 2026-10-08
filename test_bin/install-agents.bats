@@ -210,3 +210,27 @@ EOF
 
   [ "$first" = "$second" ]
 }
+
+@test "links subagent definitions into ~/.claude/agents" {
+  mkdir -p "$FIXTURE/.agents/agents"
+  printf -- '---\nname: demo-agent\ndescription: A demo agent.\n---\nBody.\n' > "$FIXTURE/.agents/agents/demo-agent.md"
+  bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
+
+  [ -L "$HOME/.claude/agents/demo-agent.md" ]
+  grep -q "name: demo-agent" "$HOME/.claude/agents/demo-agent.md"
+}
+
+@test "prunes a stale subagent link and keeps unrelated agents" {
+  mkdir -p "$FIXTURE/.agents/agents" "$HOME/.claude/agents"
+  printf -- '---\nname: gone\ndescription: x\n---\n' > "$FIXTURE/.agents/agents/gone.md"
+  printf -- '---\nname: mine\ndescription: x\n---\n' > "$HOME/.claude/agents/mine.md"
+  bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
+  [ -L "$HOME/.claude/agents/gone.md" ]
+
+  rm "$FIXTURE/.agents/agents/gone.md"
+  bash "$FIXTURE/scripts/install-agents.sh" >/dev/null
+
+  [ ! -e "$HOME/.claude/agents/gone.md" ]
+  [ ! -L "$HOME/.claude/agents/gone.md" ]
+  [ -f "$HOME/.claude/agents/mine.md" ]
+}
