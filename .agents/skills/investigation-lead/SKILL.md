@@ -94,6 +94,10 @@ otherwise, not the phenomenon.
    (`--hard`), 3 min per step (`--step-timeout`). Keep `inv map --parallel` at its
    default of 2 until the cluster's resource-group limits are known: killing a client
    may not cancel its query on the server.
+   With `INV_WORKER_CMD=inv-worker-sdk` the card runs through the Cursor SDK instead of
+   the CLI: `<front>/live.log` gets one line per tool call while it runs, and
+   `inv board` shows a running front's seconds since its last tool event. A front
+   silent for minutes is stuck: read its `live.log` before waiting longer.
 4. **Review** every returned card (protocol below).
 5. **Decide.** Next card on the same front, a rewind (`Start from: step k`), a new front,
    or a front status (`inv status <inv>/<front> <s>`): `supported`, `refuted`,

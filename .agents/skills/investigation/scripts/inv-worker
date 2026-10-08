@@ -21,7 +21,10 @@
 # Every step it ran is in the log either way: read it with inv log / inv trace.
 #
 # The agent command is $INV_WORKER_CMD, default: agent -p --output-format json
-# Model and card text are appended as: --model MODEL "<card>".
+# (inv-worker-sdk runs the card through the Cursor SDK instead, with a live log).
+# Model and card text are appended as: --model MODEL "<card>". The command also gets
+# INV_LEASE_AT (lease, epoch seconds) and INV_WORKER_LIVE (FRONT/live.log, one line per
+# tool call for runners that write it; kept under FRONT/worker/ only on a bad return).
 set -euo pipefail
 
 INV_ROOT="${INV_ROOT:-$HOME/.investigations}"
@@ -116,6 +119,7 @@ raw="$(mktemp)"
 err="$(mktemp)"
 trap 'rm -f "$raw" "$err"' EXIT
 set +e
+INV_LEASE_AT="$lease" INV_WORKER_LIVE="$dir/live.log" \
 "$timeout_bin" -k "$KILL_GRACE" "$hard_s" "${cmd[@]}" --model "$model" "$(< "$card_file")" > "$raw" 2> "$err"
 exit_code=$?
 set -e
@@ -140,7 +144,9 @@ if [[ "$status" != returned ]]; then
     mkdir -p "$dir/worker"
     cp "$raw" "$dir/worker/$n.out"
     cp "$err" "$dir/worker/$n.err"
+    [[ ! -f "$dir/live.log" ]] || mv "$dir/live.log" "$dir/worker/$n.live"
 fi
+rm -f "$dir/live.log"
 
 read -r seq_after _ < <("$INV" _front counters "$front")
 steps="steps $(( seq_before + 1 ))..$seq_after"

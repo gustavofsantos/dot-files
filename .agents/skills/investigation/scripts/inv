@@ -98,6 +98,8 @@ secs_of() {
 
 now_iso() { date -u +"%Y-%m-%dT%H:%M:%SZ"; }
 
+mtime_of() { stat -c %Y "$1" 2> /dev/null || stat -f %m "$1"; }
+
 sha_of() { shasum -a 256 | cut -c1-16; }
 
 # Path of a step's file. kind: sh (command), tsv (output), att (attachments dir).
@@ -771,6 +773,8 @@ cmd_trace() {
 
 # One line per front: steps, failed checks, last check, last activity, status (written
 # by the lead and inv-worker; "late" once a running front's lease expired) and question.
+# A running front whose worker writes live.log shows how long ago its last tool event
+# was ("running 40s"), which is how a stuck worker shows up.
 cmd_board() {
     local inv="$1"
     check_inv "$inv"
@@ -780,7 +784,7 @@ cmd_board() {
     local as_of
     as_of="$(as_of_of "$inv")"
     echo "as_of: ${as_of:-not pinned}   data: $(current_stamp "$inv")"
-    printf '%-24s %-5s %-5s %-30s %-20s %-10s %s\n' front steps fails last_check last_at status question
+    printf '%-24s %-5s %-5s %-30s %-20s %-14s %s\n' front steps fails last_check last_at status question
     local dir front events steps fails last_check last_at status lease question
     for dir in "$root" "$root"/*/; do
         dir="${dir%/}"
@@ -801,8 +805,11 @@ cmd_board() {
         if [[ "$status" == running && "$lease" =~ ^[0-9]+$ ]] && (( $(date +%s) >= lease )); then
             status="late"
         fi
+        if [[ "$status" == running || "$status" == late ]] && [[ -f "$dir/live.log" ]]; then
+            status="$status $(( $(date +%s) - $(mtime_of "$dir/live.log") ))s"
+        fi
         question="$(front_get "$dir" question)"
-        printf '%-24s %-5s %-5s %-30s %-20s %-10s %s\n' \
+        printf '%-24s %-5s %-5s %-30s %-20s %-14s %s\n' \
             "$front" "$steps" "$fails" "${last_check:0:30}" "$last_at" "$status" "${question:--}"
     done
 }

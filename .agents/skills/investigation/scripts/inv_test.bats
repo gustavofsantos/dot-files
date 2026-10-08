@@ -320,6 +320,14 @@ params() {
   [ "$(sort "$FAKE_LOG" | tr '\n' ' ')" = "c d " ]
 }
 
+@test "board shows how long a running front's live log has been silent" {
+  "$INV" _front set demo/f status running
+  echo "10:00:00 tool shell running" > "$INV_ROOT/demo/f/live.log"
+  touch -d "@$(( $(date +%s) - 90 ))" "$INV_ROOT/demo/f/live.log"
+  run "$INV" board demo
+  [[ "$output" =~ running\ (89|9[01])s ]]
+}
+
 @test "board shows each front's status from front.md" {
   "$INV" run demo/f -- printf 'a\n1\n'
   "$INV" _front set demo/f question "how many?"
