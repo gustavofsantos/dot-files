@@ -1,0 +1,295 @@
+#!/usr/bin/env bash
+# inv — record a line of investigation as numbered, replayable steps.
+# Wraps any command; knows nothing about where the data comes from.
+#
+#   inv run   SLUG [options] -- COMMAND [ARGS...]   run COMMAND and record it as the next step
+#   inv log   SLUG                                  table of every step
+#   inv trace SLUG STEP [ROWS]                      facts-only handoff: the ancestors of STEP
+#   inv board INVESTIGATION                         one line per front of an investigation
+#
+# SLUG is "investigation" or "investigation/front" (lowercase a-z, 0-9, -).
+#
+# run options:
+#   --why TEXT           why this step (shown in log; defaults to the command)
+#   --parent N           branch from step N (default: previous step; 0 = root)
+#   --attach FILE        snapshot an input file (e.g. the .sql), repeatable
+#   --expect-rows EXPR   row-count check: >N, >=N, <N, <=N or =N
+#   --expect-unique COLS comma-separated columns that must be unique together
+#
+# Output is expected to be tabular with a header line (rows = lines - 1).
+# Exit code: the command's own; 3 when the command succeeded but a check failed;
+# 4 when the step budget of SLUG is spent (SLUG/budget, else INV_MAX_STEPS, default 20).
+# Steps live in $INV_ROOT/SLUG (default ~/.investigations/SLUG). Keep it out of git.
+set -euo pipefail
+
+INV_ROOT="${INV_ROOT:-$HOME/.investigations}"
+DEFAULT_BUDGET="${INV_MAX_STEPS:-20}"
+CHECK_FAILED_EXIT=3
+BUDGET_SPENT_EXIT=4
+
+usage() {
+    sed -n '2,24p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
+    exit 1
+}
+
+die() {
+    echo "[inv] error: $1" >&2
+    exit 1
+}
+
+one_line() {
+    local s="$1"
+    s="${s//$'\t'/ }"
+    s="${s//$'\n'/ }"
+    printf '%s' "$s"
+}
+
+check_slug() {
+    [[ "$1" =~ ^[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)?$ ]] || \
+        die "slug must be 'investigation' or 'investigation/front' (lowercase a-z, 0-9, -)"
+}
+
+# Prints nothing when every check passes, otherwise "check:detail" items separated by ';'.
+run_checks() {
+    local out_file="$1" rows="$2"
+    local failures=() op n passed dup
+
+    if [[ -n "$EXPECT_ROWS" ]]; then
+        [[ "$EXPECT_ROWS" =~ ^(>=|<=|>|<|=)([0-9]+)$ ]]
+        op="${BASH_REMATCH[1]}"
+        n="${BASH_REMATCH[2]}"
+        passed=1
+        case "$op" in
+            ">")  (( rows >  n )) || passed=0 ;;
+            ">=") (( rows >= n )) || passed=0 ;;
+            "<")  (( rows <  n )) || passed=0 ;;
+            "<=") (( rows <= n )) || passed=0 ;;
+            "=")  (( rows == n )) || passed=0 ;;
+        esac
+        (( passed )) || failures+=("rows${EXPECT_ROWS}:got=${rows}")
+    fi
+
+    if [[ -n "$EXPECT_UNIQUE" ]]; then
+        dup="$(awk -F'\t' -v cols="$EXPECT_UNIQUE" '
+            NR == 1 {
+                n = split(cols, want, ",")
+                for (i = 1; i <= n; i++) {
+                    idx[i] = 0
+                    for (j = 1; j <= NF; j++) if ($j == want[i]) idx[i] = j
+                    if (!idx[i]) { print "missing_column=" want[i]; bad = 1; exit }
+                }
+                next
+            }
+            {
+                key = ""
+                for (i = 1; i <= n; i++) key = key SUBSEP $(idx[i])
+                if (seen[key]++) dups++
+            }
+            END { if (!bad && dups) print "duplicates=" dups }
+        ' "$out_file")"
+        [[ -z "$dup" ]] || failures+=("unique(${EXPECT_UNIQUE}):${dup}")
+    fi
+
+    if (( ${#failures[@]} > 0 )); then
+        local IFS=';'
+        printf '%s' "${failures[*]}"
+    fi
+}
+
+cmd_run() {
+    local slug="$1"; shift
+    check_slug "$slug"
+
+    local why="" parent_arg=""
+    local attachments=()
+    EXPECT_ROWS=""
+    EXPECT_UNIQUE=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --why)           [[ $# -ge 2 ]] || usage; why="$2"; shift 2 ;;
+            --parent)        [[ $# -ge 2 ]] || usage; parent_arg="$2"; shift 2 ;;
+            --attach)        [[ $# -ge 2 ]] || usage; attachments+=("$2"); shift 2 ;;
+            --expect-rows)   [[ $# -ge 2 ]] || usage; EXPECT_ROWS="$2"; shift 2 ;;
+            --expect-unique) [[ $# -ge 2 ]] || usage; EXPECT_UNIQUE="$2"; shift 2 ;;
+            --)              shift; break ;;
+            *)               die "unknown option $1 (put the command after --)" ;;
+        esac
+    done
+
+    [[ $# -gt 0 ]] || die "missing command after --"
+    [[ -z "$EXPECT_ROWS" || "$EXPECT_ROWS" =~ ^(>=|<=|>|<|=)[0-9]+$ ]] || die "--expect-rows must look like >0, >=1, <100 or =1"
+    [[ -z "$parent_arg" || "$parent_arg" =~ ^[0-9]+$ ]] || die "--parent must be a step number"
+    local f
+    for f in ${attachments[@]+"${attachments[@]}"}; do
+        [[ -f "$f" ]] || die "--attach file not found: $f"
+    done
+
+    local dir="$INV_ROOT/$slug"
+    local events="$dir/events.tsv"
+    mkdir -p "$dir/cmd" "$dir/out"
+    [[ -f "$events" ]] || \
+        printf 'step\tparent\ttimestamp\texit\trows\tout_sha\tcheck\twhy\n' > "$events"
+
+    local step=$(( $(wc -l < "$events") ))   # header line makes the first step 1
+    local previous=$(( step - 1 ))
+    local parent="${parent_arg:-$previous}"
+    (( parent < step )) || die "--parent $parent does not exist yet (last step is $previous)"
+
+    local budget="$DEFAULT_BUDGET"
+    [[ -f "$dir/budget" ]] && budget="$(tr -dc '0-9' < "$dir/budget")"
+    if (( previous >= ${budget:-$DEFAULT_BUDGET} )); then
+        echo "[inv] step budget spent for $slug ($previous of ${budget:-$DEFAULT_BUDGET} steps)" >&2
+        echo "[inv] stop running commands and return your findings with their step numbers" >&2
+        exit $BUDGET_SPENT_EXIT
+    fi
+
+    printf '%q ' "$@" > "$dir/cmd/$step.sh"
+    echo >> "$dir/cmd/$step.sh"
+    if (( ${#attachments[@]} > 0 )); then
+        mkdir -p "$dir/att/$step"
+        for f in "${attachments[@]}"; do
+            cp "$f" "$dir/att/$step/$(basename "$f")"
+        done
+    fi
+    [[ -n "$why" ]] || why="$(< "$dir/cmd/$step.sh")"
+
+    local out="$dir/out/$step.tsv" exit_code
+    set +e
+    "$@" > "$out"
+    exit_code=$?
+    set -e
+    cat "$out"
+
+    local rows=0 sha="-" check="error" lines failures
+    if [[ $exit_code -eq 0 ]]; then
+        lines=$(( $(wc -l < "$out") ))
+        (( lines > 0 )) && rows=$(( lines - 1 ))
+        sha="$(shasum -a 256 "$out" | cut -c1-12)"
+        failures="$(run_checks "$out" "$rows")"
+        if [[ -n "$failures" ]]; then
+            check="FAIL:$failures"
+        elif (( rows == 0 )) && [[ -z "$EXPECT_ROWS" ]]; then
+            check="empty"
+        else
+            check="ok"
+        fi
+    fi
+
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+        "$step" "$parent" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" "$exit_code" "$rows" \
+        "$sha" "$check" "$(one_line "$why")" >> "$events"
+    echo "[inv] $slug step=$step parent=$parent rows=$rows check=$check" >&2
+
+    [[ $exit_code -eq 0 ]] || exit $exit_code
+    if [[ "$check" == FAIL:* ]]; then
+        echo "[inv] CHECK FAILED at step $step: ${check#FAIL:}" >&2
+        echo "[inv] this result is wrong; do not use it for any conclusion" >&2
+        exit $CHECK_FAILED_EXIT
+    fi
+}
+
+events_of() {
+    check_slug "$1"
+    local events="$INV_ROOT/$1/events.tsv"
+    [[ -f "$events" ]] || die "no steps recorded at $INV_ROOT/$1"
+    printf '%s' "$events"
+}
+
+cmd_log() {
+    local events
+    events="$(events_of "$1")"
+    awk -F'\t' '{ printf "%-4s %-6s %-4s %-6s %-36s %s\n", $1, $2, $4, $5, $7, $8 }' "$events"
+}
+
+cmd_trace() {
+    local slug="$1" target="$2" head_rows="${3:-10}"
+    [[ "$target" =~ ^[0-9]+$ ]] || usage
+    local events dir chain
+    events="$(events_of "$slug")"
+    dir="$INV_ROOT/$slug"
+
+    chain="$(awk -F'\t' -v target="$target" '
+        NR > 1 { parent[$1] = $2; seen[$1] = 1 }
+        END {
+            if (!seen[target]) exit 1
+            for (s = target; s != 0; s = parent[s]) out = s (out == "" ? "" : " " out)
+            print out
+        }
+    ' "$events")" || die "step $target does not exist"
+
+    echo "# $slug — trace to step $target"
+    echo
+    echo "Facts only: commands as run and outputs as returned. No interpretation from any session."
+    echo "Steps outside this chain are abandoned branches and are not included."
+
+    local step row parent exit_code rows sha check why f
+    for step in $chain; do
+        row="$(awk -F'\t' -v s="$step" 'NR > 1 && $1 == s' "$events")"
+        IFS=$'\t' read -r _ parent _ exit_code rows sha check why <<< "$row"
+        echo
+        echo "## Step $step (parent $parent) — $why"
+        echo "exit=$exit_code rows=$rows check=$check sha=$sha"
+        echo
+        echo '```sh'
+        cat "$dir/cmd/$step.sh"
+        echo '```'
+        if [[ -d "$dir/att/$step" ]]; then
+            for f in "$dir/att/$step"/*; do
+                echo
+                echo "\`$(basename "$f")\`:"
+                echo '```'
+                cat "$f"
+                echo '```'
+            done
+        fi
+        if [[ "$exit_code" == "0" ]]; then
+            echo
+            echo '```tsv'
+            head -n $(( head_rows + 1 )) "$dir/out/$step.tsv"
+            (( rows <= head_rows )) || echo "… +$(( rows - head_rows )) row(s) in out/$step.tsv"
+            echo '```'
+        fi
+    done
+}
+
+# One line per front: steps, failed checks, last step's check, last activity,
+# status (written by the lead) and the front's question (written by inv-worker).
+cmd_board() {
+    local inv="$1"
+    [[ "$inv" =~ ^[a-z0-9][a-z0-9-]*$ ]] || die "board takes an investigation, not a front"
+    local root="$INV_ROOT/$inv"
+    [[ -d "$root" ]] || die "no investigation at $root"
+
+    printf '%-24s %-5s %-5s %-36s %-20s %-10s %s\n' front steps fails last_check last_at status question
+    local dir front events steps fails last_check last_at status question
+    for dir in "$root" "$root"/*/; do
+        dir="${dir%/}"
+        [[ -f "$dir/events.tsv" || -f "$dir/question" ]] || continue
+        front="${dir#"$INV_ROOT"/}"
+        events="$dir/events.tsv"
+        steps=0 fails=0 last_check="-" last_at="-"
+        if [[ -f "$events" ]]; then
+            read -r steps fails last_check last_at < <(awk -F'\t' '
+                NR > 1 { n++; if ($7 ~ /^FAIL/ || $7 == "error") f++; c = $7; t = $3 }
+                END { printf "%d %d %s %s\n", n, f, (c == "" ? "-" : c), (t == "" ? "-" : t) }
+            ' "$events")
+        fi
+        status="open"
+        [[ -f "$dir/status" ]] && status="$(head -n 1 "$dir/status")"
+        question="-"
+        [[ -f "$dir/question" ]] && question="$(head -n 1 "$dir/question")"
+        printf '%-24s %-5s %-5s %-36s %-20s %-10s %s\n' \
+            "$front" "$steps" "$fails" "${last_check:0:36}" "$last_at" "$status" "$question"
+    done
+}
+
+[[ $# -ge 1 ]] || usage
+command="$1"; shift
+case "$command" in
+    run)   [[ $# -ge 1 ]] || usage; cmd_run "$@" ;;
+    log)   [[ $# -eq 1 ]] || usage; cmd_log "$1" ;;
+    trace) [[ $# -ge 2 ]] || usage; cmd_trace "$@" ;;
+    board) [[ $# -eq 1 ]] || usage; cmd_board "$1" ;;
+    *)     usage ;;
+esac

@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# inv-worker — dispatch one card to a headless Cursor agent and keep its record.
+#
+#   inv-worker FRONT CARD_FILE [--model MODEL] [--budget N]
+#
+# FRONT is "investigation/front". The card is stored as FRONT/cards/<n>.md, the
+# agent's raw output as FRONT/worker/<n>.json and its final message as
+# FRONT/worker/<n>.md. Only the final message is printed, so the caller's
+# context never holds the worker's transcript.
+#
+#   --model MODEL  worker model (default: $INV_WORKER_MODEL)
+#   --budget N     steps this card may add to FRONT (default: 15)
+#
+# The agent command is $INV_WORKER_CMD, default: agent -p --output-format json
+# Model and card text are appended as: --model MODEL "<card>".
+set -euo pipefail
+
+INV_ROOT="${INV_ROOT:-$HOME/.investigations}"
+WORKER_CMD="${INV_WORKER_CMD:-agent -p --output-format json}"
+
+usage() {
+    sed -n '2,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
+    exit 1
+}
+
+die() {
+    echo "[inv-worker] error: $1" >&2
+    exit 1
+}
+
+[[ $# -ge 2 ]] || usage
+front="$1"
+card_file="$2"
+shift 2
+
+model="${INV_WORKER_MODEL:-}"
+allowance=15
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --model)  [[ $# -ge 2 ]] || usage; model="$2"; shift 2 ;;
+        --budget) [[ $# -ge 2 ]] || usage; allowance="$2"; shift 2 ;;
+        *)        die "unknown option $1" ;;
+    esac
+done
+
+[[ "$front" =~ ^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$ ]] || die "FRONT must be 'investigation/front'"
+[[ -f "$card_file" ]] || die "card not found: $card_file"
+[[ -n "$model" ]] || die "no model: pass --model or set INV_WORKER_MODEL"
+[[ "$allowance" =~ ^[0-9]+$ ]] || die "--budget must be a number"
+
+dir="$INV_ROOT/$front"
+mkdir -p "$dir/cards" "$dir/worker"
+
+n=$(( $(find "$dir/cards" -name '*.md' | wc -l) + 1 ))
+cp "$card_file" "$dir/cards/$n.md"
+
+if [[ ! -f "$dir/question" ]]; then
+    question="$(grep -m 1 -i '^question:' "$card_file" | sed 's/^[Qq]uestion:[[:space:]]*//' || true)"
+    [[ -n "$question" ]] || question="$(grep -m 1 -v '^[[:space:]]*$' "$card_file" | sed 's/^#*[[:space:]]*//')"
+    printf '%s\n' "$question" > "$dir/question"
+fi
+
+steps=0
+[[ -f "$dir/events.tsv" ]] && steps=$(( $(wc -l < "$dir/events.tsv") - 1 ))
+printf '%s\n' "$(( steps + allowance ))" > "$dir/budget"
+printf 'running\n' > "$dir/status"
+
+read -r -a cmd <<< "$WORKER_CMD"
+echo "[inv-worker] $front card $n → $model (budget: steps $((steps + 1))..$((steps + allowance)))" >&2
+
+set +e
+"${cmd[@]}" --model "$model" "$(< "$card_file")" > "$dir/worker/$n.json" 2> "$dir/worker/$n.err"
+exit_code=$?
+set -e
+
+if jq -e . "$dir/worker/$n.json" > /dev/null 2>&1; then
+    jq -r '.result // .text // .message // tostring' "$dir/worker/$n.json" > "$dir/worker/$n.md"
+else
+    cp "$dir/worker/$n.json" "$dir/worker/$n.md"
+fi
+
+if [[ $exit_code -eq 0 ]]; then
+    printf 'returned\n' > "$dir/status"
+else
+    printf 'failed\n' > "$dir/status"
+fi
+
+steps_after=0
+[[ -f "$dir/events.tsv" ]] && steps_after=$(( $(wc -l < "$dir/events.tsv") - 1 ))
+
+echo "# $front — card $n result (exit $exit_code, steps $((steps + 1))..$steps_after)"
+echo
+cat "$dir/worker/$n.md"
+if [[ $exit_code -ne 0 ]]; then
+    echo
+    echo "stderr (last lines):"
+    tail -n 5 "$dir/worker/$n.err"
+fi
+exit $exit_code

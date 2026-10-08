@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# inv-guard — shell hook that keeps each session's investigation on the record.
+#
+# Works as a Claude Code PreToolUse hook (matcher: Bash) and as a Cursor
+# beforeShellExecution hook: it reads the host's JSON on stdin and answers in
+# that host's format.
+#
+# Binding: when a session runs `inv run <slug> ...`, the guard binds that
+# session (Claude session_id / Cursor conversation_id) to <slug>. From then on,
+# any command listed in $INV_ROOT/guard (one name per line, e.g. trino-q) is
+# denied in that session unless it runs inside `inv run`. A binding expires
+# after INV_GUARD_TTL_HOURS without new steps. Sessions never bound are free,
+# so other sessions keep using those commands directly.
+#
+# This is a steering rail for the agent, not a security boundary: it splits the
+# command line on ; && || | and checks each part.
+set -uo pipefail
+
+INV_ROOT="${INV_ROOT:-$HOME/.investigations}"
+GUARD_FILE="$INV_ROOT/guard"
+SESSIONS_DIR="$INV_ROOT/.sessions"
+TTL_HOURS="${INV_GUARD_TTL_HOURS:-8}"
+
+input="$(cat)"
+
+if [[ "$input" == *'"tool_input"'* ]]; then
+    host="claude"
+else
+    host="cursor"
+fi
+
+allow() {
+    [[ "$host" == "cursor" ]] && printf '{"permission":"allow"}\n'
+    exit 0
+}
+
+if ! command -v jq > /dev/null 2>&1; then
+    echo "[inv-guard] jq not found; guard disabled" >&2
+    allow
+fi
+
+command_line="$(printf '%s' "$input" | jq -r '.tool_input.command // .command // empty' 2> /dev/null)"
+session="$(printf '%s' "$input" | jq -r '.session_id // .conversation_id // empty' 2> /dev/null)"
+[[ -n "$command_line" && -n "$session" ]] || allow
+binding="$SESSIONS_DIR/$(printf '%s' "$session" | tr -c 'A-Za-z0-9_-' '_')"
+
+parts=()
+while IFS= read -r part; do
+    parts+=("$part")
+done < <(printf '%s\n' "$command_line" | sed -E 's/(&&|\|\||;|\|)/\n/g')
+
+inv_run='^[[:space:]]*([^[:space:]]*/)?inv[[:space:]]+run[[:space:]]+([^[:space:]]+)'
+
+# Learn the binding from any wrapped command in this call.
+for part in "${parts[@]}"; do
+    if [[ "$part" =~ $inv_run ]]; then
+        mkdir -p "$SESSIONS_DIR"
+        printf '%s\n' "${BASH_REMATCH[2]}" > "$binding"
+    fi
+done
+
+[[ -f "$binding" && -f "$GUARD_FILE" ]] || allow
+[[ -n "$(find "$binding" -mmin -$(( TTL_HOURS * 60 )) 2> /dev/null)" ]] || allow
+
+guarded=()
+while IFS= read -r name; do
+    name="${name%%#*}"
+    name="${name//[[:space:]]/}"
+    [[ -n "$name" ]] && guarded+=("$name")
+done < "$GUARD_FILE"
+(( ${#guarded[@]} > 0 )) || allow
+
+offender=""
+for part in "${parts[@]}"; do
+    [[ "$part" =~ $inv_run ]] && continue
+    for name in "${guarded[@]}"; do
+        if [[ "$part" =~ (^|[[:space:]/])"$name"([[:space:]]|$) ]]; then
+            offender="$name"
+            break 2
+        fi
+    done
+done
+
+[[ -n "$offender" ]] || allow
+
+slug="$(< "$binding")"
+reason="This session is investigating '$slug', so $offender must run as a recorded step: inv run $slug --why \"<what this step should tell us>\" [--attach <input file>] -- <the same command>"
+
+if [[ "$host" == "claude" ]]; then
+    jq -n --arg reason "$reason" '{
+        hookSpecificOutput: {
+            hookEventName: "PreToolUse",
+            permissionDecision: "deny",
+            permissionDecisionReason: $reason
+        }
+    }'
+else
+    jq -n --arg reason "$reason" --arg user "inv-guard: $offender blocked outside inv run ($slug)" \
+        '{permission: "deny", user_message: $user, agent_message: $reason}'
+fi
+exit 0
