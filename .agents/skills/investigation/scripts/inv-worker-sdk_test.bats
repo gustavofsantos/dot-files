@@ -103,11 +103,11 @@ EOF
   [ "$(grep -c '^steer Time is up' "$FAKE_SDK_LOG")" -eq 1 ]
 }
 
-@test "a missing SDK says how to install it, and nothing is fetched or run" {
+@test "a missing SDK is an error, and nothing is fetched or run" {
   rm -rf "$INV_SDK_DIR"
   run "$RUNNER" --model cheap "card"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"inv-worker-sdk --install"* ]]
+  [[ "$output" == *"@cursor/sdk is not installed in $INV_SDK_DIR"* ]]
   [ ! -s "$FAKE_SDK_LOG" ]
   [ ! -e "$INV_SDK_STORE" ]
 }
