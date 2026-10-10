@@ -21,6 +21,7 @@ zigmod = "latest"
 black = "latest"
 shfmt = "latest"
 clang-format = "latest"
+pnpm = "latest"
 
 [settings.ruby]
 compile = false
