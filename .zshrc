@@ -21,14 +21,6 @@ function drmid-fn {
   [ ! -z "$imgs" ] && docker rmi "$imgs" || echo "no dangling images."
 }
 
-if command -v "/opt/homebrew/bin/brew" &> /dev/null; then
-  eval "$(/opt/homebrew/bin/brew shellenv)"
-fi
-
-if command -v "/home/linuxbrew/.linuxbrew/bin/brew" &> /dev/null; then
-    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv zsh)"
-fi
-
 if command -v "zoxide" &> /dev/null; then
   eval "$(zoxide init zsh)"
 fi
