@@ -22,6 +22,7 @@ black = "latest"
 shfmt = "latest"
 clang-format = "latest"
 pnpm = "latest"
+"npm:@mermaid-js/mermaid-cli" = "latest"
 
 [settings.ruby]
 compile = false

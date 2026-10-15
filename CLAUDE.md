@@ -21,7 +21,7 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 | `init-engineering-repo.sh` | Idempotently `git init`s `~/engineering`, writes its `.gitignore`, seeds the first commit |
 | `link-bin-files.sh` | Symlinks every file in `bin/` into `~/.bin/` (hook scripts live there too, prefixed `hooks-*`) |
 | `link-xdg-config.sh` | Symlinks each subdir of `config/` into `~/.config/` |
-| `install-agents.sh` | Symlinks each `.agents/skills/<name>/` into `~/.agents/skills/` and from there into `~/.claude/skills/`, links each `.agents/agents/*.md` into `~/.claude/agents/`, prunes links whose source is gone, merges `.codex/hooks.json` into `$CODEX_HOME/hooks.json`, and merges `.claude/settings.json` into `~/.claude/settings.json` |
+| `install-agents.sh` | Symlinks each `.agents/skills/<name>/` into `~/.agents/skills/` and from there into `~/.claude/skills/`, links each `.agents/agents/*.md` into `~/.claude/agents/`, links each `.agents/mods/<name>/` into `~/.claude/mods/`, prunes links whose source is gone, merges `.codex/hooks.json` into `$CODEX_HOME/hooks.json`, and merges `.claude/settings.json` into `~/.claude/settings.json` |
 | `set-caps-lock-ctrl.sh` | Sets the GNOME "Caps Lock as Ctrl" `xkb-options` key (`ctrl:nocaps`) via `gsettings`, no `gnome-tweaks` package needed. No-ops if `gsettings` is absent. |
 
 Re-running `setup.sh` is idempotent (`ln -sf`).
@@ -36,9 +36,10 @@ Re-running `setup.sh` is idempotent (`ln -sf`).
 - `bin/` — personal scripts added to `$PATH` via `~/.bin/`, including hook scripts (`hooks-*`)
 - `.agents/skills/` — every skill, one directory each, installed by `install-agents.sh`. This is the source of truth; nothing under `~/.agents/skills/` or `~/.claude/skills/` that links here is hand-edited
 - `.agents/agents/` — subagent definitions, one `.md` each, linked into `~/.claude/agents/` by `install-agents.sh`. Cursor reads that directory too, so one file serves both. The `inv-*` agents (`inv-worker`, `inv-verifier`, `inv-gap-finder`) belong to `investigation-lead`; their frontmatter uses Claude Code keys (`tools`, `maxTurns`, `skills`, `hooks`), and whether Cursor tolerates them is unverified
+- `.agents/mods/` — Claude Code mods (function-hook plugins), one directory each, linked into `~/.claude/mods/` by `install-agents.sh` and loaded through `CLAUDE_CODE_PLUGIN_DIRS` (see "Mods")
 - `test_bin/` — bats tests for `bin/` scripts, one `<script>.bats` per script
 - `config/` — XDG config dirs: `nvim/`, `doom/`, `ghostty/`, `bat/`, `lazygit/`, `mise/`, `zed/`, `wezterm/`, `tmux/`, `sheldon/`, `starship.toml`, `vale/`
-- `.claude/` — hand-maintained Claude Code config, `settings.json` only (`permissions`/`env`/`statusLine`/`theme`/`defaultMode`/`teammateMode`), merged into the global `~/.claude/settings.json` on install
+- `.claude/` — hand-maintained Claude Code config, `settings.json` only (`permissions`/`env` (incl. `CLAUDE_CODE_PLUGIN_DIRS`)/`statusLine`/`theme`/`defaultMode`/`teammateMode`), merged into the global `~/.claude/settings.json` on install
 - `.codex/` — `hooks.json`, merged into Codex's global hooks file on install
 
 ## Skills
@@ -95,6 +96,21 @@ analyzed as a set in `${XDG_STATE_HOME:-~/.local/state}/reflect/analyzed.tsv`
 (`harness<TAB>session-id<TAB>lines`). Pending means "on disk and not in the set, or grown
 since it was recorded". The file is machine-local state, never committed; `sessions.sh seed`
 marks everything on disk as analyzed.
+
+## Mods
+
+A mod is a Claude Code plugin of function hooks: `.claude-plugin/plugin.json`,
+`hooks/hooks.json` naming one module, and `hooks/register.tsx` exporting `register(on, options)`.
+Mods live under `.agents/mods/<name>/`. `install-agents.sh` links each one into
+`~/.claude/mods/<name>`, and the `env.CLAUDE_CODE_PLUGIN_DIRS` entry in `.claude/settings.json`
+lists those links (`:`-separated). Add a new mod's link there too. Claude Code watches these
+folders, so an edit here reloads in a running interactive session. Keep a mod's tests beside it
+under `tests/*.test.tsx`. Check a mod with `claude plugin validate <dir>` and `claude plugin test <dir>`.
+The engine writes `.claude-plugin/types/` into a loaded mod, with its own `.gitignore`.
+
+| Mod | What it does |
+|---|---|
+| `mermaid-render` | Draws ` ```mermaid ` blocks in Claude's replies as images inline in the terminal (kitty graphics protocol), rendered once by `mmdc` (mise `npm:@mermaid-js/mermaid-cli`) into `~/.cache/claude-mermaid/`. `source`/`expand` buttons under each diagram. `/mermaid` reopens the expanded pane. Options are in its `README.md` |
 
 ## Hooks
 

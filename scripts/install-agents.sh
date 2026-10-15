@@ -63,6 +63,28 @@ run_full_install() {
   done
   echo "Installing subagents... OK"
 
+  # Claude Code mods (function-hook plugins): one directory each under
+  # .agents/mods/, linked into ~/.claude/mods/. Claude Code loads them from
+  # CLAUDE_CODE_PLUGIN_DIRS (set in .claude/settings.json) and watches the
+  # folder, so an edit here reloads in a running session.
+  echo "Installing mods..."
+  MODS_SOURCE="$DOTFILES_DIR/.agents/mods"
+  CLAUDE_MODS_DIR="$HOME/.claude/mods"
+  mkdir -p "$CLAUDE_MODS_DIR"
+  if [ -d "$MODS_SOURCE" ]; then
+    for mod in "$MODS_SOURCE"/*/; do
+      [ -d "$mod" ] || continue
+      ln -sfn "${mod%/}" "$CLAUDE_MODS_DIR/$(basename "${mod%/}")"
+    done
+  fi
+  find "$CLAUDE_MODS_DIR" -maxdepth 1 -type l | while read -r link; do
+    target=$(readlink "$link")
+    case "$target" in
+      "$MODS_SOURCE/"*) [ -e "$link" ] || rm "$link" ;;
+    esac
+  done
+  echo "Installing mods... OK"
+
   echo "Installing Codex hooks..."
   DOTFILES_CODEX_HOOKS="$DOTFILES_DIR/.codex/hooks.json"
   CODEX_CONFIG_DIR="${CODEX_HOME:-$HOME/.codex}"
