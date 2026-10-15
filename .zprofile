@@ -12,3 +12,6 @@ fi
 if command -v "/home/linuxbrew/.linuxbrew/bin/brew" &> /dev/null; then
     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv zsh)"
 fi
+
+
+if [ -e "$HOME/.cargo/env" ]; then . "$HOME/.cargo/env";  fi
