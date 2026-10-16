@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# Usage: tmux-sessionizer [-s|--sessions-only] [<dir>]
+#
+# Pick a running tmux session or a project and switch to it, creating the
+# session on first use. Projects come from ~/.projects through project-dirs,
+# each followed by its git worktrees, so a branch is one jump away.
 
 sessions_only=false
 if [[ "$1" == "--sessions-only" || "$1" == "-s" ]]; then
@@ -47,29 +52,36 @@ if [[ -z $selected ]]; then
     exit 0
 fi
 
+# A worktree under ${WORKTREES_HOME:-~/.worktrees}/<project>/<branch> (made by
+# git-add-worktree) becomes <project>-<branch>; so does the older
+# <project>-worktrees/<branch> layout. Anything else is named after its dir.
 generate_session_name() {
     local selected_path="$1"
-    local parent_dir=$(basename "$(dirname "$selected_path")")
+    local parent_path=$(dirname "$selected_path")
+    local parent_dir=$(basename "$parent_path")
+    local worktrees_home="${WORKTREES_HOME:-$HOME/.worktrees}"
+    local name
 
-    if [[ "$parent_dir" == *-worktrees ]]; then
-        local project_name=${parent_dir%-worktrees}
-        local branch_name=$(basename "$selected_path" | tr . _)
-        echo "${project_name}-${branch_name}"
+    if [[ "$(dirname "$parent_path")" == "${worktrees_home%/}" ]]; then
+        name="${parent_dir}-$(basename "$selected_path")"
+    elif [[ "$parent_dir" == *-worktrees ]]; then
+        name="${parent_dir%-worktrees}-$(basename "$selected_path")"
     else
-        echo "$(basename "$selected_path" | tr . _)"
+        name=$(basename "$selected_path")
     fi
+    echo "$name" | tr .: __
 }
 
 selected_name=$(generate_session_name "$selected")
 tmux_running=$(pgrep tmux)
 
 if [[ -z $TMUX ]] && [[ -z $tmux_running ]]; then
-    tmux new-session -s $selected_name -c $selected
+    tmux new-session -s "$selected_name" -c "$selected"
     exit 0
 fi
 
-if ! tmux has-session -t=$selected_name 2>/dev/null; then
-    tmux new-session -ds $selected_name -c $selected
+if ! tmux has-session -t="$selected_name" 2>/dev/null; then
+    tmux new-session -ds "$selected_name" -c "$selected"
 fi
 
-tmux switch-client -t $selected_name
+tmux switch-client -t "$selected_name"

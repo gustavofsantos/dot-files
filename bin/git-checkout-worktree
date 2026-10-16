@@ -1,68 +1,7 @@
-#!/bin/bash
-
-# Usage: git-checkout-worktree <branch-name>
-
-REPO_DIR=$(git rev-parse --show-toplevel)
-WORKSPACE_DIR=$(dirname "$REPO_DIR")
-PROJECT_NAME=$(basename "$REPO_DIR")
-WORKTREE_PARENT="$WORKSPACE_DIR/${PROJECT_NAME}-worktrees"
-
-mkdir -p "$WORKTREE_PARENT"
-
-BRANCH_NAME="$1"
-
-if [ -z "$BRANCH_NAME" ]; then
-    echo "Error: No branch name provided."
-    exit 1
-fi
-
-# Verify the branch exists locally
-if ! git show-ref --verify --quiet "refs/heads/$BRANCH_NAME"; then
-    echo "Error: Local branch '$BRANCH_NAME' does not exist."
-    exit 1
-fi
-
-# Sanitize branch name for directory (replace / with -)
-SAFE_BRANCH_NAME=$(echo "$BRANCH_NAME" | tr '/' '-')
-WORKTREE_PATH="$WORKTREE_PARENT/$SAFE_BRANCH_NAME"
-
-# Check if worktree path is empty or does not exist
-if [ -e "$WORKTREE_PATH" ] && [ "$(ls -A "$WORKTREE_PATH")" ]; then
-    echo "Error: Directory $WORKTREE_PATH exists and is not empty. Aborting."
-    exit 1
-fi
-
-# Add worktree using the existing branch
-git worktree add "$WORKTREE_PATH" "$BRANCH_NAME"
-
-# Helper function to symlink a source to a target
-symlink_if_needed() {
-    local source="$1"
-    local target="$2"
-    local source_type="$3"  # "dir" or "file"
-
-    # Check if source exists
-    if [ "$source_type" = "dir" ] && [ ! -d "$source" ]; then
-        return
-    elif [ "$source_type" = "file" ] && [ ! -f "$source" ]; then
-        return
-    fi
-
-    # If target already exists, skip
-    if [ -e "$target" ]; then
-        echo "Info: $target already exists; skipping symlink."
-        return
-    fi
-
-    ln -s "$source" "$target"
-    echo "Symlinked $(basename "$source") from $REPO_DIR to $WORKTREE_PATH"
-}
-
-# Symlink shared resources from main repo
-symlink_if_needed "$REPO_DIR/.cursor" "$WORKTREE_PATH/.cursor" "dir"
-symlink_if_needed "$REPO_DIR/.claude" "$WORKTREE_PATH/.claude" "dir"
-symlink_if_needed "$REPO_DIR/.agents" "$WORKTREE_PATH/.agents" "dir"
-symlink_if_needed "$REPO_DIR/AGENTS.md" "$WORKTREE_PATH/AGENTS.md" "file"
-symlink_if_needed "$REPO_DIR/CLAUDE.local.md" "$WORKTREE_PATH/CLAUDE.local.md" "file"
-
-echo "$WORKTREE_PATH"
+#!/usr/bin/env bash
+# Usage: git-checkout-worktree <branch> [<base-branch>]
+#
+# Same as git-add-worktree, which already checks out an existing local or
+# remote branch and only creates one when neither exists. Kept so the
+# `git wtc` alias and muscle memory keep working.
+exec git-add-worktree "$@"

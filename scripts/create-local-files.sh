@@ -24,6 +24,18 @@ if [ ! -f "$HOME/.checks.yml" ]; then
 repositories: []
 EOF
 fi
+# Project list for tmux-sessionizer / project-dirs. Seeded once; never
+# overwritten.
+if [ ! -f "$HOME/.projects" ]; then
+  cat > "$HOME/.projects" <<'EOF'
+# ~/.projects — the repositories tmux-sessionizer (and Doom) offer.
+#
+# One directory per line; `~` is expanded, `#` starts a comment, and a glob
+# (`~/Workplace/*`) adds every directory it matches. Each git repo is listed
+# with its worktrees (git-add-worktree puts them under ~/.worktrees).
+~/dot-files
+EOF
+fi
 # One-time migration: rename ~/.claude-sessions/ → ~/.agent-sessions/
 if [[ -d "$HOME/.claude-sessions" && ! -d "$HOME/.agent-sessions" ]]; then
   mv "$HOME/.claude-sessions" "$HOME/.agent-sessions"

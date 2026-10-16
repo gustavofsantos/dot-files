@@ -1,35 +1,39 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Usage: git-remove-worktree <branch>
+#
+# Remove the worktree that has <branch> checked out (the branch itself is
+# kept). The symlinks git-add-worktree created are removed first, since git
+# refuses to remove a worktree with untracked files. An empty project dir
+# under the worktree home is removed too.
+set -euo pipefail
 
-# Usage: git-remove-worktree <worktree-name>
-
-WORKTREE_NAME="$1"
-
-# Check if worktree name is provided
-if [ -z "$WORKTREE_NAME" ]; then
-    echo "Usage: git-remove-worktree <worktree-name>"
+if [[ $# -ne 1 || -z "$1" ]]; then
+    echo "Usage: git-remove-worktree <branch>" >&2
     exit 1
 fi
 
-# Get repository information
-REPO_DIR=$(git rev-parse --show-toplevel)
-WORKSPACE_DIR=$(dirname "$REPO_DIR")
-PROJECT_NAME=$(basename "$REPO_DIR")
-WORKTREE_PARENT="$WORKSPACE_DIR/${PROJECT_NAME}-worktrees"
-WORKTREE_PATH="$WORKTREE_PARENT/$WORKTREE_NAME"
+BRANCH="$1"
+COMMON_DIR=$(git rev-parse --path-format=absolute --git-common-dir)
+REPO_DIR=$(dirname "$COMMON_DIR")
 
-# Check if worktree exists
-if [ ! -d "$WORKTREE_PATH" ]; then
-    echo "Error: Worktree '$WORKTREE_NAME' does not exist at $WORKTREE_PATH"
+WORKTREE_PATH=$(git worktree list --porcelain | awk -v ref="refs/heads/$BRANCH" '
+    /^worktree / { path = substr($0, 10) }
+    $0 == "branch " ref { print path; exit }')
+
+if [[ -z "$WORKTREE_PATH" ]]; then
+    echo "Error: No worktree has branch '$BRANCH' checked out." >&2
     exit 1
 fi
 
-# Remove the worktree
-echo "Removing worktree: $WORKTREE_NAME"
+if [[ "$WORKTREE_PATH" == "$REPO_DIR" ]]; then
+    echo "Error: '$BRANCH' is checked out in the main working tree." >&2
+    exit 1
+fi
+
+for shared in .cursor .claude .agents AGENTS.md CLAUDE.local.md; do
+    [[ -L "$WORKTREE_PATH/$shared" ]] && rm "$WORKTREE_PATH/$shared"
+done
+
 git worktree remove "$WORKTREE_PATH"
-
-if [ $? -eq 0 ]; then
-    echo "Successfully removed worktree: $WORKTREE_NAME"
-else
-    echo "Error: Failed to remove worktree: $WORKTREE_NAME"
-    exit 1
-fi
+rmdir "$(dirname "$WORKTREE_PATH")" 2>/dev/null || true
+echo "Removed worktree $WORKTREE_PATH"

@@ -173,6 +173,27 @@ A single global registry, `~/.checks.yml`, enrolls the repositories that run che
 
 Session navigation is independent of checks and of hooks, and spans both Claude Code and Cursor Agent. `claude-sessions` (`bind a` in tmux) discovers live agent sessions by **scanning tmux pane processes** — it walks each pane's process subtree looking for an agent CLI (`claude`, `cursor-agent`, aider, codex, …; the matched set is the `AGENTS` list at the top of the script) and lists every match in one fzf picker (a `cc`/`cu` tag distinguishes them). There is no state file and no hook to keep in sync: a session exists exactly while its process is alive, so the list can never go stale and needs no configuration — a bare `claude` or `cursor-agent` in any pane just shows up. Enter jumps straight to that pane (switch session → select window → select pane); the preview (`claude-session-preview`) is a live `tmux capture-pane` of the agent plus its location and cwd. `claude-sessions` still knows how to sort a pane first when its window name carries the `⊡` waiting prefix, but nothing sets that prefix today — `hooks-notify`, which used to set it on `Stop`/`Notification`, isn't currently wired (see "Hooks" above), so every session currently shows as `active`. The `hooks-session-track` hook that remains exists to record `track_name` for checks correlation and to restore a bare window name for the `claude-run` flow.
 
+## Projects and worktrees
+
+`~/.projects` lists the repositories you care about: one directory per line, `~` expanded,
+`#` comments, globs (`~/Workplace/*`) expanded. `create-local-files.sh` seeds it once.
+`bin/project-dirs` prints each entry followed by that repo's linked worktrees, and
+`tmux-sessionizer` (`prefix O`), Doom's `gs/sessionizer` and Zed's `project: open` all pick
+from that list. `$PROJECTS_FILE` overrides the path.
+
+Worktrees live in one place: `${WORKTREES_HOME:-~/.worktrees}/<project>/<branch>` (`/` in
+the branch becomes `-`; `<project>` is the main tree's dir name). The sessionizer names
+their sessions `<project>-<branch>`.
+
+| Script | Alias | What it does |
+|---|---|---|
+| `git-add-worktree <branch> [<base>]` | `git wta` | Prints the worktree for `<branch>`, creating it if needed: reuses a worktree that already has it, else checks out the local branch, else tracks `origin/<branch>`, else creates it from `<base>` (default `HEAD`). Symlinks `.claude`, `.cursor`, `.agents`, `AGENTS.md`, `CLAUDE.local.md` from the main tree. Last output line is the path |
+| `git-checkout-worktree` | `git wtc` | Same as `git-add-worktree` |
+| `git-remove-worktree <branch>` | `git wtr` | Removes the worktree holding `<branch>` (keeps the branch) |
+| `git-prune-worktrees` | `git wtp` | Offers to remove each linked worktree, flagging deleted branches |
+
+Tests: `bats test_bin/git-worktree.bats test_bin/project-dirs.bats`.
+
 ## Review queue
 
 `bin/review` is a per-workspace queue of code review comments, written where you read the

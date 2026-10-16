@@ -85,13 +85,19 @@ as it is its own tmux session, instead of resolving to the repo's .git root."
 
 (defun gs/project-name (root)
   "Name a project like tmux-sessionizer names a session.
-A worktree under <project>-worktrees/<branch> becomes <project>-<branch>."
-  (let* ((dir (directory-file-name root))
+A worktree under $WORKTREES_HOME (~/.worktrees)/<project>/<branch>, or the
+older <project>-worktrees/<branch>, becomes <project>-<branch>."
+  (let* ((dir (directory-file-name (file-truename root)))
          (name (file-name-nondirectory dir))
-         (parent (file-name-nondirectory (directory-file-name (file-name-directory dir)))))
-    (if (string-suffix-p "-worktrees" parent)
-        (format "%s-%s" (string-remove-suffix "-worktrees" parent) name)
-      name)))
+         (parent-path (directory-file-name (file-name-directory dir)))
+         (parent (file-name-nondirectory parent-path))
+         (worktrees-home (directory-file-name
+                          (file-truename (or (getenv "WORKTREES_HOME") "~/.worktrees")))))
+    (cond ((string= (directory-file-name (file-name-directory parent-path)) worktrees-home)
+           (format "%s-%s" parent name))
+          ((string-suffix-p "-worktrees" parent)
+           (format "%s-%s" (string-remove-suffix "-worktrees" parent) name))
+          (t name))))
 
 (after! projectile
   (setq projectile-project-name-function #'gs/project-name

@@ -5,44 +5,78 @@
 SCRIPT="$BATS_TEST_DIRNAME/../bin/project-dirs"
 
 setup() {
-  FAKE_HOME=$(mktemp -d)
+  FAKE_HOME=$(cd "$(mktemp -d)" && pwd -P)
   export HOME="$FAKE_HOME"
+  export GIT_CONFIG_GLOBAL=/dev/null
+  unset PROJECTS_FILE
 }
 
 teardown() {
   rm -rf "$FAKE_HOME"
 }
 
-@test "lists fixed dirs that exist and skips missing ones" {
-  mkdir -p "$HOME/.config/nvim" "$HOME/.config/doom"
-
-  run "$SCRIPT"
-
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"$HOME/.config/nvim"* ]]
-  [[ "$output" == *"$HOME/.config/doom"* ]]
-  [[ "$output" != *"$HOME/.config/ghostty"* ]]
+make_repo() {
+  git init -q -b main "$1"
+  git -C "$1" -c user.name=t -c user.email=t@t commit -q --allow-empty -m init
 }
 
-@test "lists direct children of each parent, not grandchildren or files" {
-  mkdir -p "$HOME/Projects/rvw" \
-           "$HOME/Workplace/api/src" \
-           "$HOME/Workplace/seubarriga-worktrees/feat.x" \
-           "$HOME/Workplace/backend-services/applications/billing"
-  touch "$HOME/Workplace/notes.txt"
+@test "lists the dirs in ~/.projects, skipping missing ones, comments and blanks" {
+  mkdir -p "$HOME/dot-files" "$HOME/Projects/rvw"
+  cat > "$HOME/.projects" <<EOF
+# my projects
+~/dot-files
+
+$HOME/Projects/rvw   # trailing comment
+~/missing
+EOF
 
   run "$SCRIPT"
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"$HOME/Projects/rvw"* ]]
+  [ "$output" = "$HOME/dot-files
+$HOME/Projects/rvw" ]
+}
+
+@test "expands globs to the directories they match" {
+  mkdir -p "$HOME/Workplace/api/src" "$HOME/Workplace/web"
+  touch "$HOME/Workplace/notes.txt"
+  echo '~/Workplace/*' > "$HOME/.projects"
+
+  run "$SCRIPT"
+
+  [ "$status" -eq 0 ]
   [[ "$output" == *"$HOME/Workplace/api"* ]]
-  [[ "$output" == *"$HOME/Workplace/seubarriga-worktrees/feat.x"* ]]
-  [[ "$output" == *"$HOME/Workplace/backend-services/applications/billing"* ]]
-  [[ "$output" != *"$HOME/Workplace/api/src"* ]]
+  [[ "$output" == *"$HOME/Workplace/web"* ]]
+  [[ "$output" != *"src"* ]]
   [[ "$output" != *"notes.txt"* ]]
 }
 
-@test "succeeds with no project dirs at all" {
+@test "follows each git project with its linked worktrees" {
+  make_repo "$HOME/Projects/app"
+  git -C "$HOME/Projects/app" worktree add -q -b feat "$HOME/.worktrees/app/feat"
+  mkdir -p "$HOME/other"
+  printf '~/Projects/app\n~/other\n' > "$HOME/.projects"
+
+  run "$SCRIPT"
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "$HOME/Projects/app
+$HOME/.worktrees/app/feat
+$HOME/other" ]
+}
+
+@test "honours PROJECTS_FILE" {
+  mkdir -p "$HOME/a"
+  echo "$HOME/a" > "$HOME/list"
+  export PROJECTS_FILE="$HOME/list"
+
+  run "$SCRIPT"
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "$HOME/a" ]
+}
+
+@test "succeeds with no ~/.projects at all" {
   run "$SCRIPT"
 
   [ "$status" -eq 0 ]

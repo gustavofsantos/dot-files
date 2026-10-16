@@ -1,60 +1,83 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Usage: git-add-worktree <branch> [<base-branch>]
+#
+# Open <branch> in its own worktree under the common worktree home:
+#
+#   ${WORKTREES_HOME:-~/.worktrees}/<project>/<branch, / replaced by ->
+#
+# <project> is the name of the main working tree, so the same branch of
+# two repos never collides. Works from the main tree or any worktree.
+#
+#   - a worktree already holds <branch>  -> print its path, change nothing
+#   - local branch <branch> exists       -> check it out
+#   - origin/<branch> exists (no base)   -> create a tracking branch
+#   - otherwise                          -> create <branch> from <base-branch>
+#                                           (default: HEAD)
+#
+# The last line of output is always the worktree path.
+set -euo pipefail
 
-# Usage: git-add-worktree <worktree-name> [<base-branch>]
+usage() {
+    echo "Usage: git-add-worktree <branch> [<base-branch>]" >&2
+    exit 1
+}
 
-REPO_DIR=$(git rev-parse --show-toplevel)
-WORKSPACE_DIR=$(dirname "$REPO_DIR")
+[[ $# -ge 1 && $# -le 2 && -n "$1" ]] || usage
+
+BRANCH="$1"
+BASE="${2:-}"
+
+git check-ref-format --branch "$BRANCH" >/dev/null 2>&1 || {
+    echo "Error: '$BRANCH' is not a valid branch name." >&2
+    exit 1
+}
+
+COMMON_DIR=$(git rev-parse --path-format=absolute --git-common-dir)
+REPO_DIR=$(dirname "$COMMON_DIR")
 PROJECT_NAME=$(basename "$REPO_DIR")
-WORKTREE_PARENT="$WORKSPACE_DIR/${PROJECT_NAME}-worktrees"
+WORKTREES_HOME="${WORKTREES_HOME:-$HOME/.worktrees}"
+WORKTREE_PATH="$WORKTREES_HOME/$PROJECT_NAME/${BRANCH//\//-}"
 
-mkdir -p "$WORKTREE_PARENT"
+# A branch can be checked out in one worktree only: reuse it wherever it is.
+existing=$(git worktree list --porcelain | awk -v ref="refs/heads/$BRANCH" '
+    /^worktree / { path = substr($0, 10) }
+    $0 == "branch " ref { print path; exit }')
+if [[ -n "$existing" ]]; then
+    echo "$existing"
+    exit 0
+fi
 
-WORKTREE_NAME="$1"
-BASE_BRANCH="${2:-HEAD}"
-WORKTREE_PATH="$WORKTREE_PARENT/$WORKTREE_NAME"
-
-# Check if worktree path is empty or does not exist
-if [ -e "$WORKTREE_PATH" ] && [ "$(ls -A "$WORKTREE_PATH")" ]; then
-    echo "Error: Directory $WORKTREE_PATH exists and is not empty. Aborting."
+if [[ -e "$WORKTREE_PATH" ]] && [[ -n "$(ls -A "$WORKTREE_PATH")" ]]; then
+    echo "Error: Directory $WORKTREE_PATH exists and is not empty. Aborting." >&2
     exit 1
 fi
 
-# Create the new worktree
-if [ "$BASE_BRANCH" = "HEAD" ]; then
-    git worktree add -b "$WORKTREE_NAME" "$WORKTREE_PATH"
+mkdir -p "$(dirname "$WORKTREE_PATH")"
+
+if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
+    [[ -z "$BASE" ]] || echo "Info: branch '$BRANCH' exists; ignoring base '$BASE'." >&2
+    git worktree add "$WORKTREE_PATH" "$BRANCH" >&2
+elif [[ -z "$BASE" ]] && git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
+    git worktree add --track -b "$BRANCH" "$WORKTREE_PATH" "origin/$BRANCH" >&2
 else
-    git worktree add -b "$WORKTREE_NAME" "$WORKTREE_PATH" "$BASE_BRANCH"
+    git worktree add -b "$BRANCH" "$WORKTREE_PATH" "${BASE:-HEAD}" >&2
 fi
 
-# Helper function to symlink a source to a target
+# Symlink untracked agent config from the main tree, so every worktree
+# shares one copy.
 symlink_if_needed() {
-    local source="$1"
-    local target="$2"
-    local source_type="$3"  # "dir" or "file"
-
-    # Check if source exists
-    if [ "$source_type" = "dir" ] && [ ! -d "$source" ]; then
-        return
-    elif [ "$source_type" = "file" ] && [ ! -f "$source" ]; then
-        return
+    local source="$1" target="$2"
+    [[ -e "$source" ]] || return 0
+    if [[ -e "$target" || -L "$target" ]]; then
+        echo "Info: $target already exists; skipping symlink." >&2
+        return 0
     fi
-
-    # If target already exists, skip
-    if [ -e "$target" ]; then
-        echo "Info: $target already exists; skipping symlink."
-        return
-    fi
-
     ln -s "$source" "$target"
-    echo "Symlinked $(basename "$source") from $REPO_DIR to $WORKTREE_PATH"
+    echo "Symlinked $(basename "$source") from $REPO_DIR" >&2
 }
 
-# Symlink shared resources from main repo
-symlink_if_needed "$REPO_DIR/.cursor" "$WORKTREE_PATH/.cursor" "dir"
-symlink_if_needed "$REPO_DIR/.claude" "$WORKTREE_PATH/.claude" "dir"
-symlink_if_needed "$REPO_DIR/.agents" "$WORKTREE_PATH/.agents" "dir"
-symlink_if_needed "$REPO_DIR/AGENTS.md" "$WORKTREE_PATH/AGENTS.md" "file"
-symlink_if_needed "$REPO_DIR/CLAUDE.local.md" "$WORKTREE_PATH/CLAUDE.local.md" "file"
+for shared in .cursor .claude .agents AGENTS.md CLAUDE.local.md; do
+    symlink_if_needed "$REPO_DIR/$shared" "$WORKTREE_PATH/$shared"
+done
 
-# Output the worktree path for the parent shell to use
 echo "$WORKTREE_PATH"
