@@ -2,7 +2,7 @@
 btop = "latest"
 eza = "latest"
 neovim = "latest"
-node = "20"
+node = "latest"
 tmux = "latest"
 lazygit = "latest"
 vale = "latest"
