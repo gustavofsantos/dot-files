@@ -96,16 +96,12 @@
       "Bash(weep *)",
       "Bash(aws *)"
     ],
-    "defaultMode": "auto",
-    "additionalDirectories": [
-      "~/engineering"
-    ]
+    "defaultMode": "auto"
   },
   "statusLine": {
     "type": "command",
     "command": "claude-statusline"
   },
-  "theme": "custom:gustavofsantos:nord",
   "teammateMode": "tmux",
   "defaultMode": "auto"
 }
