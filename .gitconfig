@@ -33,6 +33,8 @@
   wtp           = "!git-prune-worktrees"
   wtc           = "!git-checkout-worktree"
   wtr		= "!git-remove-worktree"
+  wtl           = "!gitmaster worktree list"
+  wtb           = "!gitmaster worktree list --format tsv"
 
   r             = !GIT_NO_PAGER=1 git l -30 -- .
   ra            = !git r --all

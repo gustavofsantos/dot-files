@@ -192,7 +192,18 @@ their sessions `<project>-<branch>`.
 | `git-remove-worktree <branch>` | `git wtr` | Removes the worktree holding `<branch>` (keeps the branch) |
 | `git-prune-worktrees` | `git wtp` | Offers to remove each linked worktree, flagging deleted branches |
 
-Tests: `bats test_bin/git-worktree.bats test_bin/project-dirs.bats`.
+`gitmaster worktree` (the GitMaster CLI, `list`/`branches`/`path`/`add`/`include`) is the same
+create-or-reuse logic and layout (`WORKTREES_HOME`) as `git-add-worktree`, plus a
+`.worktreeinclude` file at the repo root that links ignored files such as `.env` into new
+worktrees instead of copying them. It is reachable from git (`git wtl` lists paths, `git wtb`
+branch and path) and from tmux through `tmux-worktree`:
+
+| Script | Alias | What it does |
+|---|---|---|
+| `tmux-worktree [<branch>]` | tmux `prefix W` | fzf over every branch (local and remote-only); creates the worktree when the branch has none (a name that matches nothing starts a new branch from `HEAD`), then enters its session through `tmux-sessionizer` |
+| `tmux-worktree --existing` | tmux `prefix T` | fzf over the repo's existing worktrees only; creates nothing |
+
+Both need `gitmaster` on `PATH`. Tests: `bats test_bin/git-worktree.bats test_bin/project-dirs.bats test_bin/tmux-worktree.bats`.
 
 ## Review queue
 

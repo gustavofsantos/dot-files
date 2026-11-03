@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Usage: tmux-worktree [-e|--existing] [<branch>]
+#
+# Jump to the worktree of a branch in a tmux session of its own, creating the
+# worktree first when the branch has none. Works on the repo of the current
+# directory (main tree or any worktree) through `gitmaster worktree`.
+#
+#   tmux-worktree            pick any branch (local, or remote-only) with fzf.
+#                            Type a name that matches nothing to start a new
+#                            branch from HEAD.
+#   tmux-worktree <branch>   skip the picker.
+#   tmux-worktree -e         pick among the existing worktrees only; creates
+#                            nothing.
+#
+# The worktree lives where git-add-worktree puts it:
+# ${WORKTREES_HOME:-~/.worktrees}/<project>/<branch, / replaced by ->, and
+# `.worktreeinclude` links come along. The session is made and entered by
+# tmux-sessionizer, so its name matches the ones that script picks.
+set -euo pipefail
+
+existing_only=false
+if [[ "${1:-}" == "-e" || "${1:-}" == "--existing" ]]; then
+    existing_only=true
+    shift
+fi
+
+if ! command -v gitmaster >/dev/null 2>&1; then
+    echo "tmux-worktree: gitmaster is not on PATH." >&2
+    exit 1
+fi
+
+# gitmaster and git-add-worktree must agree on where worktrees live.
+export WORKTREES_HOME="${WORKTREES_HOME:-$HOME/.worktrees}"
+
+if [[ "$existing_only" == true ]]; then
+    # branch<TAB>path per line; jump to the path of the choice.
+    choice=$(gitmaster worktree list --format tsv |
+        fzf --height 100% --prompt='worktree → ' --delimiter=$'\t' \
+            --with-nth=1 --preview 'ls -1 {2} | head -20' \
+            --preview-window 'right:40%') || exit 0
+    [[ -n "$choice" ]] || exit 0
+    exec tmux-sessionizer "${choice#*$'\t'}"
+fi
+
+if [[ $# -ge 1 ]]; then
+    branch="$1"
+else
+    # --print-query prints the typed text first, then the highlighted line,
+    # which is absent when nothing matched (status 1). Esc is status 130.
+    rc=0
+    out=$(gitmaster worktree branches | fzf --height 100% --prompt='branch → ' \
+        --print-query --select-1 \
+        --preview 'gitmaster worktree path {} 2>/dev/null || echo "(no worktree yet)"' \
+        --preview-window 'right:40%') || rc=$?
+    [[ $rc -eq 0 || $rc -eq 1 ]] || exit 0
+    [[ -n "$out" ]] || exit 0
+    branch=$(printf '%s\n' "$out" | tail -n 1)
+fi
+[[ -n "$branch" ]] || exit 0
+
+worktree=$(gitmaster worktree add "$branch" | tail -n 1)
+exec tmux-sessionizer "$worktree"
