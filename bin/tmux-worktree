@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
-# Usage: tmux-worktree [-e|--existing] [<branch>]
+# Usage: tmux-worktree [-a|--all] [-e|--existing] [<branch>]
 #
 # Jump to the worktree of a branch in a tmux session of its own, creating the
-# worktree first when the branch has none. Works on the repo of the current
-# directory (main tree or any worktree) through `gitmaster worktree`.
+# worktree first when the branch has none. Works through `gitmaster worktree`.
 #
-#   tmux-worktree            pick any branch (local, or remote-only) with fzf.
-#                            Type a name that matches nothing to start a new
-#                            branch from HEAD.
+#   tmux-worktree            pick any branch (local, or remote-only) of the repo
+#                            of the current directory with fzf. Type a name that
+#                            matches nothing to start a new branch from HEAD.
 #   tmux-worktree <branch>   skip the picker.
+#   tmux-worktree -a         pick a branch of any project listed in
+#                            ${PROJECTS_FILE:-~/.projects}, the same list
+#                            tmux-sessionizer uses. Works from anywhere.
 #   tmux-worktree -e         pick among the existing worktrees only; creates
-#                            nothing.
+#                            nothing. Combines with -a.
 #
 # The worktree lives where git-add-worktree puts it:
 # ${WORKTREES_HOME:-~/.worktrees}/<project>/<branch, / replaced by ->, and
@@ -19,10 +21,18 @@
 set -euo pipefail
 
 existing_only=false
-if [[ "${1:-}" == "-e" || "${1:-}" == "--existing" ]]; then
-    existing_only=true
+all=false
+while [[ "${1:-}" == -* ]]; do
+    case "$1" in
+        -e | --existing) existing_only=true ;;
+        -a | --all) all=true ;;
+        *)
+            echo "usage: tmux-worktree [-a|--all] [-e|--existing] [<branch>]" >&2
+            exit 2
+            ;;
+    esac
     shift
-fi
+done
 
 if ! command -v gitmaster >/dev/null 2>&1; then
     echo "tmux-worktree: gitmaster is not on PATH." >&2
@@ -32,14 +42,37 @@ fi
 # gitmaster and git-add-worktree must agree on where worktrees live.
 export WORKTREES_HOME="${WORKTREES_HOME:-$HOME/.worktrees}"
 
+TAB=$'\t'
+
 if [[ "$existing_only" == true ]]; then
-    # branch<TAB>path per line; jump to the path of the choice.
+    if [[ "$all" == true ]]; then
+        # project<TAB>branch<TAB>path
+        choice=$(gitmaster worktree list --all --format tsv |
+            fzf --height 100% --prompt='worktree → ' --delimiter="$TAB" \
+                --with-nth=1,2 --preview 'ls -1 {3} | head -20' \
+                --preview-window 'right:40%') || exit 0
+        [[ -n "$choice" ]] || exit 0
+        exec tmux-sessionizer "${choice##*"$TAB"}"
+    fi
+    # branch<TAB>path
     choice=$(gitmaster worktree list --format tsv |
-        fzf --height 100% --prompt='worktree → ' --delimiter=$'\t' \
+        fzf --height 100% --prompt='worktree → ' --delimiter="$TAB" \
             --with-nth=1 --preview 'ls -1 {2} | head -20' \
             --preview-window 'right:40%') || exit 0
     [[ -n "$choice" ]] || exit 0
-    exec tmux-sessionizer "${choice#*$'\t'}"
+    exec tmux-sessionizer "${choice#*"$TAB"}"
+fi
+
+if [[ "$all" == true ]]; then
+    # project<TAB>branch<TAB>main checkout. The checkout says which repo a
+    # branch belongs to, so a name that matches nothing cannot start a branch.
+    choice=$(gitmaster worktree branches --all |
+        fzf --height 100% --prompt='branch → ' --delimiter="$TAB" \
+            --with-nth=1,2) || exit 0
+    [[ -n "$choice" ]] || exit 0
+    IFS="$TAB" read -r _ branch repo <<<"$choice"
+    worktree=$(gitmaster worktree add "$branch" --repo "$repo" | tail -n 1)
+    exec tmux-sessionizer "$worktree"
 fi
 
 if [[ $# -ge 1 ]]; then

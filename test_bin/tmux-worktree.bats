@@ -16,9 +16,14 @@ setup() {
   cat > "$FAKE/stubs/gitmaster" <<'STUB'
 #!/usr/bin/env bash
 echo "gitmaster $* [WORKTREES_HOME=$WORKTREES_HOME]" >> "$CALLS"
+all=false; for a in "$@"; do [ "$a" = --all ] && all=true; done
 case "$2" in
-  branches) printf '%s\n' main feature/login ;;
-  list) printf 'main\t/repo\nfeature/login\t/wt/repo/feature-login\n' ;;
+  branches)
+    if $all; then printf 'app\tmain\t/src/app\nbilling\ttopic\t/src/billing\n'
+    else printf '%s\n' main feature/login; fi ;;
+  list)
+    if $all; then printf 'app\tmain\t/src/app\nbilling\ttopic\t/wt/billing/topic\n'
+    else printf 'main\t/repo\nfeature/login\t/wt/repo/feature-login\n'; fi ;;
   add) echo "chatter"; echo "/wt/repo/${3//\//-}" ;;
 esac
 STUB
@@ -96,4 +101,29 @@ teardown() {
 
   [ "$status" -eq 1 ]
   [[ "$output" == *"gitmaster is not on PATH"* ]]
+}
+
+@test "--all picks a branch of any project and adds it in that repo" {
+  FZF_OUT='billing\ttopic\t/src/billing\n' run tmux-worktree --all
+
+  [ "$status" -eq 0 ]
+  grep -q "worktree branches --all" "$CALLS"
+  grep -q "worktree add topic --repo /src/billing" "$CALLS"
+  grep -qx "sessionizer /wt/repo/topic" "$CALLS"
+}
+
+@test "--all --existing enters the path of the chosen worktree" {
+  FZF_OUT='billing\ttopic\t/wt/billing/topic\n' run tmux-worktree --all --existing
+
+  [ "$status" -eq 0 ]
+  grep -q "worktree list --all --format tsv" "$CALLS"
+  ! grep -q "worktree add" "$CALLS"
+  grep -qx "sessionizer /wt/billing/topic" "$CALLS"
+}
+
+@test "an unknown option is a usage error" {
+  run tmux-worktree --bogus
+
+  [ "$status" -eq 2 ]
+  [[ "$output" == *usage* ]]
 }

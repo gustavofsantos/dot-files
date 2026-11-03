@@ -4,6 +4,23 @@
 [github]
   user = gustavofsantos
 
+# GitMaster's base preferences. A repository overrides any of them in its own
+# .git/config (`git config gitmaster.diffLayout split`), like any git option.
+[gitmaster "worktree"]
+  # `gitmaster worktree add` puts worktrees at <root>/<project>/<branch>
+  root = ~/.worktrees
+  # how .worktreeinclude paths reach a new worktree: symlink | reflink | none
+  include = symlink
+# [gitmaster]
+#   diffLayout = unified          # unified | split
+#   authorPictures = false
+# [gitmaster "threads"]
+#   capture = true
+#   maxResultBytes = 65536
+#   redactPath = .env             # repeat the key to add more; an empty value resets the list
+# [gitmaster-redact "acme-token"]
+#   regex = acme_[A-Za-z0-9]{32}  # write a backslash as \\
+
 [alias]
   b             = branch
   c             = commit
