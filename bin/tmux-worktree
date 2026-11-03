@@ -8,9 +8,11 @@
 #                            of the current directory with fzf. Type a name that
 #                            matches nothing to start a new branch from HEAD.
 #   tmux-worktree <branch>   skip the picker.
-#   tmux-worktree -a         pick a branch of any project listed in
-#                            ${PROJECTS_FILE:-~/.projects}, the same list
-#                            tmux-sessionizer uses. Works from anywhere.
+#   tmux-worktree -a         pick a branch of any project that project-dirs
+#                            prints (${PROJECTS_FILE:-~/.projects}), the same
+#                            list tmux-sessionizer uses. Works from anywhere.
+#                            gitmaster takes the list on stdin and knows
+#                            nothing about ~/.projects.
 #   tmux-worktree -e         pick among the existing worktrees only; creates
 #                            nothing. Combines with -a.
 #
@@ -47,7 +49,7 @@ TAB=$'\t'
 if [[ "$existing_only" == true ]]; then
     if [[ "$all" == true ]]; then
         # project<TAB>branch<TAB>path
-        choice=$(gitmaster worktree list --all --format tsv |
+        choice=$(project-dirs | gitmaster worktree list --repos-from - --format tsv |
             fzf --height 100% --prompt='worktree → ' --delimiter="$TAB" \
                 --with-nth=1,2 --preview 'ls -1 {3} | head -20' \
                 --preview-window 'right:40%') || exit 0
@@ -66,7 +68,7 @@ fi
 if [[ "$all" == true ]]; then
     # project<TAB>branch<TAB>main checkout. The checkout says which repo a
     # branch belongs to, so a name that matches nothing cannot start a branch.
-    choice=$(gitmaster worktree branches --all |
+    choice=$(project-dirs | gitmaster worktree branches --repos-from - |
         fzf --height 100% --prompt='branch → ' --delimiter="$TAB" \
             --with-nth=1,2) || exit 0
     [[ -n "$choice" ]] || exit 0

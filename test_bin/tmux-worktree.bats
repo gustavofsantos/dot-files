@@ -16,7 +16,8 @@ setup() {
   cat > "$FAKE/stubs/gitmaster" <<'STUB'
 #!/usr/bin/env bash
 echo "gitmaster $* [WORKTREES_HOME=$WORKTREES_HOME]" >> "$CALLS"
-all=false; for a in "$@"; do [ "$a" = --all ] && all=true; done
+all=false; for a in "$@"; do [ "$a" = --repos-from ] && all=true; done
+[ "$all" = true ] && cat > /dev/null
 case "$2" in
   branches)
     if $all; then printf 'app\tmain\t/src/app\nbilling\ttopic\t/src/billing\n'
@@ -33,6 +34,10 @@ STUB
 cat > /dev/null
 printf '%b' "${FZF_OUT-}"
 exit "${FZF_RC:-0}"
+STUB
+  cat > "$FAKE/stubs/project-dirs" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' /src/app /src/billing
 STUB
   cat > "$FAKE/stubs/tmux-sessionizer" <<'STUB'
 #!/usr/bin/env bash
@@ -107,7 +112,7 @@ teardown() {
   FZF_OUT='billing\ttopic\t/src/billing\n' run tmux-worktree --all
 
   [ "$status" -eq 0 ]
-  grep -q "worktree branches --all" "$CALLS"
+  grep -q "worktree branches --repos-from -" "$CALLS"
   grep -q "worktree add topic --repo /src/billing" "$CALLS"
   grep -qx "sessionizer /wt/repo/topic" "$CALLS"
 }
@@ -116,7 +121,7 @@ teardown() {
   FZF_OUT='billing\ttopic\t/wt/billing/topic\n' run tmux-worktree --all --existing
 
   [ "$status" -eq 0 ]
-  grep -q "worktree list --all --format tsv" "$CALLS"
+  grep -q "worktree list --repos-from - --format tsv" "$CALLS"
   ! grep -q "worktree add" "$CALLS"
   grep -qx "sessionizer /wt/billing/topic" "$CALLS"
 }

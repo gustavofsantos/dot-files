@@ -204,9 +204,9 @@ branch and path) and from tmux through `tmux-worktree`:
 |---|---|---|
 | `tmux-worktree [<branch>]` | tmux `prefix W` | fzf over every branch (local and remote-only); creates the worktree when the branch has none (a name that matches nothing starts a new branch from `HEAD`), then enters its session through `tmux-sessionizer` |
 | `tmux-worktree --existing` | tmux `prefix T` | fzf over the repo's existing worktrees only; creates nothing |
-| `tmux-worktree --all` | tmux `prefix P` | the same over every project in `~/.projects` (the list `tmux-sessionizer` reads); combines with `--existing` |
+| `tmux-worktree --all` | tmux `prefix P` | the same over every project `project-dirs` prints (the `~/.projects` list `tmux-sessionizer` reads), piped to `gitmaster … --repos-from -`; combines with `--existing` |
 
-`gitmaster worktree` also takes `--repo <path-or-project>` and, for `list`/`branches`, `--all`, which read `~/.projects` (or `$PROJECTS_FILE`, or the `gitmaster.projectsFile` key). All need `gitmaster` on `PATH`. Tests: `bats test_bin/git-worktree.bats test_bin/project-dirs.bats test_bin/tmux-worktree.bats`.
+`gitmaster worktree` also takes `--repo <path>` and, for `list`/`branches`, `--repos-from <file|->` (one folder per line). It never reads `~/.projects` itself: `project-dirs` pipes the list in. All need `gitmaster` on `PATH`. Tests: `bats test_bin/git-worktree.bats test_bin/project-dirs.bats test_bin/tmux-worktree.bats`.
 
 ## Review queue
 
