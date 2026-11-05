@@ -133,3 +133,15 @@ png_size() {
   run "$PELE" "$WORK/flow.mmd" --json
   [ "$status" -eq 2 ]
 }
+
+@test "resvg is installed once into XDG_CACHE_HOME, and svg never needs it" {
+  export XDG_CACHE_HOME="$WORK/cache"
+  run "$PELE" "$WORK/flow.mmd" -o "$WORK/s.svg" -q
+  [ "$status" -eq 0 ]
+  [ ! -d "$XDG_CACHE_HOME/pele" ]
+  run "$PELE" "$WORK/flow.mmd" -o "$WORK/s.png"
+  [ "$status" -eq 0 ]
+  [ -d "$XDG_CACHE_HOME/pele/resvg-2.6.2/node_modules/@resvg/resvg-js" ]
+  # stderr is only the summary line: no registry errors from the loader's platform probe
+  [ "$(echo "$output" | wc -l)" -eq 1 ]
+}

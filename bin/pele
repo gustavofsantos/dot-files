@@ -4,16 +4,18 @@
 // A thin CLI shim: no layout or drawing logic lives here. Pele draws the diagram; this script
 // reads the source, themes it, makes the SVG portable, and rasterizes PNG with resvg.
 //
-// Dependencies are pinned in the imports below and installed by Bun's auto-install on first
-// run (cached after that). That only works while no package.json or node_modules sits above
-// this file; the dotfiles repo has none.
+// Pele is pinned in the import below and installed by Bun's auto-install on first run (cached
+// after that). That only works while no package.json or node_modules sits above this file; the
+// dotfiles repo has none. resvg is the exception, see loadResvg().
 
 import { render, PeleError } from "pele@1.13.0";
 import { parseArgs } from "node:util";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 
 const VERSION = "1.0.0";
+const RESVG_VERSION = "2.6.2";
 const MAX_PIXELS = 16384; // per side, to stop a typo from asking for a gigabyte PNG
 
 const HELP = `pele — render Mermaid diagrams to SVG or PNG (Pele ${"1.13.0"}, run by Bun)
@@ -263,8 +265,28 @@ function themeVars(theme: string, overrides: string[]): Map<string, string> {
   return vars;
 }
 
+// resvg is a native addon, and on macOS its loader first probes the package
+// `@resvg/resvg-js-darwin-universal`, which does not exist, before falling back to the arm64 or
+// x64 one. Under Bun's auto-install that probe becomes a registry request: it 404s, prints an
+// error, and repeats on every run because a 404 is never cached. So resvg lives in a private
+// node_modules, installed once; inside a tree with node_modules Bun does not auto-install and
+// the probe fails silently, as the loader expects.
+async function loadResvg(): Promise<typeof import("@resvg/resvg-js")> {
+  const dir = join(process.env.XDG_CACHE_HOME || join(homedir(), ".cache"), "pele", `resvg-${RESVG_VERSION}`);
+  const entry = join(dir, "node_modules/@resvg/resvg-js/index.js");
+  if (!existsSync(entry)) {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "package.json"), JSON.stringify({ private: true, dependencies: { "@resvg/resvg-js": RESVG_VERSION } }));
+    const run = Bun.spawnSync([process.execPath, "install", "--silent"], { cwd: dir, stdout: "ignore", stderr: "pipe" });
+    if (run.exitCode !== 0 || !existsSync(entry)) {
+      throw new Error(`could not install @resvg/resvg-js ${RESVG_VERSION} into ${dir}\n${run.stderr.toString().trim()}`);
+    }
+  }
+  return await import(entry);
+}
+
 async function toPng(svg: string, o: { width?: number; height?: number; scale: number; fontFiles: string[]; font?: string }, natural: { width: number; height: number }): Promise<Uint8Array> {
-  const { Resvg } = await import("@resvg/resvg-js@2.6.2");
+  const { Resvg } = await loadResvg();
   let zoom = o.scale;
   if (o.width && o.height) zoom = Math.min(o.width / natural.width, o.height / natural.height);
   else if (o.width) zoom = o.width / natural.width;

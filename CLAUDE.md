@@ -117,8 +117,11 @@ The engine writes `.claude-plugin/types/` into a loaded mod, with its own `.giti
 `bin/pele` is a single-file Bun shim over [Pele](https://github.com/obsidianmd/pele) that
 renders Mermaid to SVG or PNG, built for pipes and agents: `pele flow.mmd -o flow.png --width 1600`,
 or `… | pele -f png > out.png` (a ```` ```mermaid ```` fence around the input is stripped).
-Pele and `@resvg/resvg-js` are pinned in the imports and installed by Bun's auto-install on
-first run, which only works while no `package.json`/`node_modules` sits above `bin/`.
+Pele is pinned in its import and installed by Bun's auto-install on first run, which only
+works while no `package.json`/`node_modules` sits above `bin/`. `@resvg/resvg-js` is not: it is
+installed once into `${XDG_CACHE_HOME:-~/.cache}/pele/resvg-<version>/` on the first PNG. On macOS
+its loader probes the nonexistent `@resvg/resvg-js-darwin-universal`, and under auto-install that
+probe became a registry 404 on every run (an `error: GET …` line after the PNG was written).
 
 - Pele themes with `var(--pele-*)`, which only browsers resolve. By default `pele` resolves
   them (and `color-mix`) so the SVG stands alone and resvg can draw it; `--keep-vars` keeps them.
