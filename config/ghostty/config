@@ -6,10 +6,10 @@
 #font-feature = +liga,-dlig,+calt,zero,+ss01,+ss14
 
 #font-family = Operator Mono
-#font-family = CommitMono
+font-family = CommitMono
 #font-family = BerkeleyMono Nerd Font
 #font-family = MonoLisa Nerd Font
-font-family = Iosevka Custom
+#font-family = Iosevka Custom
 adjust-cell-height = 4
 font-size = 16
 cursor-style = block
