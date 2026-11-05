@@ -1,0 +1,403 @@
+#!/usr/bin/env bun
+// pele — render Mermaid to SVG or PNG with Pele (https://github.com/obsidianmd/pele).
+//
+// A thin CLI shim: no layout or drawing logic lives here. Pele draws the diagram; this script
+// reads the source, themes it, makes the SVG portable, and rasterizes PNG with resvg.
+//
+// Dependencies are pinned in the imports below and installed by Bun's auto-install on first
+// run (cached after that). That only works while no package.json or node_modules sits above
+// this file; the dotfiles repo has none.
+
+import { render, PeleError } from "pele@1.13.0";
+import { parseArgs } from "node:util";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
+
+const VERSION = "1.0.0";
+const MAX_PIXELS = 16384; // per side, to stop a typo from asking for a gigabyte PNG
+
+const HELP = `pele — render Mermaid diagrams to SVG or PNG (Pele ${"1.13.0"}, run by Bun)
+
+Usage:
+  pele [FILE|-] [-o OUT] [options]
+
+Input is FILE, or stdin when FILE is "-" or omitted. A Markdown fence around the
+diagram (\`\`\`mermaid … \`\`\`) is stripped.
+
+Output
+  -o, --output PATH     Write to PATH ("-" is stdout). Format follows the extension.
+  -f, --format FMT      svg | png. Overrides the extension. Default: svg.
+                        Without -o, SVG goes to stdout. PNG to stdout needs a pipe.
+
+PNG size (precedence: width/height, then scale)
+  -w, --width PX        Fit to this width, keeping the aspect ratio.
+  -H, --height PX       Fit to this height. With --width too, fit inside the box.
+  -s, --scale N         Multiply the natural size. Default: 2.
+
+Look
+  -t, --theme NAME      light (default) | dark.
+  -b, --background C    Any CSS color, or "transparent". Default: the theme background for
+                        PNG, transparent for SVG.
+      --var NAME=VALUE  Set a Pele variable, repeatable: --var accent=#f00 (also
+                        series-1…series-8, font, radius). Runs after --theme.
+      --font FAMILY     Label font, used to measure and to draw.
+      --font-file PATH  Extra font file for PNG, repeatable. System fonts load too.
+      --font-size PX    Base font size. Default: 16.
+      --padding PX      Space around the diagram.
+      --max-width PX    Width the layout should adapt to (may wrap or turn vertical).
+      --keep-vars       SVG keeps Pele's CSS variables, so a page can re-theme it.
+                        Default: variables are resolved and the file stands alone.
+
+Tool use
+      --check           Parse and render, write nothing. Exit code tells valid or not.
+      --json            Print a JSON result on stdout (needs -o FILE, or --check).
+  -q, --quiet           No summary line on stderr after writing a file.
+  -h, --help            This text.
+      --version
+
+Exit codes: 0 ok · 1 the diagram could not be rendered · 2 bad usage or I/O error.
+
+Examples:
+  pele flow.mmd -o flow.svg
+  pele flow.mmd -o flow.png --width 1600
+  echo 'flowchart LR; A-->B' | pele -f png -t dark > out.png
+  pele flow.mmd --check --json
+`;
+
+class UsageError extends Error {}
+
+type Format = "svg" | "png";
+
+const THEMES: Record<string, Record<string, string>> = {
+  light: {},
+  // Flexoki dark, the palette from Pele's theming docs.
+  dark: {
+    bg: "#100f0f",
+    fg: "#cecdc3",
+    muted: "#878580",
+    line: "#cecdc3",
+    surface: "#1c1b1a",
+    "surface-alt": "#282726",
+    border: "#403e3c",
+    accent: "#4385be",
+    critical: "#d14d41",
+  },
+};
+const DEFAULT_BG = "#ffffff"; // Pele's own --pele-bg fallback
+
+// ---------------------------------------------------------------------------------------------
+// CSS variable resolution. Pele's SVG is themed with `var(--pele-x, fallback)`, which browsers
+// resolve and everything else (resvg, Inkscape, image viewers) does not.
+
+// Replace every var(--name, fallback), innermost first. Unknown name with no fallback → "".
+function resolveVars(text: string, vars: Map<string, string>): string {
+  const seen = new Map<string, string>();
+  const lookup = (name: string, depth: number): string | undefined => {
+    if (seen.has(name)) return seen.get(name);
+    const raw = vars.get(name);
+    if (raw === undefined || depth > 8) return undefined;
+    const value = substitute(raw, depth + 1);
+    seen.set(name, value);
+    return value;
+  };
+  const substitute = (s: string, depth: number): string => {
+    for (;;) {
+      const start = s.lastIndexOf("var(");
+      if (start < 0) return s;
+      let level = 0;
+      let end = start + 3;
+      for (; end < s.length; end++) {
+        if (s[end] === "(") level++;
+        else if (s[end] === ")" && --level === 0) break;
+      }
+      const inner = s.slice(start + 4, end);
+      const comma = inner.indexOf(",");
+      const name = (comma < 0 ? inner : inner.slice(0, comma)).trim();
+      const fallback = comma < 0 ? "" : inner.slice(comma + 1).trim();
+      s = s.slice(0, start) + (lookup(name, depth) ?? fallback) + s.slice(end + 1);
+    }
+  };
+  return substitute(text, 0);
+}
+
+type Rgba = [number, number, number, number];
+
+function parseColor(input: string): Rgba | null {
+  const c = input.trim().toLowerCase();
+  if (c === "transparent") return [0, 0, 0, 0];
+  if (c === "white") return [255, 255, 255, 1];
+  if (c === "black") return [0, 0, 0, 1];
+  const hex = /^#([0-9a-f]{3,8})$/.exec(c)?.[1];
+  if (hex) {
+    const full = hex.length <= 4 ? [...hex].map((h) => h + h).join("") : hex;
+    if (full.length !== 6 && full.length !== 8) return null;
+    const n = (i: number) => parseInt(full.slice(i, i + 2), 16);
+    return [n(0), n(2), n(4), full.length === 8 ? n(6) / 255 : 1];
+  }
+  const fn = /^rgba?\(([^)]+)\)$/.exec(c)?.[1];
+  if (fn) {
+    const p = fn.split(/[\s,/]+/).filter(Boolean);
+    if (p.length < 3) return null;
+    const ch = (v: string) => (v.endsWith("%") ? (parseFloat(v) * 255) / 100 : parseFloat(v));
+    const a = p[3] === undefined ? 1 : p[3].endsWith("%") ? parseFloat(p[3]) / 100 : parseFloat(p[3]);
+    const out: Rgba = [ch(p[0]), ch(p[1]), ch(p[2]), a];
+    return out.some(Number.isNaN) ? null : out;
+  }
+  return null;
+}
+
+function formatColor([r, g, b, a]: Rgba): string {
+  const q = (v: number) => Math.round(Math.min(255, Math.max(0, v)));
+  return a >= 1 ? `rgb(${q(r)},${q(g)},${q(b)})` : `rgba(${q(r)},${q(g)},${q(b)},${+a.toFixed(3)})`;
+}
+
+// Pele mixes nested subgraph fills with color-mix(in srgb, A p%, B), which only browsers know.
+function evaluateColorMix(text: string): string {
+  return text.replace(
+    /color-mix\(\s*in srgb\s*,\s*((?:rgba?\([^)]*\)|[^,()])+?)\s+([\d.]+)%\s*,\s*((?:rgba?\([^)]*\)|[^,()])+?)\s*\)/g,
+    (whole, a: string, pct: string, b: string) => {
+      const ca = parseColor(a);
+      const cb = parseColor(b);
+      if (!ca || !cb) {
+        warn(`cannot mix colors "${a}" and "${b}"; using the first`);
+        return a;
+      }
+      const p = Math.min(100, Math.max(0, parseFloat(pct))) / 100;
+      return formatColor(ca.map((v, i) => v * p + cb[i] * (1 - p)) as Rgba);
+    },
+  );
+}
+
+// `style="rx:4px"` is how Pele rounds a rect; resvg reads the attribute, not the property.
+function inlineRadius(svg: string): string {
+  return svg.replace(/(<rect\b[^>]*?)\sstyle="rx:([\d.]+)(?:px)?"/g, (_m, head: string, rx: string) =>
+    /\srx=/.test(head) ? head : `${head} rx="${rx}"`,
+  );
+}
+
+// Drop `--custom:…;` declarations (they have been used up) and the responsive sizing from every
+// style attribute, so a resolved file carries no dead CSS.
+function cleanStyles(svg: string): string {
+  return svg.replace(/\sstyle="([^"]*)"/g, (_m, css: string) => {
+    const kept = css
+      .split(";")
+      .map((d) => d.trim())
+      .filter((d) => d && !d.startsWith("--") && !/^(max-width|height)\s*:/.test(d))
+      // resvg ignores the `font:` shorthand and falls back to its default size; Pele sets the
+      // family separately, so only the size is needed.
+      .map((d) => d.replace(/^font\s*:\s*([\d.]+px)\b.*$/, "font-size:$1"));
+    return kept.length ? ` style="${kept.join(";")}"` : "";
+  });
+}
+
+function resolveSvg(svg: string, vars: Map<string, string>): string {
+  // Custom properties Pele declares on the root (--_bg:var(--pele-bg,#fff), …) join the lookup,
+  // so the theme only has to supply the public --pele-* names.
+  const all = new Map(vars);
+  const rootStyle = /^<svg\b[^>]*?\sstyle="([^"]*)"/.exec(svg)?.[1] ?? "";
+  for (const decl of rootStyle.split(";")) {
+    const m = /^\s*(--[\w-]+)\s*:(.*)$/.exec(decl);
+    if (m && !all.has(m[1])) all.set(m[1], m[2].trim());
+  }
+  let out = resolveVars(svg, all);
+  out = evaluateColorMix(out);
+  out = inlineRadius(out);
+  return cleanStyles(out);
+}
+
+// For --keep-vars: put the theme on the root element so the file shows it by default while a
+// host page can still override it.
+function declareVars(svg: string, vars: Map<string, string>): string {
+  if (vars.size === 0) return svg;
+  const decls = [...vars].map(([k, v]) => `${k}:${v}`).join(";");
+  return svg.replace(/^(<svg\b[^>]*?\sstyle=")/, `$1${decls};`);
+}
+
+function addBackground(svg: string, color: string): string {
+  return svg.replace(/^<svg\b[^>]*>/, (open) => `${open}<rect width="100%" height="100%" fill="${color}"/>`);
+}
+
+// ---------------------------------------------------------------------------------------------
+
+function warn(message: string): void {
+  console.error(`pele: warning: ${message}`);
+}
+
+function num(name: string, value: string | undefined, min = 1, max = MAX_PIXELS): number | undefined {
+  if (value === undefined) return undefined;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < min || n > max) throw new UsageError(`--${name} must be a number from ${min} to ${max}`);
+  return n;
+}
+
+function stripFence(text: string): string {
+  const m = /^\s*(`{3,}|~{3,})[ \t]*mermaid[^\n]*\n([\s\S]*?)\n[ \t]*\1[`~]*\s*$/.exec(text);
+  return m ? m[2] : text;
+}
+
+function readInput(path: string | undefined): string {
+  if (path === undefined || path === "-") {
+    if (path === undefined && process.stdin.isTTY) throw new UsageError("no input: give a FILE or pipe the diagram on stdin");
+    return readFileSync(0, "utf8");
+  }
+  try {
+    return readFileSync(path, "utf8");
+  } catch (e) {
+    throw new UsageError(`cannot read ${path}: ${(e as NodeJS.ErrnoException).code ?? e}`);
+  }
+}
+
+function themeVars(theme: string, overrides: string[]): Map<string, string> {
+  const preset = THEMES[theme];
+  if (!preset) throw new UsageError(`--theme must be one of: ${Object.keys(THEMES).join(", ")}`);
+  const vars = new Map<string, string>();
+  for (const [k, v] of Object.entries(preset)) vars.set(`--pele-${k}`, v);
+  for (const item of overrides) {
+    const eq = item.indexOf("=");
+    if (eq < 1) throw new UsageError(`--var expects NAME=VALUE, got "${item}"`);
+    const name = item.slice(0, eq).trim().replace(/^--/, "").replace(/^pele-/, "");
+    const value = item.slice(eq + 1).trim();
+    if (!/^[\w-]+$/.test(name) || /[;{}<>"]/.test(value)) throw new UsageError(`--var "${item}" is not a plain name and value`);
+    vars.set(`--pele-${name}`, value);
+  }
+  return vars;
+}
+
+async function toPng(svg: string, o: { width?: number; height?: number; scale: number; fontFiles: string[]; font?: string }, natural: { width: number; height: number }): Promise<Uint8Array> {
+  const { Resvg } = await import("@resvg/resvg-js@2.6.2");
+  let zoom = o.scale;
+  if (o.width && o.height) zoom = Math.min(o.width / natural.width, o.height / natural.height);
+  else if (o.width) zoom = o.width / natural.width;
+  else if (o.height) zoom = o.height / natural.height;
+  if (Math.max(natural.width, natural.height) * zoom > MAX_PIXELS) {
+    throw new UsageError(`PNG would exceed ${MAX_PIXELS}px on a side; lower --width/--height/--scale`);
+  }
+  const family = o.font?.split(",")[0].trim().replace(/^["']|["']$/g, "");
+  const resvg = new Resvg(svg, {
+    fitTo: { mode: "zoom", value: zoom },
+    font: {
+      loadSystemFonts: true,
+      fontFiles: o.fontFiles,
+      ...(family ? { defaultFontFamily: family, sansSerifFamily: family } : {}),
+    },
+  });
+  return resvg.render().asPng();
+}
+
+async function run(): Promise<number> {
+  let parsed;
+  try {
+    parsed = parseArgs({
+      allowPositionals: true,
+      options: {
+        output: { type: "string", short: "o" },
+        format: { type: "string", short: "f" },
+        width: { type: "string", short: "w" },
+        height: { type: "string", short: "H" },
+        scale: { type: "string", short: "s" },
+        theme: { type: "string", short: "t", default: "light" },
+        background: { type: "string", short: "b" },
+        var: { type: "string", multiple: true, default: [] },
+        font: { type: "string" },
+        "font-file": { type: "string", multiple: true, default: [] },
+        "font-size": { type: "string" },
+        padding: { type: "string" },
+        "max-width": { type: "string" },
+        "keep-vars": { type: "boolean", default: false },
+        check: { type: "boolean", default: false },
+        json: { type: "boolean", default: false },
+        quiet: { type: "boolean", short: "q", default: false },
+        help: { type: "boolean", short: "h", default: false },
+        version: { type: "boolean", default: false },
+      },
+    });
+  } catch (e) {
+    throw new UsageError((e as Error).message);
+  }
+  const { values: v, positionals } = parsed;
+  if (v.help) return void process.stdout.write(HELP) ?? 0;
+  if (v.version) return void console.log(`pele ${VERSION} (pele 1.13.0, bun ${Bun.version})`) ?? 0;
+  if (positionals.length > 1) throw new UsageError("only one input is accepted");
+
+  const out = v.output;
+  const ext = out && out !== "-" ? /\.(svg|png)$/i.exec(out)?.[1].toLowerCase() : undefined;
+  const format = (v.format ?? ext ?? "svg").toLowerCase();
+  if (format !== "svg" && format !== "png") throw new UsageError(`--format must be svg or png, got "${format}"`);
+  const toStdout = !out || out === "-";
+  if (v.json && toStdout && !v.check) throw new UsageError("--json needs -o FILE (stdout is taken by the diagram), or --check");
+  if (!v.check && format === "png" && toStdout && process.stdout.isTTY) {
+    throw new UsageError("refusing to write a PNG to the terminal; use -o FILE or pipe it");
+  }
+
+  const vars = themeVars(v.theme, v.var);
+  const source = stripFence(readInput(positionals[0]));
+  const result = render(source, {
+    responsive: false,
+    ...(v.font ? { fontFamily: v.font } : {}),
+    ...(v["font-size"] ? { fontSize: num("font-size", v["font-size"], 4, 200) } : {}),
+    ...(v.padding ? { padding: num("padding", v.padding, 0, 500) } : {}),
+    ...(v["max-width"] ? { maxWidth: num("max-width", v["max-width"]) } : {}),
+  });
+
+  const meta = { type: result.type, mermaidType: result.mermaidType, width: result.width, height: result.height };
+  if (v.check) {
+    if (v.json) console.log(JSON.stringify({ ok: true, ...meta }));
+    else if (!v.quiet) console.error(`pele: ok (${meta.type}, ${meta.width}x${meta.height})`);
+    return 0;
+  }
+
+  // Background: explicit wins; otherwise PNG gets the theme's, SVG stays transparent.
+  const bgVar = vars.get("--pele-bg") ?? DEFAULT_BG;
+  const bg = v.background ?? (format === "png" ? bgVar : "transparent");
+  if (bg !== "transparent" && /["<>;]/.test(bg)) throw new UsageError("--background is not a plain CSS color");
+  const keepVars = v["keep-vars"] && format === "svg";
+  let svg = keepVars ? declareVars(result.svg, vars) : resolveSvg(result.svg, vars);
+  if (bg !== "transparent") svg = addBackground(svg, resolveVars(bg, new Map()));
+
+  let bytes: Uint8Array | string = svg;
+  let size = meta;
+  if (format === "png") {
+    bytes = await toPng(svg, { width: num("width", v.width), height: num("height", v.height), scale: num("scale", v.scale, 0.1, 100) ?? 2, fontFiles: v["font-file"], font: v.font }, meta);
+    // Read the true pixel size back from the IHDR chunk.
+    const dv = new DataView(bytes.buffer, bytes.byteOffset);
+    size = { ...meta, width: dv.getUint32(16), height: dv.getUint32(20) };
+  } else if (v.width || v.height || v.scale) {
+    warn("--width/--height/--scale only size PNG output; ignored for SVG");
+  }
+
+  if (toStdout) process.stdout.write(bytes);
+  else {
+    mkdirSync(dirname(out!), { recursive: true });
+    writeFileSync(out!, bytes);
+  }
+  if (!toStdout) {
+    const byteLength = typeof bytes === "string" ? Buffer.byteLength(bytes) : bytes.byteLength;
+    if (v.json) console.log(JSON.stringify({ ok: true, ...size, format, output: out, bytes: byteLength }));
+    else if (!v.quiet) console.error(`pele: wrote ${out} (${format}, ${size.width}x${size.height}, ${meta.type})`);
+  }
+  return 0;
+}
+
+function report(e: unknown, json: boolean): number {
+  if (e instanceof PeleError) {
+    const where = e.line ? ` at line ${e.line}${e.column ? `, column ${e.column}` : ""}` : "";
+    if (json) {
+      const { code, type, mermaidType, line, column, snippet, message } = e;
+      console.log(JSON.stringify({ ok: false, error: { code, type, mermaidType, line, column, snippet, message } }));
+    } else {
+      console.error(`pele: ${e.code}${e.type ? ` (${e.type})` : ""}${where}\n${e.message}`);
+    }
+    return 1;
+  }
+  const message = e instanceof Error ? e.message : String(e);
+  if (json) console.log(JSON.stringify({ ok: false, error: { code: e instanceof UsageError ? "usage" : "internal", message } }));
+  else console.error(`pele: ${message}${e instanceof UsageError ? "\ntry: pele --help" : ""}`);
+  return e instanceof UsageError ? 2 : 1;
+}
+
+const json = process.argv.includes("--json");
+try {
+  process.exitCode = await run();
+} catch (e) {
+  process.exitCode = report(e, json);
+}

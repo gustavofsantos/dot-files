@@ -112,6 +112,22 @@ The engine writes `.claude-plugin/types/` into a loaded mod, with its own `.giti
 |---|---|
 | `mermaid-render` | Draws ` ```mermaid ` blocks in Claude's replies as images inline in the terminal (kitty graphics protocol), rendered once by `mmdc` (mise `npm:@mermaid-js/mermaid-cli`) into `~/.cache/claude-mermaid/`. `source`/`expand` buttons under each diagram. `/mermaid` reopens the expanded pane. Options are in its `README.md` |
 
+## Mermaid rendering (`pele`)
+
+`bin/pele` is a single-file Bun shim over [Pele](https://github.com/obsidianmd/pele) that
+renders Mermaid to SVG or PNG, built for pipes and agents: `pele flow.mmd -o flow.png --width 1600`,
+or `… | pele -f png > out.png` (a ```` ```mermaid ```` fence around the input is stripped).
+Pele and `@resvg/resvg-js` are pinned in the imports and installed by Bun's auto-install on
+first run, which only works while no `package.json`/`node_modules` sits above `bin/`.
+
+- Pele themes with `var(--pele-*)`, which only browsers resolve. By default `pele` resolves
+  them (and `color-mix`) so the SVG stands alone and resvg can draw it; `--keep-vars` keeps them.
+- PNG size: `--width`, `--height` (fit inside the box), else `--scale` (default 2).
+  `--theme light|dark`, `--var accent=#f00`, `--background`, `--font`/`--font-file` shape the look.
+- For agents: `--check` validates only, `--json` prints a result or `{ok:false,error:{code,line,column,snippet,message}}`.
+  Exit 0 ok, 1 the diagram failed, 2 bad usage or I/O.
+- Tests: `bats test_bin/pele.bats` (needs network once, to install the dependencies).
+
 ## Hooks
 
 Hook scripts live under `bin/`, prefixed `hooks-*` (e.g. `hooks-vale-lint`) — the prefix
