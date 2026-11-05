@@ -127,6 +127,10 @@ first run, which only works while no `package.json`/`node_modules` sits above `b
 - For agents: `--check` validates only, `--json` prints a result or `{ok:false,error:{code,line,column,snippet,message}}`.
   Exit 0 ok, 1 the diagram failed, 2 bad usage or I/O.
 - Tests: `bats test_bin/pele.bats` (needs network once, to install the dependencies).
+- Neovim: `snacks.image` hardcodes the command `mmdc` and only lets config change its arguments.
+  `config/nvim/shims/mmdc` translates `-i -o -b -t -s` into a `pele` call, and
+  `snacks.config.lua` prepends `shims/` to Neovim's `PATH` only, so the real `mmdc` (and the
+  `mermaid-render` mod) are unaffected. Tests: `bats test_bin/nvim-mmdc-shim.bats`.
 
 ## Hooks
 

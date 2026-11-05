@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# mmdc-compatible shim over `pele`, for snacks.nvim's image viewer.
+#
+# snacks.image hardcodes the command `mmdc` and only lets config change its arguments, so
+# snacks.config.lua puts this directory first on Neovim's PATH. Only the flags snacks passes
+# are understood: -i SRC -o FILE -b BACKGROUND -t THEME -s SCALE. It is not on the global PATH,
+# so the real mmdc (used by the mermaid-render mod) is untouched.
+set -euo pipefail
+
+src="" out="" bg="transparent" theme="light" scale="2"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -i) src="$2"; shift 2 ;;
+    -o) out="$2"; shift 2 ;;
+    -b) bg="$2"; shift 2 ;;
+    -t) theme="$2"; shift 2 ;;
+    -s) scale="$2"; shift 2 ;;
+    *) echo "mmdc shim: unsupported argument: $1" >&2; exit 2 ;;
+  esac
+done
+[ -n "$src" ] && [ -n "$out" ] || { echo "mmdc shim: -i and -o are required" >&2; exit 2; }
+
+# mmdc themes: default|forest|dark|neutral. Pele has light and dark.
+case "$theme" in dark) theme=dark ;; *) theme=light ;; esac
+
+pele=$(command -v pele || true)
+[ -n "$pele" ] || pele="$HOME/.bin/pele"
+exec "$pele" "$src" -o "$out" -f png -b "$bg" -t "$theme" -s "$scale" -q
