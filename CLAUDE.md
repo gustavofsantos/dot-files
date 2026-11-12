@@ -226,6 +226,7 @@ branch and path) and from tmux through `tmux-worktree`:
 | Script | Alias | What it does |
 |---|---|---|
 | `tmux-worktree [<branch>]` | tmux `prefix W` | fzf over every branch (local and remote-only); creates the worktree when the branch has none (a name that matches nothing starts a new branch from `HEAD`), then enters its session through `tmux-sessionizer` |
+| `tmux-worktree <branch>` | tmux `prefix G` | prompts for a branch name (no fzf) and does the same: enters `<project>-<branch>` if it exists, else creates the worktree (and the branch from `HEAD` if new) and its session. Runs from the current pane's directory |
 | `tmux-worktree --existing` | tmux `prefix T` | fzf over the repo's existing worktrees only; creates nothing |
 | `tmux-worktree --all` | tmux `prefix P` | the same over every project `project-dirs` prints (the `~/.projects` list `tmux-sessionizer` reads), piped to `gitmaster … --repos-from -`; combines with `--existing` |
 
