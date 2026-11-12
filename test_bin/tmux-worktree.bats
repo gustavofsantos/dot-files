@@ -132,3 +132,35 @@ teardown() {
   [ "$status" -eq 2 ]
   [[ "$output" == *usage* ]]
 }
+
+@test "--prompt asks for a branch in a tmux prompt that names the main tree's project" {
+  cat > "$FAKE/stubs/tmux" <<'STUB'
+#!/usr/bin/env bash
+printf 'tmux' >> "$CALLS"; printf ' <%s>' "$@" >> "$CALLS"; echo >> "$CALLS"
+STUB
+  chmod +x "$FAKE/stubs/tmux"
+  git init -q "$FAKE/billing"
+  git -C "$FAKE/billing" -c user.name=t -c user.email=t@t commit -q --allow-empty -m init
+  git -C "$FAKE/billing" worktree add -q "$FAKE/wt/topic" -b topic
+
+  cd "$FAKE/wt/topic"
+  run tmux-worktree --prompt
+
+  [ "$status" -eq 0 ]
+  grep -qxF "tmux <command-prompt> <-p> <branch (billing):> <run-shell -b \"cd '$FAKE/wt/topic' && tmux-worktree '%%'\">" "$CALLS"
+  ! grep -q gitmaster "$CALLS"
+}
+
+@test "--prompt outside a git repo shows a message instead of a prompt" {
+  cat > "$FAKE/stubs/tmux" <<'STUB'
+#!/usr/bin/env bash
+printf 'tmux' >> "$CALLS"; printf ' <%s>' "$@" >> "$CALLS"; echo >> "$CALLS"
+STUB
+  chmod +x "$FAKE/stubs/tmux"
+  mkdir "$FAKE/plain" && cd "$FAKE/plain"
+  run tmux-worktree --prompt
+
+  [ "$status" -eq 0 ]
+  grep -q "tmux <display-message> <tmux-worktree: $FAKE/plain is not in a git repository>" "$CALLS"
+  ! grep -q command-prompt "$CALLS"
+}

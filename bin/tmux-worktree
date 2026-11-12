@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Usage: tmux-worktree [-a|--all] [-e|--existing] [<branch>]
+# Usage: tmux-worktree [-a|--all] [-e|--existing] [-p|--prompt] [<branch>]
 #
 # Jump to the worktree of a branch in a tmux session of its own, creating the
 # worktree first when the branch has none. Works through `gitmaster worktree`.
@@ -15,6 +15,9 @@
 #                            nothing about ~/.projects.
 #   tmux-worktree -e         pick among the existing worktrees only; creates
 #                            nothing. Combines with -a.
+#   tmux-worktree -p         ask for the branch name in tmux's own prompt,
+#                            which names the project it applies to (tmux
+#                            prefix G). Outside a git repo it says so instead.
 #
 # The worktree lives where git-add-worktree puts it:
 # ${WORKTREES_HOME:-~/.worktrees}/<project>/<branch, / replaced by ->, and
@@ -24,17 +27,32 @@ set -euo pipefail
 
 existing_only=false
 all=false
+prompt=false
 while [[ "${1:-}" == -* ]]; do
     case "$1" in
         -e | --existing) existing_only=true ;;
         -a | --all) all=true ;;
+        -p | --prompt) prompt=true ;;
         *)
-            echo "usage: tmux-worktree [-a|--all] [-e|--existing] [<branch>]" >&2
+            echo "usage: tmux-worktree [-a|--all] [-e|--existing] [-p|--prompt] [<branch>]" >&2
             exit 2
             ;;
     esac
     shift
 done
+
+# The project is the main working tree's dir name, as in git-add-worktree and
+# the <project>-<branch> session names, so a worktree pane names its repo too.
+if [[ "$prompt" == true ]]; then
+    if ! common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then
+        tmux display-message "tmux-worktree: $PWD is not in a git repository"
+        exit 0
+    fi
+    project=$(basename "$(dirname "$common")")
+    dir=$(git rev-parse --show-toplevel)
+    exec tmux command-prompt -p "branch ($project):" \
+        "run-shell -b \"cd '$dir' && tmux-worktree '%%'\""
+fi
 
 if ! command -v gitmaster >/dev/null 2>&1; then
     echo "tmux-worktree: gitmaster is not on PATH." >&2
