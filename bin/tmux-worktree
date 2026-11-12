@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Usage: tmux-worktree [-a|--all] [-e|--existing] [-p|--prompt] [<branch>]
+# Usage: tmux-worktree [-a|--all] [-e|--existing] [<branch>]
 #
 # Jump to the worktree of a branch in a tmux session of its own, creating the
 # worktree first when the branch has none. Works through `gitmaster worktree`.
@@ -12,12 +12,16 @@
 #                            prints (${PROJECTS_FILE:-~/.projects}), the same
 #                            list tmux-sessionizer uses. Works from anywhere.
 #                            gitmaster takes the list on stdin and knows
-#                            nothing about ~/.projects.
+#                            nothing about ~/.projects. Lines read
+#                            `<project> <branch>`, so typing both narrows to
+#                            one. Text that matches nothing (or Alt-Enter,
+#                            whatever matches) starts a new branch from that
+#                            repo's HEAD: the last word is the branch, the
+#                            words before it pre-filter a repo picker, which
+#                            skips itself when they leave one repo
+#                            (`bil feat/x` → feat/x in billing).
 #   tmux-worktree -e         pick among the existing worktrees only; creates
 #                            nothing. Combines with -a.
-#   tmux-worktree -p         ask for the branch name in tmux's own prompt,
-#                            which names the project it applies to (tmux
-#                            prefix G). Outside a git repo it says so instead.
 #
 # The worktree lives where git-add-worktree puts it:
 # ${WORKTREES_HOME:-~/.worktrees}/<project>/<branch, / replaced by ->, and
@@ -27,32 +31,17 @@ set -euo pipefail
 
 existing_only=false
 all=false
-prompt=false
 while [[ "${1:-}" == -* ]]; do
     case "$1" in
         -e | --existing) existing_only=true ;;
         -a | --all) all=true ;;
-        -p | --prompt) prompt=true ;;
         *)
-            echo "usage: tmux-worktree [-a|--all] [-e|--existing] [-p|--prompt] [<branch>]" >&2
+            echo "usage: tmux-worktree [-a|--all] [-e|--existing] [<branch>]" >&2
             exit 2
             ;;
     esac
     shift
 done
-
-# The project is the main working tree's dir name, as in git-add-worktree and
-# the <project>-<branch> session names, so a worktree pane names its repo too.
-if [[ "$prompt" == true ]]; then
-    if ! common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then
-        tmux display-message "tmux-worktree: $PWD is not in a git repository"
-        exit 0
-    fi
-    project=$(basename "$(dirname "$common")")
-    dir=$(git rev-parse --show-toplevel)
-    exec tmux command-prompt -p "branch ($project):" \
-        "run-shell -b \"cd '$dir' && tmux-worktree '%%'\""
-fi
 
 if ! command -v gitmaster >/dev/null 2>&1; then
     echo "tmux-worktree: gitmaster is not on PATH." >&2
@@ -85,12 +74,33 @@ fi
 
 if [[ "$all" == true ]]; then
     # project<TAB>branch<TAB>main checkout. The checkout says which repo a
-    # branch belongs to, so a name that matches nothing cannot start a branch.
-    choice=$(project-dirs | gitmaster worktree branches --repos-from - |
+    # branch belongs to. --print-query prints the typed text, then the chosen
+    # line, which is absent when nothing matched (status 1); Alt-Enter prints
+    # the text alone. Esc is status 130.
+    branches=$(project-dirs | gitmaster worktree branches --repos-from -)
+    rc=0
+    out=$(printf '%s\n' "$branches" |
         fzf --height 100% --prompt='branch → ' --delimiter="$TAB" \
-            --with-nth=1,2) || exit 0
-    [[ -n "$choice" ]] || exit 0
-    IFS="$TAB" read -r _ branch repo <<<"$choice"
+            --with-nth=1,2 --print-query --bind 'alt-enter:print-query' \
+            --header 'no match or alt-enter: new branch (last word), in a repo (words before)') ||
+        rc=$?
+    [[ $rc -eq 0 || $rc -eq 1 ]] || exit 0
+    choice=$(printf '%s\n' "$out" | tail -n 1)
+    if [[ "$choice" == *"$TAB"* ]]; then
+        IFS="$TAB" read -r _ branch repo <<<"$choice"
+    else
+        query=$(printf '%s\n' "$out" | head -n 1)
+        read -r -a words <<<"$query"
+        [[ ${#words[@]} -gt 0 ]] || exit 0
+        branch=${words[${#words[@]}-1]}
+        # project<TAB>main checkout, one line per repo.
+        repo=$(printf '%s\n' "$branches" | cut -f1,3 | sort -u |
+            fzf --height 100% --prompt="new branch $branch in → " \
+                --delimiter="$TAB" --with-nth=1 --select-1 --exit-0 \
+                --query "${words[*]:0:${#words[@]}-1}") || exit 0
+        [[ -n "$repo" ]] || exit 0
+        repo=${repo#*"$TAB"}
+    fi
     worktree=$(gitmaster worktree add "$branch" --repo "$repo" | tail -n 1)
     exec tmux-sessionizer "$worktree"
 fi

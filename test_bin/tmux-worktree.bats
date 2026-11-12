@@ -29,11 +29,17 @@ case "$2" in
 esac
 STUB
   # fzf prints $FZF_OUT (with \n escapes) and exits with $FZF_RC (default 0).
+  # The Nth call prints $FZF_OUT<N> and exits $FZF_RC<N> (the first call also
+  # reads the unsuffixed names), and records its arguments and input.
   cat > "$FAKE/stubs/fzf" <<'STUB'
 #!/usr/bin/env bash
-cat > /dev/null
-printf '%b' "${FZF_OUT-}"
-exit "${FZF_RC:-0}"
+n=$(( $(cat "$CALLS.fzf" 2>/dev/null || echo 0) + 1 )); echo "$n" > "$CALLS.fzf"
+echo "fzf#$n $*" >> "$CALLS"
+sed "s/^/fzf#$n< /" >> "$CALLS"
+out="FZF_OUT$n"; rc="FZF_RC$n"
+[ "$n" = 1 ] && { out=FZF_OUT; rc=FZF_RC; }
+printf '%b' "${!out-}"
+exit "${!rc:-0}"
 STUB
   cat > "$FAKE/stubs/project-dirs" <<'STUB'
 #!/usr/bin/env bash
@@ -109,7 +115,7 @@ teardown() {
 }
 
 @test "--all picks a branch of any project and adds it in that repo" {
-  FZF_OUT='billing\ttopic\t/src/billing\n' run tmux-worktree --all
+  FZF_OUT='bil top\nbilling\ttopic\t/src/billing\n' run tmux-worktree --all
 
   [ "$status" -eq 0 ]
   grep -q "worktree branches --repos-from -" "$CALLS"
@@ -133,34 +139,45 @@ teardown() {
   [[ "$output" == *usage* ]]
 }
 
-@test "--prompt asks for a branch in a tmux prompt that names the main tree's project" {
-  cat > "$FAKE/stubs/tmux" <<'STUB'
-#!/usr/bin/env bash
-printf 'tmux' >> "$CALLS"; printf ' <%s>' "$@" >> "$CALLS"; echo >> "$CALLS"
-STUB
-  chmod +x "$FAKE/stubs/tmux"
-  git init -q "$FAKE/billing"
-  git -C "$FAKE/billing" -c user.name=t -c user.email=t@t commit -q --allow-empty -m init
-  git -C "$FAKE/billing" worktree add -q "$FAKE/wt/topic" -b topic
 
-  cd "$FAKE/wt/topic"
-  run tmux-worktree --prompt
+@test "--all with text that matches nothing starts the branch in the repo the other words pick" {
+  FZF_OUT='bil feat/x\n' FZF_RC=1 FZF_OUT2='billing\t/src/billing\n' run tmux-worktree --all
 
   [ "$status" -eq 0 ]
-  grep -qxF "tmux <command-prompt> <-p> <branch (billing):> <run-shell -b \"cd '$FAKE/wt/topic' && tmux-worktree '%%'\">" "$CALLS"
-  ! grep -q gitmaster "$CALLS"
+  grep -q "^fzf#2 .*--prompt=new branch feat/x in → .*--select-1 .*--query bil$" "$CALLS"
+  grep -qxF "fzf#2< app	/src/app" "$CALLS"
+  grep -qxF "fzf#2< billing	/src/billing" "$CALLS"
+  grep -q "worktree add feat/x --repo /src/billing" "$CALLS"
+  grep -qx "sessionizer /wt/repo/feat-x" "$CALLS"
 }
 
-@test "--prompt outside a git repo shows a message instead of a prompt" {
-  cat > "$FAKE/stubs/tmux" <<'STUB'
-#!/usr/bin/env bash
-printf 'tmux' >> "$CALLS"; printf ' <%s>' "$@" >> "$CALLS"; echo >> "$CALLS"
-STUB
-  chmod +x "$FAKE/stubs/tmux"
-  mkdir "$FAKE/plain" && cd "$FAKE/plain"
-  run tmux-worktree --prompt
+@test "--all with one unmatched word asks for the repo with an empty filter" {
+  FZF_OUT='feat/x\n' FZF_RC=1 FZF_OUT2='app\t/src/app\n' run tmux-worktree --all
 
   [ "$status" -eq 0 ]
-  grep -q "tmux <display-message> <tmux-worktree: $FAKE/plain is not in a git repository>" "$CALLS"
-  ! grep -q command-prompt "$CALLS"
+  grep -q "^fzf#2 .*--query $" "$CALLS"
+  grep -q "worktree add feat/x --repo /src/app" "$CALLS"
+}
+
+@test "--all with alt-enter (query only, status 0) starts a new branch even if text matched" {
+  FZF_OUT='billing topic2\n' FZF_OUT2='billing\t/src/billing\n' run tmux-worktree --all
+
+  [ "$status" -eq 0 ]
+  grep -q "worktree add topic2 --repo /src/billing" "$CALLS"
+}
+
+@test "--all does nothing when the repo picker is cancelled" {
+  FZF_OUT='feat/x\n' FZF_RC=1 FZF_RC2=130 run tmux-worktree --all
+
+  [ "$status" -eq 0 ]
+  ! grep -q "worktree add" "$CALLS"
+  ! grep -q sessionizer "$CALLS"
+}
+
+@test "--all does nothing on Esc or an empty query" {
+  FZF_RC=130 run tmux-worktree --all
+  [ "$status" -eq 0 ]
+  FZF_OUT='\n' FZF_RC=1 run tmux-worktree --all
+  [ "$status" -eq 0 ]
+  ! grep -q "worktree add" "$CALLS"
 }
