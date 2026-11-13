@@ -19,9 +19,7 @@ echo "gitmaster $* [WORKTREES_HOME=$WORKTREES_HOME]" >> "$CALLS"
 all=false; for a in "$@"; do [ "$a" = --repos-from ] && all=true; done
 [ "$all" = true ] && cat > /dev/null
 case "$2" in
-  branches)
-    if $all; then printf 'app\tmain\t/src/app\nbilling\ttopic\t/src/billing\n'
-    else printf '%s\n' main feature/login; fi ;;
+  branches) printf '%s\n' main feature/login ;;
   list)
     if $all; then printf 'app\tmain\t/src/app\nbilling\ttopic\t/wt/billing/topic\n'
     else printf 'main\t/repo\nfeature/login\t/wt/repo/feature-login\n'; fi ;;
@@ -41,9 +39,22 @@ out="FZF_OUT$n"; rc="FZF_RC$n"
 printf '%b' "${!out-}"
 exit "${!rc:-0}"
 STUB
-  cat > "$FAKE/stubs/project-dirs" <<'STUB'
+  # Real repos for --all, which reads refs with git itself: app has main;
+  # billing has main and topic, and origin has topic (also local), old
+  # (remote only) and HEAD. A worktree of billing is listed too, as
+  # project-dirs does.
+  for r in app billing; do
+    git init -q -b main "$FAKE/src/$r"
+    git -C "$FAKE/src/$r" -c user.name=t -c user.email=t@t commit -q --allow-empty -m init
+  done
+  git -C "$FAKE/src/billing" branch topic
+  for ref in topic old HEAD; do
+    git -C "$FAKE/src/billing" update-ref "refs/remotes/origin/$ref" main
+  done
+  git -C "$FAKE/src/billing" worktree add -q "$FAKE/wt/billing/topic" topic
+  cat > "$FAKE/stubs/project-dirs" <<STUB
 #!/usr/bin/env bash
-printf '%s\n' /src/app /src/billing
+printf '%s\\n' "$FAKE/src/app" "$FAKE/src/billing" "$FAKE/wt/billing/topic" "$FAKE/not-a-repo"
 STUB
   cat > "$FAKE/stubs/tmux-sessionizer" <<'STUB'
 #!/usr/bin/env bash
@@ -115,11 +126,11 @@ teardown() {
 }
 
 @test "--all picks a branch of any project and adds it in that repo" {
-  FZF_OUT='bil top\nbilling\ttopic\t/src/billing\n' run tmux-worktree --all
+  FZF_OUT="bil top\nbilling\ttopic\t$FAKE/src/billing\n" run tmux-worktree --all
 
   [ "$status" -eq 0 ]
-  grep -q "worktree branches --repos-from -" "$CALLS"
-  grep -q "worktree add topic --repo /src/billing" "$CALLS"
+  ! grep -q "worktree branches" "$CALLS"
+  grep -q "worktree add topic --repo $FAKE/src/billing" "$CALLS"
   grep -qx "sessionizer /wt/repo/topic" "$CALLS"
 }
 
@@ -141,29 +152,29 @@ teardown() {
 
 
 @test "--all with text that matches nothing starts the branch in the repo the other words pick" {
-  FZF_OUT='bil feat/x\n' FZF_RC=1 FZF_OUT2='billing\t/src/billing\n' run tmux-worktree --all
+  FZF_OUT='bil feat/x\n' FZF_RC=1 FZF_OUT2="billing\t$FAKE/src/billing\n" run tmux-worktree --all
 
   [ "$status" -eq 0 ]
   grep -q "^fzf#2 .*--prompt=new branch feat/x in → .*--select-1 .*--query bil$" "$CALLS"
-  grep -qxF "fzf#2< app	/src/app" "$CALLS"
-  grep -qxF "fzf#2< billing	/src/billing" "$CALLS"
-  grep -q "worktree add feat/x --repo /src/billing" "$CALLS"
+  grep -qxF "fzf#2< app	$FAKE/src/app" "$CALLS"
+  grep -qxF "fzf#2< billing	$FAKE/src/billing" "$CALLS"
+  grep -q "worktree add feat/x --repo $FAKE/src/billing" "$CALLS"
   grep -qx "sessionizer /wt/repo/feat-x" "$CALLS"
 }
 
 @test "--all with one unmatched word asks for the repo with an empty filter" {
-  FZF_OUT='feat/x\n' FZF_RC=1 FZF_OUT2='app\t/src/app\n' run tmux-worktree --all
+  FZF_OUT='feat/x\n' FZF_RC=1 FZF_OUT2="app\t$FAKE/src/app\n" run tmux-worktree --all
 
   [ "$status" -eq 0 ]
   grep -q "^fzf#2 .*--query $" "$CALLS"
-  grep -q "worktree add feat/x --repo /src/app" "$CALLS"
+  grep -q "worktree add feat/x --repo $FAKE/src/app" "$CALLS"
 }
 
 @test "--all with alt-enter (query only, status 0) starts a new branch even if text matched" {
-  FZF_OUT='billing topic2\n' FZF_OUT2='billing\t/src/billing\n' run tmux-worktree --all
+  FZF_OUT='billing topic2\n' FZF_OUT2="billing\t$FAKE/src/billing\n" run tmux-worktree --all
 
   [ "$status" -eq 0 ]
-  grep -q "worktree add topic2 --repo /src/billing" "$CALLS"
+  grep -q "worktree add topic2 --repo $FAKE/src/billing" "$CALLS"
 }
 
 @test "--all does nothing when the repo picker is cancelled" {
@@ -180,4 +191,16 @@ teardown() {
   FZF_OUT='\n' FZF_RC=1 run tmux-worktree --all
   [ "$status" -eq 0 ]
   ! grep -q "worktree add" "$CALLS"
+}
+
+@test "--all lists local and origin-only branches of each repo once, without HEAD" {
+  FZF_RC=130 run tmux-worktree --all
+
+  [ "$status" -eq 0 ]
+  diff <(grep "^fzf#1< " "$CALLS") - <<LIST
+fzf#1< app	main	$FAKE/src/app
+fzf#1< billing	main	$FAKE/src/billing
+fzf#1< billing	topic	$FAKE/src/billing
+fzf#1< billing	old	$FAKE/src/billing
+LIST
 }

@@ -53,6 +53,34 @@ export WORKTREES_HOME="${WORKTREES_HOME:-$HOME/.worktrees}"
 
 TAB=$'\t'
 
+# project<TAB>main checkout, once per repo project-dirs prints. A worktree, or
+# a project inside a monorepo, names the same main checkout as its repo.
+all_repos() {
+    local dir common main seen=$'\n'
+    while IFS= read -r dir; do
+        common=$(git -C "$dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || continue
+        main=$(dirname "$common")
+        [[ "$seen" != *$'\n'"$main"$'\n'* ]] || continue
+        seen+="$main"$'\n'
+        printf '%s\t%s\n' "${main##*/}" "$main"
+    done < <(project-dirs)
+}
+
+# project<TAB>branch<TAB>main checkout: each repo's local branches, then
+# origin's that have no local one. for-each-ref reads refs only (no working
+# tree, no network), and each repo's lines go out as soon as it is read, so
+# fzf shows the first ones at once.
+all_branches() {
+    local project main
+    while IFS="$TAB" read -r project main; do
+        git -C "$main" for-each-ref --format='%(refname)' refs/heads refs/remotes/origin |
+            awk -v p="$project" -v m="$main" -v OFS='\t' '
+                sub(/^refs\/heads\//, "") { have[$0] = 1; print p, $0, m; next }
+                sub(/^refs\/remotes\/origin\//, "") && $0 != "HEAD" { remote[++n] = $0 }
+                END { for (i = 1; i <= n; i++) if (!(remote[i] in have)) print p, remote[i], m }'
+    done < <(all_repos)
+}
+
 if [[ "$existing_only" == true ]]; then
     if [[ "$all" == true ]]; then
         # project<TAB>branch<TAB>path
@@ -77,13 +105,11 @@ if [[ "$all" == true ]]; then
     # branch belongs to. --print-query prints the typed text, then the chosen
     # line, which is absent when nothing matched (status 1); Alt-Enter prints
     # the text alone. Esc is status 130.
-    branches=$(project-dirs | gitmaster worktree branches --repos-from -)
     rc=0
-    out=$(printf '%s\n' "$branches" |
-        fzf --height 100% --prompt='branch → ' --delimiter="$TAB" \
-            --with-nth=1,2 --print-query --bind 'alt-enter:print-query' \
-            --header 'no match or alt-enter: new branch (last word), in a repo (words before)') ||
-        rc=$?
+    out=$(fzf --height 100% --prompt='branch → ' --delimiter="$TAB" \
+        --with-nth=1,2 --print-query --bind 'alt-enter:print-query' \
+        --header 'no match or alt-enter: new branch (last word), in a repo (words before)' \
+        < <(all_branches)) || rc=$?
     [[ $rc -eq 0 || $rc -eq 1 ]] || exit 0
     choice=$(printf '%s\n' "$out" | tail -n 1)
     if [[ "$choice" == *"$TAB"* ]]; then
@@ -94,7 +120,7 @@ if [[ "$all" == true ]]; then
         [[ ${#words[@]} -gt 0 ]] || exit 0
         branch=${words[${#words[@]}-1]}
         # project<TAB>main checkout, one line per repo.
-        repo=$(printf '%s\n' "$branches" | cut -f1,3 | sort -u |
+        repo=$(all_repos |
             fzf --height 100% --prompt="new branch $branch in → " \
                 --delimiter="$TAB" --with-nth=1 --select-1 --exit-0 \
                 --query "${words[*]:0:${#words[@]}-1}") || exit 0
