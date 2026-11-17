@@ -62,7 +62,7 @@
   ski           = !git stash --keep-index
   lcom		= !git-diff-list-commits
   drev		= !git-diff
-  lazy		= !lazygit
+  tui		= !gitmaster tui
 
 [gpg]
   format = ssh
