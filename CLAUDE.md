@@ -9,10 +9,12 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 ## Setup
 
 ```bash
-./setup.sh          # links all files, installs skills, merges Claude settings and Codex hooks
+make install        # or ./setup.sh: links all files, installs skills, merges Claude settings and Codex hooks
+make agents         # only the agent part (scripts/install-agents.sh)
+make help           # every target
 ```
 
-`setup.sh` delegates to seven scripts in `scripts/`:
+`setup.sh` and the `Makefile` delegate to the same seven scripts in `scripts/` (one make target each):
 
 | Script | What it does |
 |--------|--------------|
@@ -35,7 +37,7 @@ Re-running `setup.sh` is idempotent (`ln -sf`).
 
 - `bin/` — personal scripts added to `$PATH` via `~/.bin/`, including hook scripts (`hooks-*`)
 - `.agents/skills/` — every skill, one directory each, installed by `install-agents.sh`. This is the source of truth; nothing under `~/.agents/skills/` or `~/.claude/skills/` that links here is hand-edited
-- `.agents/agents/` — subagent definitions, one `.md` each, linked into `~/.claude/agents/` by `install-agents.sh`. Cursor reads that directory too, so one file serves both. The `inv-*` agents (`inv-worker`, `inv-verifier`, `inv-gap-finder`) belong to `investigation-lead`; their frontmatter uses Claude Code keys (`tools`, `maxTurns`, `skills`, `hooks`), and whether Cursor tolerates them is unverified
+- `.agents/agents/` — subagent definitions, one `.md` each, linked into `~/.claude/agents/` by `install-agents.sh`. Cursor reads that directory too, so one file serves both. `worker` serves `orchestrate`; `librarian` owns the domain library through the `library` skill's script; `maintainability-reviewer` is a read-only reviewer. Their frontmatter uses Claude Code keys (`model: haiku`, `tools`, `skills`), and whether Cursor tolerates them is unverified
 - `.agents/mods/` — Claude Code mods (function-hook plugins), one directory each, linked into `~/.claude/mods/` by `install-agents.sh` and loaded through `CLAUDE_CODE_PLUGIN_DIRS` (see "Mods")
 - `test_bin/` — bats tests for `bin/` scripts, one `<script>.bats` per script
 - `config/` — XDG config dirs: `nvim/`, `doom/`, `ghostty/`, `bat/`, `lazygit/`, `mise/`, `zed/`, `wezterm/`, `tmux/`, `sheldon/`, `starship.toml`, `vale/`
@@ -71,6 +73,9 @@ Conventions skills follow (keep them when editing):
   (e.g. `reflect` loads `references/backlog.md` only for the backlog scope).
 - **No dead pointers.** A skill may only reference skills, scripts, and agents that
   exist in this repo.
+- **Scripts by installed path.** A skill runs its own script as
+  `"$HOME/.agents/skills/<name>/scripts/<script>"`, the path `install-agents.sh` links,
+  since skill scripts are not on `PATH`.
 - **Skill scripts test in place.** A script under `.agents/skills/<name>/scripts/` keeps its
   bats tests beside it as `<script>_test.bats`, so the skill directory stays
   self-contained. `test_bin/` is only for `bin/` scripts.
@@ -84,8 +89,9 @@ Both test locations run under `bats`, and neither is discovered by `listchangedt
 which matches only `py|js|ts|clj`:
 
 ```bash
+make test                                                   # both locations
 bats test_bin/                                              # all bin/ script tests
-bats .agents/skills/reflect/scripts/sessions_test.bats      # one skill script
+bats .agents/skills/library/scripts/library_test.bats       # one skill script
 ```
 
 ### Reflect state

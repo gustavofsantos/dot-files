@@ -5,13 +5,13 @@ Personal dotfiles. Everything is symlinked into `$HOME` by explicit scripts — 
 ## Install
 
 ```bash
-./setup.sh
+make install     # or ./setup.sh
 ```
 
-That's the only step. It's idempotent — re-run it any time. `setup.sh` delegates to
-the scripts in `scripts/`: it links dotfiles into `$HOME`, seeds local-override files,
-links `bin/` and XDG config, and installs the agent config — plugins, settings, and the
-global Codex hook — for Claude Code, Cursor, and Codex (below).
+That's the only step. It's idempotent — re-run it any time. `make help` lists the
+individual steps (`make agents`, `make bin`, `make config`, …); each one runs a script
+in `scripts/`. `make test` runs the bats suites (`test_bin/` and the tests beside skill
+scripts).
 
 ### Local overrides (never committed)
 
@@ -26,90 +26,23 @@ Both are created empty by `setup.sh` if missing.
 
 ## Agent config
 
-Standalone Claude Code skills live under `.agents/skills/<name>/`; plugin-scoped skills,
-subagents, hooks, and themes live inside `agents/plugins/<name>/`. Both are hand-authored
-source trees with no compile step. Nothing under `~/.agents/skills/`, `~/.claude/skills/`,
-or `~/.cursor/plugins/local/` is hand-edited. `.claude/settings.json` holds the one thing
-that is not plugin-scoped: `permissions`/`env`/`statusLine`/`theme`, hand-maintained and
-merged into the global settings file on install. There is no separate
-"rules" mechanism — a rule is just a skill with an eager trigger description, like any
-other.
+Everything agent-related lives under `.agents/`, hand-authored, with no compile step:
 
-### Install
+| Source | Installed as |
+|---|---|
+| `.agents/skills/<name>/` | `~/.agents/skills/<name>` (shared skill directory for multi-agent discovery), and `~/.claude/skills/<name>` → that link |
+| `.agents/agents/<name>.md` | `~/.claude/agents/<name>.md` (subagents; Cursor reads it too) |
+| `.agents/mods/<name>/` | `~/.claude/mods/<name>` (loaded through `CLAUDE_CODE_PLUGIN_DIRS`) |
 
-`./setup.sh` runs `scripts/install-agents.sh`, which:
+`make agents` (`scripts/install-agents.sh`) creates those links, prunes the ones whose
+source is gone, merges `.claude/settings.json` into `~/.claude/settings.json` (global wins
+on conflicts; `permissions` arrays are unioned), and merges `.codex/hooks.json` into
+`$CODEX_HOME/hooks.json`. A real file or directory already at a destination is reported
+and left alone.
 
-1. Symlinks each `.agents/skills/<name>/` into `~/.agents/skills/` and then into
-   `~/.claude/skills/` for Claude Code.
-2. Symlinks each `agents/plugins/<name>/` into `~/.claude/skills/` (a Claude Code
-   skills-directory plugin) and `~/.cursor/plugins/local/` (a Cursor local plugin, read by
-   both the desktop app and the CLI) — the only way a plugin's skills, agents, hooks, and
-   themes reach either harness.
-3. Merges `.claude/settings.json` into `~/.claude/settings.json` (global wins on
-   conflicts; `permissions` arrays are unioned).
-4. Merges `.codex/hooks.json` into the user-level `$CODEX_HOME/hooks.json` (or
-   `~/.codex/hooks.json`), preserving unrelated Codex hooks and replacing this
-   hook's prior entry idempotently.
-
-### Add a skill, subagent, hook, or theme
-
-Standalone Claude Code skills go under `.agents/skills/<skill>/`. Plugin-scoped skills,
-subagents, hooks, and themes go under the plugin's matching subdirectory —
-`agents/plugins/<name>/skills/<skill>/`, `agents/plugins/<name>/hooks/`,
-`agents/plugins/<name>/themes/`. Commit and re-run `./setup.sh`. See
-[`CLAUDE.md`](CLAUDE.md) for each type's exact frontmatter shape and per-harness quirks.
-
-### Causality
-
-The `causality` skill bundles a standard-library Python CLI for verified semantic-graph
-retrieval, query planning, and persistent root-cause investigations. The executable, its
-tests, references, and demo assets all live under
-`agents/plugins/gustavofsantos/skills/causality/`, so the plugin installs as one portable
-unit. The skill invokes `python3 <skill-dir>/scripts/causality`; it does not depend on a
-separate PATH-visible binary.
-
-In a project that uses Causality, create `causality.toml` and keep trusted declarative
-sources under its configured `model_dir`. The command discovers configuration from the
-current directory upward:
-
-```toml
-model_dir = "model"
-proposals_dir = "proposals"
-investigations_dir = "investigations"
-sqlite_path = ".generated/causality.sqlite"
-
-[safety]
-large_table_rows = 100000000
-large_table_bytes = 100000000000
-```
-
-Then verify and compile the model before using it:
-
-```bash
-CAUSALITY=/path/to/installed/causality/scripts/causality
-python3 "$CAUSALITY" validate
-python3 "$CAUSALITY" test
-python3 "$CAUSALITY" compile
-python3 "$CAUSALITY" resolve "delivery cancellations"
-```
-
-For a five-minute local trial, copy
-`agents/plugins/gustavofsantos/skills/causality/assets/demo/` to a temporary directory,
-enter it, and run the commands above. The demo includes a cross-domain causal path, a
-current and historical binding, large-table partition metadata, an isolated concept, and
-declarative regression tests.
-
-Trusted sources remain in `model/`; agent-created relationship proposals go only to
-`proposals/`, incident-specific reasoning goes to `investigations/`, and the SQLite index
-is an atomically replaced build artifact. The installed skill teaches Claude Code and
-Cursor to retrieve bounded neighborhoods, inspect physical scale and grain before querying,
-and preserve refuted explanations across sessions.
-
-The bundled end-to-end tests run directly with Python:
-
-```bash
-python3 agents/plugins/gustavofsantos/skills/causality/scripts/causality_test.py
-```
+The links are live: editing a `SKILL.md` applies in the next session. Re-run
+`make agents` only to add or remove a skill, agent, or mod. A skill that ships a script
+calls it by its installed path, `"$HOME/.agents/skills/<name>/scripts/<script>"`.
 
 ## More
 
