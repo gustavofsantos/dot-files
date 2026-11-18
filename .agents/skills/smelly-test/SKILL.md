@@ -13,7 +13,7 @@ Make each test state and enforce one business promise.
   when the framework requires identifiers.
 - Assert one promise per test on the domain concept (`isOverdrawn()`), not on internals or a
   recomputed formula (`price * 1.08`). State the literal (`108.00`).
-- Take the rule and its words from the domain, not from the code. Use the canonical names from `vocabulary`; when no source gives the business name, ask the user.
+- Take the rule and its words from the domain, not from the code. Use the user's ubiquitous language (`vocabulary`); when no source gives the business name, ask the user.
 - Put the deciding fact, such as the boundary value or the just-expired date, in the test
   body, not in a builder default.
 

@@ -15,7 +15,7 @@ The vault is `${ENGINEERING_HOME:-$HOME/engineering}`. Store briefs in `projects
 
 1. Search `projects/` for the topic. Update an existing brief instead of making a duplicate.
 2. For a new brief, run `"$HOME/.agents/skills/project/scripts/new.sh" "<slug>"`. Use a stable `kebab-case-noun-phrase` with no date.
-3. Fill only established facts. Leave a section empty instead of guessing. Write the Glossary, Workflow context, and Data map in the canonical names from `vocabulary`. Keep project-only terms here; cross-project terms belong in `~/GLOSSARY.md`.
+3. Fill only established facts. Leave a section empty instead of guessing. Write the Glossary, Workflow context, and Data map in the user's ubiquitous language (`vocabulary`). Keep project-only terms here; cross-project terms belong in `~/GLOSSARY.md`.
 4. Run `"$HOME/.agents/skills/project/scripts/members.sh" "<slug>"` when current issue membership matters. Do not copy that derived list into the brief.
 
 ## Sections

@@ -11,4 +11,4 @@ For UI, layout, or a concept too dense for Mermaid, write one focused HTML file 
 
 Put each visual next to the sentence it supports. Keep only the calls, files, and states the question needs.
 
-For a business flow, look in `workflows/` first: if a diagram exists, show or adapt it instead of drawing a second topology. Label every visual with the canonical names from `vocabulary`.
+For a business flow, look in `workflows/` first: if a diagram exists, show or adapt it instead of drawing a second topology. Label every visual with the user's ubiquitous language (`vocabulary`).

@@ -19,7 +19,7 @@ claim can be settled inside the current task, use the single-claim check in
    Fill in the sections below. Link the throwaway commit instead of pasting it. Put raw
    material (dumps, query output) in `artifacts/` and link it from Evidence. The issue links
    the spike, never the reverse.
-5. **Discard** the scaffold. Write the receipt in the canonical names from `vocabulary`.
+5. **Discard** the scaffold. Write the receipt in the user's ubiquitous language (`vocabulary`).
 
 ```markdown
 ---

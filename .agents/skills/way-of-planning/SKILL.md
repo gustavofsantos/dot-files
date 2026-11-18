@@ -7,7 +7,7 @@ description: Turn an agreed behavior change into testable EARS requirements and 
 
 Create a short plan in the conversation. Do not create a plan file.
 
-When a requirement depends on a business term, rule, invariant, or workflow, phrase it in the canonical names from `vocabulary`. A term no source defines is a question for the user, not something to infer from the code you will change.
+When a requirement depends on a business term, rule, invariant, or workflow, phrase it in the user's ubiquitous language (`vocabulary`). A term no source defines is a question for the user, not something to infer from the code you will change.
 
 1. Phrase each requirement so it maps to an acceptance test:
    - `THE <system> SHALL <response>`

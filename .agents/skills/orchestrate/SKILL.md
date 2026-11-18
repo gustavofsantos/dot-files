@@ -19,7 +19,7 @@ You own alignment with me, decomposition, and acceptance. `worker` subagents own
 - **Coordination overhead.** Keep the work yourself when the handoff costs more than the
   task (a few-line edit, one known file) or when the reasoning is coupled to our
   conversation (design, trade-offs, domain decisions).
-- **My words, not new ones.** Use the canonical names from `vocabulary` in briefs and
+- **My words, not new ones.** Use the user's ubiquitous language (`vocabulary`) in briefs and
   reports, and put the terms a worker needs into its brief. Ask me for a name rather than
   coin one.
 - **Fan-out / fan-in.** Dispatch independent briefs in parallel; serialize briefs that touch

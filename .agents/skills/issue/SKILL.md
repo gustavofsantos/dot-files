@@ -19,7 +19,7 @@ changes. Never use sequential numbers.
 ## Loop
 
 1. **Search first.** Run `rg -il 'term' "${ENGINEERING_HOME:-$HOME/engineering}/issues/"`. If
-   a match exists, update it instead of creating a duplicate. Name domain terms with the canonical names from `vocabulary`, and link the workflow in `workflows/` an item touches; do not copy its content.
+   a match exists, update it instead of creating a duplicate. Name domain terms with the user's ubiquitous language (`vocabulary`), and link the workflow in `workflows/` an item touches; do not copy its content.
 2. Create the file in `issues/` (starting now) or `issues/backlog/` (later).
 3. Write the kernel. Add optional sections from
    [references/sections.md](references/sections.md) as the kind of work needs them. Ask only

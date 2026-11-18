@@ -381,10 +381,12 @@ The vault is `$ENGINEERING_HOME` (`.zshenv`, default `~/engineering`) — the lo
 | `projects/` | `project` skill | Stable project summary, context, data map, questions, and canonical links |
 | `workflows/` | `biz-workflows` skill | Standalone canonical business and system workflow diagrams |
 
-Skills and agents steer toward the user's canonical names rather than coined terms. The
-`vocabulary` skill lists the sources, in order: the user's words, the glossary at
-`~/GLOSSARY.md` (home directory, outside the vault, owned by `vocabulary`), the project
-brief, `workflows/` and `spikes/`, then the area's code and docs. Each is used only if
+Skills and agents speak the user's ubiquitous language rather than coined terms. The
+glossary at `~/GLOSSARY.md` (home directory, outside the vault, owned by `vocabulary`) holds
+one semiotic triangle per term: symbol (the word and its aliases), concept (what the user
+means), and referent (the thing it points to). The `vocabulary` skill lists the sources, in
+order: the user's words, the glossary, the project brief, `workflows/` and `spikes/`, then
+the area's code and docs. Each is used only if
 it exists; nothing depends on a dedicated knowledge agent.
 
 A brief lives at `projects/<slug>.md`, named by a stable bare slug. An issue names its
