@@ -2,7 +2,7 @@
 name: vocabulary
 description: >
   Use the user's canonical names instead of coining terms when a request materially depends on
-  shared domain meaning. Curate vocabulary entries only when the user explicitly asks.
+  shared domain meaning. Curate glossary entries in ~/GLOSSARY.md only when the user explicitly asks.
 ---
 
 # Vocabulary
@@ -16,7 +16,7 @@ did not use.
 Use whichever of these is available in the current session, in this order:
 
 1. The user's own words in the conversation.
-2. `${ENGINEERING_HOME:-$HOME/engineering}/VOCABULARY.md` — canonical cross-project terms.
+2. `$HOME/GLOSSARY.md` — the user's glossary of canonical cross-project terms.
 3. The project brief in `projects/<slug>.md` — its Glossary holds project-only terms.
 4. Canonical workflow diagrams in `workflows/`, and spikes in `spikes/`.
 5. The names in the area's code, schema, docs, and tickets.
@@ -27,7 +27,7 @@ conflict. When no source names the concept, ask the user for the term instead of
 up. Use the preferred term and preserve established distinctions; do not swap a term for a
 synonym to vary the prose.
 
-Reading the vocabulary does not permit a change to it.
+Reading the glossary does not permit a change to it.
 
 ## Curate on explicit request
 
@@ -50,5 +50,6 @@ Use aliases on the canonical line. Keep a retired name as an alias when future s
 it. Do not record secrets, transient task facts, generic dictionary definitions, or meanings
 that the user or an authoritative source has not established.
 
-When a project term becomes cross-project language, add the canonical entry here. Let the
+Keep the glossary at `$HOME/GLOSSARY.md`, never in the engineering vault or a repository.
+When a project term becomes cross-project language, add the canonical entry there. Let the
 project brief link or summarize it without creating a competing definition.
