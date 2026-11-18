@@ -43,8 +43,7 @@ Re-running `setup.sh` is idempotent (`ln -sf`).
   accepted over a build step. Edit both copies when changing an agent's body.
 - `.claude/agents/`, `.cursor/agents/` — subagent definitions, one `.md` each, linked into
   `~/.claude/agents/` and `~/.cursor/agents/` by `install-agents.sh`. `worker` serves
-  `orchestrate`; `librarian` owns the domain library through the `library` skill's script;
-  `maintainability-reviewer` is a read-only reviewer. Claude copies use Claude keys
+  `orchestrate`; `maintainability-reviewer` is a read-only reviewer. Claude copies use Claude keys
   (`model: haiku`, `tools`, `skills`); Cursor copies use Cursor keys (`model: composer-2.5`,
   `readonly`)
 - `.claude/mods/` — Claude Code mods (function-hook plugins), one directory each, linked into `~/.claude/mods/` by `install-agents.sh` and loaded through `CLAUDE_CODE_PLUGIN_DIRS` (see "Mods")
@@ -101,7 +100,7 @@ which matches only `py|js|ts|clj`:
 ```bash
 make test                                                   # both locations
 bats test_bin/                                              # all bin/ script tests
-bats .agents/skills/library/scripts/library_test.bats       # one skill script
+bats .agents/skills/project/scripts/new_test.bats          # one skill script
 ```
 
 ### Reflect state
@@ -382,6 +381,11 @@ The vault is `$ENGINEERING_HOME` (`.zshenv`, default `~/engineering`) — the lo
 | `projects/` | `project` skill | Stable project summary, context, data map, questions, and canonical links |
 | `workflows/` | `biz-workflows` skill | Standalone canonical business and system workflow diagrams |
 | `VOCABULARY.md` | `vocabulary` skill | Canonical cross-project terms, aliases, usage, and relationships |
+
+Skills and agents steer toward the user's canonical names rather than coined terms. The
+`vocabulary` skill lists the sources, in order: the user's words, `VOCABULARY.md`, the
+project brief, `workflows/` and `spikes/`, then the area's code and docs. Each is used only if
+it exists; nothing depends on a dedicated knowledge agent.
 
 A brief lives at `projects/<slug>.md`, named by a stable bare slug. An issue names its
 project in optional `project:` frontmatter, and `members.sh` derives membership. The brief

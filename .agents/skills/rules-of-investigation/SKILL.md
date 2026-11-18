@@ -21,6 +21,6 @@ Code shows what *can* happen, not what *did* happen. Correlation is a lead. A re
 
 **Test the code that ran.** Pin the commit, build, and flag values that were live when the behavior happened. Code from the current branch can hide the defect or the loop. For each finding, name the version you checked.
 
-**Start from what is known.** Before reading code or logs in depth, ask `librarian` what the area is documented to do: invariants, ownership, the workflow it sits in. Record its answer as a claim, `documented` or `inferred`, never as `observed`. A `stale` flag means the claim predates the code, so observe it again.
+**Start from what is known.** Before reading code or logs in depth, read what is available on the area: the project brief, `workflows/`, `spikes/`, and the repository's docs. Record what they say as a claim, `documented` or `inferred`, never as `observed`. A document older than the code may be stale, so observe it again.
 
 **Single claim.** To check one stated claim, restate it as `Given <state>, when <action>, then <observable>`. Run the narrowest existing check, or a throwaway probe on the real path. Return `Confirmed`, `Falsified`, or `Undetermined`, and cite the command and output. Remove the throwaway work. If the answer must outlive the task, hand it to `spike`.

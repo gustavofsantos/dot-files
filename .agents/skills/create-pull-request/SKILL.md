@@ -6,7 +6,7 @@ description: Create a GitHub pull request with an executive-oriented description
 # Create Pull Request
 
 1. Gather the base branch, the commits since base, and the full diff. Read the diff to understand the change, but don't narrate it in the PR.
-2. Search the local knowledge base for why the work was done: branch name, commit messages, touched modules. For the domain terms and the workflow the change touches, use the canonical words.
+2. Search the local knowledge base for why the work was done: branch name, commit messages, touched modules. For the domain terms and the workflow the change touches, use the canonical names from `vocabulary`.
 3. Use the repository's PR template if one exists. Put the executive content in its opening section, or in a short paragraph before a leading checklist. Otherwise use [references/default-template.md](references/default-template.md).
 4. The opening answers three things: the problem that existed, why this approach solves it, and the outcome. Fill the other sections from the diff and commits.
 5. Title: at most 70 characters, imperative, no trailing period, describing the outcome rather than the mechanism. Some repositories ask it to be formatted in conventional commits.
@@ -14,7 +14,6 @@ description: Create a GitHub pull request with an executive-oriented description
    - no filesystem paths
    - no bare local issue ids
    - no `[[wikilinks]]`
-   - no library entry ids or paths
    - no author-only jargon
    - no code symbols unless they are meaningful publicly
 

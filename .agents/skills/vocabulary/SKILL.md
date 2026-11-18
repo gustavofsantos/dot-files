@@ -1,20 +1,31 @@
 ---
 name: vocabulary
 description: >
-  Read and apply established cross-project terminology when a request materially depends on
+  Use the user's canonical names instead of coining terms when a request materially depends on
   shared domain meaning. Curate vocabulary entries only when the user explicitly asks.
 ---
 
 # Vocabulary
 
-`${ENGINEERING_HOME:-$HOME/engineering}/VOCABULARY.md` owns the user's canonical
-cross-project terms. A project brief owns project-only terms. What a concept means, its invariants, and its workflows belong to `librarian`; ask it when a term's meaning matters beyond its preferred wording.
+Name things the way the user and their sources already name them. Do not invent a term, an
+abbreviation, or a label for a concept that already has a name. Do not add jargon the user
+did not use.
 
-## Read and apply
+## Where canonical names come from
 
-When shared semantics matter, search the vocabulary for the relevant terms and aliases. Read
-only the matching entries unless the user asks for a broad audit. Use the preferred terms and
-preserve established distinctions. If the file does not exist, continue without creating it.
+Use whichever of these is available in the current session, in this order:
+
+1. The user's own words in the conversation.
+2. `${ENGINEERING_HOME:-$HOME/engineering}/VOCABULARY.md` — canonical cross-project terms.
+3. The project brief in `projects/<slug>.md` — its Glossary holds project-only terms.
+4. Canonical workflow diagrams in `workflows/`, and spikes in `spikes/`.
+5. The names in the area's code, schema, docs, and tickets.
+
+Search only for the terms at hand and read only the matching entries. A source that does not
+exist is skipped, not created. When sources disagree, prefer the higher one and mention the
+conflict. When no source names the concept, ask the user for the term instead of making one
+up. Use the preferred term and preserve established distinctions; do not swap a term for a
+synonym to vary the prose.
 
 Reading the vocabulary does not permit a change to it.
 

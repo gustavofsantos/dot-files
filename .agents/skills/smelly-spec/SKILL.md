@@ -20,7 +20,7 @@ and still build the wrong thing. Look for:
 Calibration is the discipline. Tag each finding by reach:
 
 - **In-document**: visible in the text. State it plainly.
-- **Needs-context**: depends on the system or the domain. Ask `librarian` first. Ask the user only what the library cannot settle, as a question. An answer from the library does not turn the finding into an in-document one.
+- **Needs-context**: depends on the system or the domain. Check the sources `vocabulary` names first. Ask the user only what they cannot settle, as a question. An answer from those sources does not turn the finding into an in-document one.
 - **Out-of-reach**: cannot be assessed from here. Name it and stop.
 
 Never dress a guess as an in-document finding. Lead with in-document findings. For each, quote

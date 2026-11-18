@@ -19,7 +19,7 @@ changes. Never use sequential numbers.
 ## Loop
 
 1. **Search first.** Run `rg -il 'term' "${ENGINEERING_HOME:-$HOME/engineering}/issues/"`. If
-   a match exists, update it instead of creating a duplicate. For the domain terms or the workflow an item touches, ask `librarian` and cite its entry ids; do not copy their content.
+   a match exists, update it instead of creating a duplicate. Name domain terms with the canonical names from `vocabulary`, and link the workflow in `workflows/` an item touches; do not copy its content.
 2. Create the file in `issues/` (starting now) or `issues/backlog/` (later).
 3. Write the kernel. Add optional sections from
    [references/sections.md](references/sections.md) as the kind of work needs them. Ask only
@@ -66,7 +66,7 @@ Optional sections go between `Tasks` and `Artifacts`. Outcome sections (`Finding
 - Draw structure and write judgment. Sequences, states, and flows are diagrams. Rationale and
   decisions stay as short prose.
 - No section exceeds one short paragraph. Push overflow into an artifact.
-- Issues hold deltas. Current workflows belong to `librarian`.
+- Issues hold deltas. Current workflows live in `workflows/`.
 
 ## Closing
 

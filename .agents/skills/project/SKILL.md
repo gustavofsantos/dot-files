@@ -15,7 +15,7 @@ The vault is `${ENGINEERING_HOME:-$HOME/engineering}`. Store briefs in `projects
 
 1. Search `projects/` for the topic. Update an existing brief instead of making a duplicate.
 2. For a new brief, run `"$HOME/.agents/skills/project/scripts/new.sh" "<slug>"`. Use a stable `kebab-case-noun-phrase` with no date.
-3. Fill only established facts. Leave a section empty instead of guessing. Before the Glossary, Workflow context, or Data map, ask `librarian`. Keep project-only terms here and name library entries by id.
+3. Fill only established facts. Leave a section empty instead of guessing. Write the Glossary, Workflow context, and Data map in the canonical names from `vocabulary`. Keep project-only terms here; cross-project terms belong in `VOCABULARY.md`.
 4. Run `"$HOME/.agents/skills/project/scripts/members.sh" "<slug>"` when current issue membership matters. Do not copy that derived list into the brief.
 
 ## Sections
@@ -24,7 +24,7 @@ The vault is `${ENGINEERING_HOME:-$HOME/engineering}`. Store briefs in `projects
 |---|---|
 | Objective | One sentence that states the project's stable purpose |
 | Glossary | Project-only terms, one per line |
-| Workflow context | Ids of the relevant workflow entries, which `librarian` owns |
+| Workflow context | Links to the relevant canonical diagrams in `workflows/` |
 | Data map | Each dataset, what one row means, and non-obvious traps |
 | Standing questions | Open falsifiable unknowns |
 | Key artifacts | The few canonical files worth reading cold |
@@ -32,7 +32,7 @@ The vault is `${ENGINEERING_HOME:-$HOME/engineering}`. Store briefs in `projects
 ## Boundaries
 
 - The project brief owns stable summary and context. An `issue` owns a work delta, tasks, and completion state.
-- Do not embed a second workflow topology. Name the relevant workflow entries by their library id (ask `librarian` which exist). Never copy their diagrams, and add only the context needed to explain why they matter.
+- Do not embed a second workflow topology. Link the relevant diagrams in `workflows/`. Never copy their diagrams, and add only the context needed to explain why they matter.
 - Do not list issues. Each issue names its project, and `members.sh` derives the reverse.
 - Curate key artifacts. Do not turn the section into an index.
 - Phrase each standing question so `spike` can settle it. When settled, update the relevant stable section and keep the spike as evidence.

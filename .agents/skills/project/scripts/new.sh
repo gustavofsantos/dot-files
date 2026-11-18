@@ -30,7 +30,7 @@ The vocabulary of this project, in plain words.
 - **term** — what it means here.
 
 ## Workflow context
-Ids of the relevant workflow entries; the librarian owns them. Do not embed a second topology.
+Links to the relevant diagrams in workflows/. Do not embed a second topology.
 
 ## Data map
 Where the data lives. Name each dataset. Say what one row means. Name the traps.

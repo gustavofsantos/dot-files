@@ -21,4 +21,4 @@ Assumptions: decisions you made that the brief didn't cover
 Blocked on:  what you need, if anything
 ```
 
-Keep the report tight. The orchestrator's context is expensive: no file dumps, no narration.
+Use the names the brief and the codebase already use, in the report too. Don't coin new terms or jargon; if a concept has no name, say so as a question.

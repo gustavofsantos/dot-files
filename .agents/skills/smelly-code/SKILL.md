@@ -8,5 +8,5 @@ disable-model-invocation: true
 
 Make production code read as intention. Name conditions, not expressions. Keep each decision
 near the data and invariants it needs, not in getter-driven callers. When persistence runs a
-business rule, name the rule at that boundary, in the domain's own term; ask `librarian` when the task does not give it. Keep one abstraction level per function.
+business rule, name the rule at that boundary, in the domain's own term from `vocabulary`; ask the user when no source gives it. Keep one abstraction level per function.
 Production code only. Tests belong to `smelly-test`.
