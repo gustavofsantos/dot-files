@@ -4,97 +4,50 @@ set -euo pipefail
 DOTFILES_DIR="${DOTFILES_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
 export DOTFILES_DIR
 
-# ln -sfn into a path that is a real directory would nest the link inside it,
-# so a real file or directory at the destination is reported and left alone.
-link() {
-  local src="$1" dest="$2"
-  if [ -e "$dest" ] && [ ! -L "$dest" ]; then
-    echo "  skipping $dest: a real file or directory is in the way" >&2
-    return 0
-  fi
-  ln -sfn "$src" "$dest"
+# link_all SRC_DIR DEST_DIR [VIA_DIR]: link each entry of SRC_DIR into DEST_DIR
+# (pointing at VIA_DIR/<name> instead when given), then
+# remove links in DEST_DIR that point into this repo and no longer resolve.
+# A real file or directory already at a destination is reported and left alone.
+link_all() {
+  local src="$1" dest="$2" via="${3:-$1}" entry name target
+  mkdir -p "$dest"
+  for entry in "$src"/*; do
+    [ -e "$entry" ] || continue
+    name=$(basename "$entry")
+    if [ -e "$dest/$name" ] && [ ! -L "$dest/$name" ]; then
+      echo "  skipping $dest/$name: a real file or directory is in the way" >&2
+      continue
+    fi
+    ln -sfn "$via/$name" "$dest/$name"
+  done
+  find "$dest" -maxdepth 1 -type l | while read -r link; do
+    target=$(readlink "$link")
+    case "$target" in
+      "$DOTFILES_DIR/"*|"$HOME/.agents/skills/"*) [ -e "$link" ] || rm "$link" ;;
+    esac
+  done
 }
 
 run_full_install() {
-  # Skills: each .agents/skills/<name>/ is linked into ~/.agents/skills/ (the
-  # shared directory several agent harnesses read) and, from there, into
-  # ~/.claude/skills/ for Claude Code. Links are live: editing a SKILL.md here
-  # applies in the next session without re-running this script.
+  # Shared: skills every harness reads from ~/.agents/skills/. Claude Code
+  # only reads ~/.claude/skills/, so each skill is linked there too, through
+  # the ~/.agents link.
   echo "Installing skills..."
-  STANDALONE_SKILLS_SOURCE="$DOTFILES_DIR/.agents/skills"
-  STANDALONE_SKILLS_DIR="$HOME/.agents/skills"
-  CLAUDE_SKILLS_DIR="$HOME/.claude/skills"
-  mkdir -p "$STANDALONE_SKILLS_DIR" "$CLAUDE_SKILLS_DIR"
-
-  if [ -d "$STANDALONE_SKILLS_SOURCE" ]; then
-    for skill in "$STANDALONE_SKILLS_SOURCE"/*/; do
-      [ -d "$skill" ] || continue
-      name=$(basename "${skill%/}")
-      link "${skill%/}" "$STANDALONE_SKILLS_DIR/$name"
-      link "$STANDALONE_SKILLS_DIR/$name" "$CLAUDE_SKILLS_DIR/$name"
-    done
-  fi
-
-  # Remove only stale links owned by this source tree. Other user-installed
-  # skills under ~/.agents/skills remain untouched.
-  if [ -d "$STANDALONE_SKILLS_SOURCE" ]; then
-    find "$STANDALONE_SKILLS_DIR" -maxdepth 1 -type l | while read -r link; do
-      target=$(readlink "$link")
-      case "$target" in
-        "$STANDALONE_SKILLS_SOURCE/"*) [ -e "$link" ] || rm "$link" ;;
-      esac
-    done
-  fi
-  find "$CLAUDE_SKILLS_DIR" -maxdepth 1 -type l | while read -r link; do
-    target=$(readlink "$link")
-    case "$target" in
-      "$STANDALONE_SKILLS_DIR/"*) [ -e "$link" ] || rm "$link" ;;
-    esac
-  done
+  link_all "$DOTFILES_DIR/.agents/skills" "$HOME/.agents/skills"
+  link_all "$DOTFILES_DIR/.agents/skills" "$HOME/.claude/skills" "$HOME/.agents/skills"
   echo "Installing skills... OK"
 
-  # Subagent definitions: one file each under .agents/agents/, linked into
-  # ~/.claude/agents/. Cursor reads that directory too, so one file serves both.
-  echo "Installing subagents..."
-  AGENTS_SOURCE="$DOTFILES_DIR/.agents/agents"
-  CLAUDE_AGENTS_DIR="$HOME/.claude/agents"
-  mkdir -p "$CLAUDE_AGENTS_DIR"
-  if [ -d "$AGENTS_SOURCE" ]; then
-    for agent in "$AGENTS_SOURCE"/*.md; do
-      [ -f "$agent" ] || continue
-      link "$agent" "$CLAUDE_AGENTS_DIR/$(basename "$agent")"
-    done
-  fi
-  # Remove only stale links that point into this source tree.
-  find "$CLAUDE_AGENTS_DIR" -maxdepth 1 -type l | while read -r link; do
-    target=$(readlink "$link")
-    case "$target" in
-      "$AGENTS_SOURCE/"*) [ -e "$link" ] || rm "$link" ;;
-    esac
-  done
-  echo "Installing subagents... OK"
+  # Claude only: subagents and mods (mods load through CLAUDE_CODE_PLUGIN_DIRS
+  # in .claude/settings.json).
+  echo "Installing Claude agents and mods..."
+  link_all "$DOTFILES_DIR/.claude/agents" "$HOME/.claude/agents"
+  link_all "$DOTFILES_DIR/.claude/mods" "$HOME/.claude/mods"
+  echo "Installing Claude agents and mods... OK"
 
-  # Claude Code mods (function-hook plugins): one directory each under
-  # .agents/mods/, linked into ~/.claude/mods/. Claude Code loads them from
-  # CLAUDE_CODE_PLUGIN_DIRS (set in .claude/settings.json) and watches the
-  # folder, so an edit here reloads in a running session.
-  echo "Installing mods..."
-  MODS_SOURCE="$DOTFILES_DIR/.agents/mods"
-  CLAUDE_MODS_DIR="$HOME/.claude/mods"
-  mkdir -p "$CLAUDE_MODS_DIR"
-  if [ -d "$MODS_SOURCE" ]; then
-    for mod in "$MODS_SOURCE"/*/; do
-      [ -d "$mod" ] || continue
-      link "${mod%/}" "$CLAUDE_MODS_DIR/$(basename "${mod%/}")"
-    done
-  fi
-  find "$CLAUDE_MODS_DIR" -maxdepth 1 -type l | while read -r link; do
-    target=$(readlink "$link")
-    case "$target" in
-      "$MODS_SOURCE/"*) [ -e "$link" ] || rm "$link" ;;
-    esac
-  done
-  echo "Installing mods... OK"
+  # Cursor only: subagents.
+  echo "Installing Cursor agents..."
+  link_all "$DOTFILES_DIR/.cursor/agents" "${CURSOR_HOME:-$HOME/.cursor}/agents"
+  echo "Installing Cursor agents... OK"
 
   echo "Installing Codex hooks..."
   DOTFILES_CODEX_HOOKS="$DOTFILES_DIR/.codex/hooks.json"

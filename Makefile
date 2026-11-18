@@ -24,7 +24,7 @@ bin: ## symlink bin/ into ~/.bin
 config: ## symlink config/* into ~/.config
 	@$(SCRIPTS)/link-xdg-config.sh
 
-agents: ## link skills into ~/.agents/skills and ~/.claude/skills, agents, mods; merge settings
+agents: ## shared skills, Claude agents/mods/settings, Cursor agents, Codex hooks
 	@$(SCRIPTS)/install-agents.sh
 
 caps: ## Caps Lock as Ctrl (GNOME only)

@@ -23,7 +23,7 @@ make help           # every target
 | `init-engineering-repo.sh` | Idempotently `git init`s `~/engineering`, writes its `.gitignore`, seeds the first commit |
 | `link-bin-files.sh` | Symlinks every file in `bin/` into `~/.bin/` (hook scripts live there too, prefixed `hooks-*`) |
 | `link-xdg-config.sh` | Symlinks each subdir of `config/` into `~/.config/` |
-| `install-agents.sh` | Symlinks each `.agents/skills/<name>/` into `~/.agents/skills/` and from there into `~/.claude/skills/`, links each `.agents/agents/*.md` into `~/.claude/agents/`, links each `.agents/mods/<name>/` into `~/.claude/mods/`, prunes links whose source is gone, merges `.codex/hooks.json` into `$CODEX_HOME/hooks.json`, and merges `.claude/settings.json` into `~/.claude/settings.json` |
+| `install-agents.sh` | Symlinks each `.agents/skills/<name>/` into `~/.agents/skills/` and from there into `~/.claude/skills/`, links each `.claude/agents/*.md` into `~/.claude/agents/` and `.cursor/agents/*.md` into `~/.cursor/agents/`, links each `.claude/mods/<name>/` into `~/.claude/mods/`, prunes links whose source is gone, merges `.codex/hooks.json` into `$CODEX_HOME/hooks.json`, and merges `.claude/settings.json` into `~/.claude/settings.json` |
 | `set-caps-lock-ctrl.sh` | Sets the GNOME "Caps Lock as Ctrl" `xkb-options` key (`ctrl:nocaps`) via `gsettings`, no `gnome-tweaks` package needed. No-ops if `gsettings` is absent. |
 
 Re-running `setup.sh` is idempotent (`ln -sf`).
@@ -37,11 +37,21 @@ Re-running `setup.sh` is idempotent (`ln -sf`).
 
 - `bin/` — personal scripts added to `$PATH` via `~/.bin/`, including hook scripts (`hooks-*`)
 - `.agents/skills/` — every skill, one directory each, installed by `install-agents.sh`. This is the source of truth; nothing under `~/.agents/skills/` or `~/.claude/skills/` that links here is hand-edited
-- `.agents/agents/` — subagent definitions, one `.md` each, linked into `~/.claude/agents/` by `install-agents.sh`. Cursor reads that directory too, so one file serves both. `worker` serves `orchestrate`; `librarian` owns the domain library through the `library` skill's script; `maintainability-reviewer` is a read-only reviewer. Their frontmatter uses Claude Code keys (`model: haiku`, `tools`, `skills`), and whether Cursor tolerates them is unverified
-- `.agents/mods/` — Claude Code mods (function-hook plugins), one directory each, linked into `~/.claude/mods/` by `install-agents.sh` and loaded through `CLAUDE_CODE_PLUGIN_DIRS` (see "Mods")
+- **Shared vs. per-harness.** `.agents/` holds only what every harness reads: skills. What
+  only Claude Code reads lives under `.claude/`, what only Cursor reads under `.cursor/`.
+  The same agent may exist in both, each with its own harness's frontmatter; duplication is
+  accepted over a build step. Edit both copies when changing an agent's body.
+- `.claude/agents/`, `.cursor/agents/` — subagent definitions, one `.md` each, linked into
+  `~/.claude/agents/` and `~/.cursor/agents/` by `install-agents.sh`. `worker` serves
+  `orchestrate`; `librarian` owns the domain library through the `library` skill's script;
+  `maintainability-reviewer` is a read-only reviewer. Claude copies use Claude keys
+  (`model: haiku`, `tools`, `skills`); Cursor copies use Cursor keys (`model: composer-2.5`,
+  `readonly`)
+- `.claude/mods/` — Claude Code mods (function-hook plugins), one directory each, linked into `~/.claude/mods/` by `install-agents.sh` and loaded through `CLAUDE_CODE_PLUGIN_DIRS` (see "Mods")
+- `.cursor/rules/`, `.cursor/hooks.json` — Cursor-only rules and hooks, kept here but not installed
 - `test_bin/` — bats tests for `bin/` scripts, one `<script>.bats` per script
 - `config/` — XDG config dirs: `nvim/`, `doom/`, `ghostty/`, `bat/`, `lazygit/`, `mise/`, `zed/`, `wezterm/`, `tmux/`, `sheldon/`, `starship.toml`, `vale/`
-- `.claude/` — hand-maintained Claude Code config, `settings.json` only (`permissions`/`env` (incl. `CLAUDE_CODE_PLUGIN_DIRS`)/`statusLine`/`theme`/`defaultMode`/`teammateMode`), merged into the global `~/.claude/settings.json` on install
+- `.claude/settings.json` — hand-maintained Claude Code settings (`permissions`/`env` (incl. `CLAUDE_CODE_PLUGIN_DIRS`)/`statusLine`/`theme`/`defaultMode`/`teammateMode`), merged into the global `~/.claude/settings.json` on install
 - `.codex/` — `hooks.json`, merged into Codex's global hooks file on install
 
 ## Skills
@@ -107,7 +117,7 @@ marks everything on disk as analyzed.
 
 A mod is a Claude Code plugin of function hooks: `.claude-plugin/plugin.json`,
 `hooks/hooks.json` naming one module, and `hooks/register.tsx` exporting `register(on, options)`.
-Mods live under `.agents/mods/<name>/`. `install-agents.sh` links each one into
+Mods live under `.claude/mods/<name>/`. `install-agents.sh` links each one into
 `~/.claude/mods/<name>`, and the `env.CLAUDE_CODE_PLUGIN_DIRS` entry in `.claude/settings.json`
 lists those links (`:`-separated). Add a new mod's link there too. Claude Code watches these
 folders, so an edit here reloads in a running interactive session. Keep a mod's tests beside it

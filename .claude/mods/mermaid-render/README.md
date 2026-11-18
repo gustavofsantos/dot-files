@@ -34,6 +34,6 @@ Set under `pluginConfigs["mermaid-render"].options` in `~/.claude/settings.json`
 ## Tests
 
 ```bash
-claude plugin validate .agents/mods/mermaid-render
-claude plugin test .agents/mods/mermaid-render
+claude plugin validate .claude/mods/mermaid-render
+claude plugin test .claude/mods/mermaid-render
 ```
