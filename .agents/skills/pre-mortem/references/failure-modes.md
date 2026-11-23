@@ -61,6 +61,11 @@ trigger; answer it from the code, not from the diff's intent.
 - Feature flag toggled mid-flight: are processes that started under one value finished under
   the other, leaving mixed state?
 - Ordering between this deploy and another service's deploy that the change depends on.
+- Configuration: a new environment variable or config key that is missing in production
+  falls back to a default; is that default safe, or does it get persisted as if real?
+- Infrastructure settings changed with the code (queue retry count, visibility timeout,
+  dead-letter policy, consumer concurrency, job timeout, cron schedule): do runs now
+  overlap, repeat, or get dropped?
 
 ## Silent loss and swallowed errors
 
@@ -79,6 +84,15 @@ trigger; answer it from the code, not from the diff's intent.
   changed ordering, changed default.
 - Changed semantics behind an unchanged signature: same name, different behavior for
   existing callers found in step 2.
+
+## Tenant and ownership scope
+
+- Is every read and write still scoped to the tenant, account, or owner, for every caller
+  found in step 2? A query that lost its scope filter reads or overwrites another tenant's
+  data.
+- Are background jobs, consumers, and batch paths given the scope explicitly, or do they rely
+  on request context that is not there outside a request?
+- Do cache keys, file paths, and object-storage keys include the scope?
 
 ## Time and ordering
 
