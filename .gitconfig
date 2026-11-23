@@ -8,7 +8,7 @@
 # .git/config (`git config gitmaster.diffLayout split`), like any git option.
 [gitmaster "worktree"]
   # `gitmaster worktree add` puts worktrees at <root>/<project>/<branch>
-  root = ~/.worktrees
+	root = ~/.worktrees
   # how .worktreeinclude paths reach a new worktree: symlink | reflink | none
   include = symlink
 # [gitmaster]
@@ -154,3 +154,5 @@
 [credential "https://gist.github.com"]
   helper =
   helper = !/usr/bin/gh auth git-credential
+[gitmaster]
+	authorPictures = true
