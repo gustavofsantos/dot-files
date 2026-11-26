@@ -350,6 +350,18 @@ The example menus are in `lua/plugins/transient.config.lua` on `<leader>m`. It d
 which-key yet. Its headless Lua suites live in `tests/transient/` and run through
 `bats test_bin/transient-nvim.bats`.
 
+## Tmux inactive-pane dimming
+
+`bin/tmux-dim-panes` dims inactive panes by setting `window-style` to the theme's fg blended
+`@dim-inactive-amount` percent (default 30) toward its bg, and `window-active-style` to
+`fg=terminal` (an active pane with `default` style would inherit the dim). `tmux.conf` runs
+`tmux-dim-panes init`, which applies it and installs hooks (slot `[77]`) that re-apply on
+attach, focus-in and, on tmux >= 3.6, light/dark theme changes. `prefix C-d` toggles it.
+Options: `@dim-inactive`, `@dim-inactive-amount`, `@dim-inactive-theme` (auto|light|dark),
+`@dim-inactive-{light,dark}-{fg,bg}` (defaults: the cursorized palette). Only default colors
+dim; programs that paint their own colors (Neovim) stay unchanged. Tests:
+`bats test_bin/tmux-dim-panes.bats` (starts a throwaway tmux server).
+
 ## Zed config
 
 `config/zed/` ports the Neovim + tmux setup to Zed: `settings.json` (options), `keymap.json`
