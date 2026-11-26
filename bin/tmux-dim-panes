@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# Usage: tmux-dim-panes [init|apply|on|off|toggle|blend <fg> <bg> <percent>]
+#
+# Dim inactive tmux panes: their default text color is blended toward the
+# background by @dim-inactive-amount percent (30 by default), so the active
+# pane stands out. Only the pane's *default* colors change, through tmux's
+# `window-style`; tmux cannot repaint colors a program sets itself, so an
+# app that paints its own background and text (Neovim with a non-transparent
+# colorscheme, for one) stays as it is. The background stays `default` so the
+# terminal's own background (and its opacity) shows through.
+#
+#   init     apply, then install the hooks that re-apply on client attach,
+#            focus-in and (tmux >= 3.6) light/dark theme changes. Run once
+#            from tmux.conf: run -b 'tmux-dim-panes init'
+#   apply    compute the inactive style from the options below (default)
+#   on|off   set @dim-inactive and apply
+#   toggle   flip @dim-inactive and apply
+#   blend    print <fg> mixed toward <bg> by <percent> (#rrggbb), and exit
+#
+# Options (tmux user options, set them before the `run` line in tmux.conf):
+#   @dim-inactive            on|off             default on
+#   @dim-inactive-amount     0-100, percent     default 30
+#   @dim-inactive-theme      auto|light|dark    default auto
+#   @dim-inactive-light-fg   #rrggbb            default #31302d (cursorized)
+#   @dim-inactive-light-bg   #rrggbb            default #f7f7f4
+#   @dim-inactive-dark-fg    #rrggbb            default #d2cfc5
+#   @dim-inactive-dark-bg    #rrggbb            default #1a1918
+#
+# `auto` picks the theme from the client (`#{client_theme}`, tmux >= 3.6),
+# else from the desktop: GNOME's color-scheme, or macOS's AppleInterfaceStyle.
+# Ghostty follows the same system setting (theme = light:…,dark:…).
+set -euo pipefail
+
+HOOK_INDEX=77   # fixed hook slot, so re-running `init` replaces instead of appending
+
+die() { echo "tmux-dim-panes: $*" >&2; exit 2; }
+
+opt() { # opt <name> <default>
+  local v
+  v=$(tmux show-options -gqv "$1" 2>/dev/null || true)
+  printf '%s' "${v:-$2}"
+}
+
+valid_hex() { [[ "$1" =~ ^#[0-9a-fA-F]{6}$ ]]; }
+
+# blend <fg> <bg> <percent>: move fg toward bg by percent, in sRGB.
+blend() {
+  local fg=$1 bg=$2 pct=$3 out='#' i a b
+  valid_hex "$fg" || die "not a #rrggbb color: $fg"
+  valid_hex "$bg" || die "not a #rrggbb color: $bg"
+  [[ "$pct" =~ ^[0-9]+$ ]] && (( pct <= 100 )) || die "amount must be 0-100: $pct"
+  for i in 1 3 5; do
+    a=$((16#${fg:i:2})); b=$((16#${bg:i:2}))
+    out+=$(printf '%02x' $(( (a * (100 - pct) + b * pct + 50) / 100 )))
+  done
+  printf '%s\n' "$out"
+}
+
+detect_theme() {
+  local t
+  t=$(tmux display-message -p '#{client_theme}' 2>/dev/null || true)
+  case "$t" in light|dark) echo "$t"; return ;; esac
+  if command -v gsettings >/dev/null 2>&1; then
+    t=$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null || true)
+    case "$t" in *dark*) echo dark; return ;; *light*|*default*) echo light; return ;; esac
+  fi
+  if [ "$(uname -s)" = Darwin ]; then
+    if [ "$(defaults read -g AppleInterfaceStyle 2>/dev/null || true)" = Dark ]; then
+      echo dark
+    else
+      echo light
+    fi
+    return
+  fi
+  echo dark
+}
+
+apply() {
+  if [ "$(opt @dim-inactive on)" != on ]; then
+    tmux set-option -g window-style default
+    tmux set-option -g window-active-style default
+    return
+  fi
+  local theme fg bg dim
+  theme=$(opt @dim-inactive-theme auto)
+  [ "$theme" = auto ] && theme=$(detect_theme)
+  case "$theme" in
+    light) fg=$(opt @dim-inactive-light-fg '#31302d'); bg=$(opt @dim-inactive-light-bg '#f7f7f4') ;;
+    dark)  fg=$(opt @dim-inactive-dark-fg  '#d2cfc5'); bg=$(opt @dim-inactive-dark-bg  '#1a1918') ;;
+    *) die "@dim-inactive-theme must be auto, light or dark: $theme" ;;
+  esac
+  dim=$(blend "$fg" "$bg" "$(opt @dim-inactive-amount 30)")
+  tmux set-option -g window-style "fg=$dim"
+  # `terminal`, not `default`: an active pane whose fg is `default` inherits
+  # window-style, which would dim it too.
+  tmux set-option -g window-active-style fg=terminal
+}
+
+init() {
+  apply
+  local hook cmd="run-shell -b 'tmux-dim-panes apply'"
+  for hook in client-attached client-focus-in client-light-theme client-dark-theme; do
+    # The theme hooks exist from tmux 3.6 on; older servers reject them.
+    tmux set-hook -g "$hook[$HOOK_INDEX]" "$cmd" 2>/dev/null || true
+  done
+}
+
+case "${1:-apply}" in
+  init)   init ;;
+  apply)  apply ;;
+  on|off) tmux set-option -g @dim-inactive "$1"; apply ;;
+  toggle)
+    if [ "$(opt @dim-inactive on)" = on ]; then new=off; else new=on; fi
+    tmux set-option -g @dim-inactive "$new"; apply
+    tmux display-message "Inactive pane dimming: $new" ;;
+  blend)  [ $# -eq 4 ] || die "usage: tmux-dim-panes blend <fg> <bg> <percent>"; blend "$2" "$3" "$4" ;;
+  -h|--help) sed -n '2,/^set -euo/{/^set -euo/d;s/^# \{0,1\}//;p}' "$0" ;;
+  *) die "unknown command: $1 (try --help)" ;;
+esac
